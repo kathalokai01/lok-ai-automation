@@ -1,0 +1,28 @@
+name: Generate Lok AI Video
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read topic
+        run: |
+          echo "===== TOPIC ====="
+          cat input/topic.txt
+          echo "================="
+
+      - name: Prepare output folder
+        run: |
+          mkdir -p output
+          echo "Automation started successfully." > output/status.txt
+
+      - name: Show files
+        run: |
+          echo "===== Repository ====="
+          find . -maxdepth 3 -type f | sort
