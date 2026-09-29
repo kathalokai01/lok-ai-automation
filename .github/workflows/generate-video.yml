@@ -3,26 +3,107 @@ name: Generate Lok AI Video
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  generate:
+  prepare:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Read topic
+      - name: Read configuration
         run: |
-          echo "===== TOPIC ====="
+          echo "===== VIDEO CONFIGURATION ====="
           cat input/topic.txt
-          echo "================="
+          echo "==============================="
 
-      - name: Prepare output folder
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -e
+
+          CONFIG="input/topic.txt"
+
+          required_keys=(
+            FORMAT
+            AUDIENCE
+            VOICE
+            SPEED
+            TOPIC
+            PARTS
+            SCENES
+            STORY_LENGTH
+            SCENE_DURATION
+            CAPTIONS
+            VISUAL_STYLE
+            REALISM
+            QUALITY
+            FPS
+            RESUME_ENABLED
+            MAX_RETRIES
+            SAVE_CHECKPOINT_AFTER_EACH_SCENE
+            SKIP_COMPLETED_SCENES
+            FAILURE_POLICY
+          )
+
+          for key in "${required_keys[@]}"; do
+            if ! grep -qE "^${key}[[:space:]]*=" "$CONFIG"; then
+              echo "ERROR: Missing configuration key: $key"
+              exit 1
+            fi
+          done
+
+          echo "Configuration validation: PASSED"
+
+      - name: Prepare directories
         run: |
           mkdir -p output
-          echo "Automation started successfully." > output/status.txt
+          mkdir -p output/checkpoints
+          mkdir -p output/scenes
+          mkdir -p output/parts
+          mkdir -p output/shorts
 
-      - name: Show files
+      - name: Create initial checkpoint
+        shell: bash
         run: |
-          echo "===== Repository ====="
-          find . -maxdepth 3 -type f | sort
+          CHECKPOINT="output/checkpoints/progress.json"
+
+          if [ -f "$CHECKPOINT" ]; then
+            echo "Existing checkpoint found."
+            cat "$CHECKPOINT"
+          else
+            cat > "$CHECKPOINT" <<'EOF'
+          {
+            "status": "initialized",
+            "completed_parts": [],
+            "completed_scenes": [],
+            "current_part": 1,
+            "current_scene": 1,
+            "last_completed": null
+          }
+          EOF
+            echo "Initial checkpoint created."
+          fi
+
+      - name: Show project state
+        run: |
+          echo "===== PROJECT STATE ====="
+          find output -maxdepth 3 -type f | sort
+          echo "========================="
+
+      - name: Save checkpoint
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add output/checkpoints/progress.json
+
+          if git diff --cached --quiet; then
+            echo "No checkpoint changes to commit."
+          else
+            git commit -m "Initialize video generation checkpoint"
+            git push
+          fi
