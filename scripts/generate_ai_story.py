@@ -4,13 +4,13 @@ import json
 import os
 import time
 import urllib.request
-import urllib.error
 from pathlib import Path
 
 INPUT = Path("output/story/story.json")
 OUTPUT = Path("output/story/ai_story.json")
 
 MODEL = "gemini-3.5-flash-lite"
+
 API_URL = (
     "https://generativelanguage.googleapis.com/v1beta/"
     f"models/{MODEL}:generateContent"
@@ -44,20 +44,47 @@ def save_json(data):
 
 
 def generate_part(api_key, topic, part):
+
     scenes = part.get("scenes", [])
+
+    scene_context = []
+
+    for scene in scenes:
+        scene_context.append({
+            "scene": scene["scene"],
+            "role": scene.get("role", "")
+        })
 
     scene_schema = {
         "type": "object",
         "properties": {
-            "scene": {"type": "integer"},
-            "narration": {"type": "string"},
-            "dialogue": {"type": "string"},
-            "visual_prompt": {"type": "string"},
-            "negative_prompt": {"type": "string"},
-            "camera_prompt": {"type": "string"},
-            "lighting_prompt": {"type": "string"},
-            "sfx_prompt": {"type": "string"},
-            "music_prompt": {"type": "string"}
+            "scene": {
+                "type": "integer"
+            },
+            "narration": {
+                "type": "string"
+            },
+            "dialogue": {
+                "type": "string"
+            },
+            "visual_prompt": {
+                "type": "string"
+            },
+            "negative_prompt": {
+                "type": "string"
+            },
+            "camera_prompt": {
+                "type": "string"
+            },
+            "lighting_prompt": {
+                "type": "string"
+            },
+            "sfx_prompt": {
+                "type": "string"
+            },
+            "music_prompt": {
+                "type": "string"
+            }
         },
         "required": [
             "scene",
@@ -80,16 +107,10 @@ def generate_part(api_key, topic, part):
                 "items": scene_schema
             }
         },
-        "required": ["scenes"]
+        "required": [
+            "scenes"
+        ]
     }
-
-    scene_context = []
-
-    for scene in scenes:
-        scene_context.append({
-            "scene": scene["scene"],
-            "role": scene.get("role", "")
-        })
 
     prompt = f"""
 You are the main story-generation AI for an automated Hindi cinematic
@@ -111,14 +132,14 @@ IMPORTANT:
 - Dialogue should be in Hindi.
 - Keep the story coherent across all scenes.
 - Maintain character consistency.
-- Maintain world/location consistency.
+- Maintain world and location consistency.
 - Maintain scene-to-scene continuity.
 - Build suspense progressively.
 - Follow the scene roles exactly.
 - Make the storytelling cinematic and emotionally engaging.
-- Do not use cartoon/anime language.
+- Do not use cartoon or anime language.
 - Visual prompts must describe realistic cinematic visuals.
-- Camera prompts must describe cinematic camera movement/framing.
+- Camera prompts must describe cinematic camera movement and framing.
 - Lighting prompts must describe realistic cinematic lighting.
 - SFX prompts must describe appropriate sound effects.
 - Music prompts must describe appropriate cinematic background music.
@@ -181,7 +202,10 @@ IMPORTANT:
 
             generated = json.loads(text)
 
-            generated_scenes = generated.get("scenes", [])
+            generated_scenes = generated.get(
+                "scenes",
+                []
+            )
 
             if len(generated_scenes) != len(scenes):
                 raise ValueError(
@@ -207,6 +231,7 @@ IMPORTANT:
             return generated_scenes
 
         except Exception as e:
+
             last_error = e
 
             print(
@@ -250,9 +275,10 @@ ai_story = {
 }
 
 
-# Resume from existing AI story if available
 if OUTPUT.exists():
+
     try:
+
         existing = load_json(OUTPUT)
 
         if (
@@ -260,9 +286,16 @@ if OUTPUT.exists():
             and existing.get("parts")
         ):
             ai_story = existing
-            print("Existing AI story found. Resuming...")
+            print(
+                "Existing AI story found. Resuming..."
+            )
+
     except Exception:
-        print("Existing AI story is invalid. Starting fresh.")
+
+        print(
+            "Existing AI story is invalid. "
+            "Starting fresh."
+        )
 
 
 for part in story.get("parts", []):
@@ -271,7 +304,8 @@ for part in story.get("parts", []):
 
     existing_part = next(
         (
-            p for p in ai_story.get("parts", [])
+            p
+            for p in ai_story.get("parts", [])
             if p.get("part") == part_number
         ),
         None
@@ -299,8 +333,10 @@ for part in story.get("parts", []):
     }
 
     for scene in generated_scenes:
+
         completed_part["scenes"].append({
             "scene": scene["scene"],
+
             "role": next(
                 (
                     s.get("role", "")
@@ -309,24 +345,33 @@ for part in story.get("parts", []):
                 ),
                 ""
             ),
+
             "status": "completed",
+
             "prompt": "",
+
             "narration": scene["narration"],
             "dialogue": scene["dialogue"],
+
             "visual_prompt": scene["visual_prompt"],
             "negative_prompt": scene["negative_prompt"],
+
             "camera_prompt": scene["camera_prompt"],
             "lighting_prompt": scene["lighting_prompt"],
+
             "sfx_prompt": scene["sfx_prompt"],
             "music_prompt": scene["music_prompt"]
         })
 
     ai_story["parts"] = [
-        p for p in ai_story.get("parts", [])
+        p
+        for p in ai_story.get("parts", [])
         if p.get("part") != part_number
     ]
 
-    ai_story["parts"].append(completed_part)
+    ai_story["parts"].append(
+        completed_part
+    )
 
     ai_story["parts"].sort(
         key=lambda p: p["part"]
