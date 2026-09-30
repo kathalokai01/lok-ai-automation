@@ -46,5 +46,6 @@
         "Face and detailed features must remain hidden to preserve mystery"
       ]
     }
-  ]
+  ],
+  "model": "gemini-3.5-flash-lite"
 }
