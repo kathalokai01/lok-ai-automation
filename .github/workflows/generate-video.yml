@@ -97,9 +97,10 @@ jobs:
 
           python3 scripts/test_gemini.py
 
-
       - name: Prepare AI story generation
         shell: bash
+        env:
+         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
 
