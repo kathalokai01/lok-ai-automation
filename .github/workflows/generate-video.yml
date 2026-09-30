@@ -124,6 +124,20 @@ jobs:
           cat output/story/character_bible.json
           echo "==========================="
 
+
+      - name: Generate Scenes
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -e
+
+          python3 scripts/generate_scenes.py
+
+          echo "===== GENERATED SCENES ====="
+          cat output/scenes/scenes.json
+          echo "============================"
+
       - name: Create initial checkpoint
         shell: bash
         run: |
