@@ -65,6 +65,17 @@ jobs:
           mkdir -p output/scenes
           mkdir -p output/parts
           mkdir -p output/shorts
+          
+      - name: Generate story plan
+        shell: bash
+        run: |
+          set -e
+
+          python3 scripts/generate_story_plan.py
+
+          echo "===== STORY PLAN ====="
+          cat output/story/story_plan.json
+          echo "======================"
 
       - name: Create initial checkpoint
         shell: bash
@@ -99,7 +110,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add output/checkpoints/progress.json
+          git add output/checkpoints/progress.json output/story/story_plan.json 
 
           if git diff --cached --quiet; then
             echo "No checkpoint changes to commit."
