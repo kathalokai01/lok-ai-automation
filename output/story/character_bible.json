@@ -1,0 +1,50 @@
+{
+  "status": "completed",
+  "topic": "आत्माराम की कहानी",
+  "character_count": 2,
+  "characters": [
+    {
+      "character_id": "CHAR_001",
+      "name": "Atmaram",
+      "role": "Protagonist",
+      "importance": "Primary",
+      "age": "Late 50s to early 60s",
+      "gender": "Male",
+      "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+      "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+      "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+      "hair": "Short grey hair, slightly unkempt",
+      "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+      "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+      "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+      "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+      "consistency_rules": [
+        "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+        "Hair must remain short and grey",
+        "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+        "Clothing should consistently reflect an older rustic wardrobe"
+      ]
+    },
+    {
+      "character_id": "CHAR_002",
+      "name": "Mysterious Figure",
+      "role": "Antagonist / Shadowy Intruder",
+      "importance": "Secondary",
+      "age": "Adult",
+      "gender": "Ambiguous / Not specified",
+      "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+      "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+      "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+      "hair": "Not visible or obscured by hoods/shadows",
+      "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+      "body_features": "Average human height and build, moving silently",
+      "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+      "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+      "consistency_rules": [
+        "Must remain shadowy, obscure, or silhouetted in appearance",
+        "Should always be framed in doorways, dark corridors, or distant background shots",
+        "Face and detailed features must remain hidden to preserve mystery"
+      ]
+    }
+  ]
+}
