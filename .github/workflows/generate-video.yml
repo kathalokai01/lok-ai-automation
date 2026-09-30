@@ -17,7 +17,7 @@ jobs:
       - name: Read configuration
         run: |
           echo "===== VIDEO CONFIGURATION ====="
-          cat input/topic.txt
+          cat Input/topic.txt
           echo "==============================="
 
       - name: Validate configuration
@@ -25,7 +25,7 @@ jobs:
         run: |
           set -e
 
-          CONFIG="input/topic.txt"
+          CONFIG="Input/topic.txt"
 
           required_keys=(
             FORMAT
