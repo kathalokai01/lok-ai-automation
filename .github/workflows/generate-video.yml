@@ -65,7 +65,8 @@ jobs:
           mkdir -p output/scenes
           mkdir -p output/parts
           mkdir -p output/shorts
-          
+          mkdir -p output/story
+
       - name: Generate story plan
         shell: bash
         run: |
@@ -100,7 +101,7 @@ jobs:
       - name: Prepare AI story generation
         shell: bash
         env:
-         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
 
@@ -109,7 +110,20 @@ jobs:
           echo "===== AI STORY STRUCTURE ====="
           cat output/story/ai_story.json
           echo "=============================="
-          
+
+      - name: Generate Character Bible
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -e
+
+          python3 scripts/generate_character_bible.py
+
+          echo "===== CHARACTER BIBLE ====="
+          cat output/story/character_bible.json
+          echo "==========================="
+
       - name: Create initial checkpoint
         shell: bash
         run: |
@@ -143,11 +157,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add output/checkpoints/progress.json output/story/story_plan.json output/story/story.json output/story/ai_story.json
-          
+          git add \
+            output/checkpoints/progress.json \
+            output/story/story_plan.json \
+            output/story/story.json \
+            output/story/ai_story.json \
+            output/story/character_bible.json
+
           if git diff --cached --quiet; then
             echo "No checkpoint changes to commit."
           else
-            git commit -m "Initialize video generation checkpoint"
+            git commit -m "Add Character Bible generation checkpoint"
             git push
           fi
