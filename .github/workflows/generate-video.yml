@@ -88,6 +88,15 @@ jobs:
           cat output/story/story.json
           echo "==========================="
 
+      - name: Test Gemini API
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -e
+
+          python3 scripts/test_gemini.py
+
 
       - name: Prepare AI story generation
         shell: bash
