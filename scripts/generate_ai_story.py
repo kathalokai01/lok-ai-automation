@@ -6,15 +6,10 @@ import time
 import urllib.request
 from pathlib import Path
 
+
 INPUT = Path("output/story/story.json")
 OUTPUT = Path("output/story/ai_story.json")
-
-MODEL = "gemini-3.5-flash-lite"
-
-API_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/"
-    f"models/{MODEL}:generateContent"
-)
+MODEL_FILE = Path("output/config/selected_model.json")
 
 MAX_RETRIES = 3
 
@@ -25,6 +20,24 @@ def load_json(path):
 
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def load_selected_model():
+    config = load_json(MODEL_FILE)
+
+    if config.get("status") != "selected":
+        raise SystemExit(
+            "ERROR: Gemini model selection is not in selected state"
+        )
+
+    model = config.get("model")
+
+    if not model:
+        raise SystemExit(
+            "ERROR: No selected Gemini model found"
+        )
+
+    return model
 
 
 def save_json(data):
@@ -43,7 +56,7 @@ def save_json(data):
     temp.replace(OUTPUT)
 
 
-def generate_part(api_key, topic, part):
+def generate_part(api_key, model, topic, part):
 
     scenes = part.get("scenes", [])
 
@@ -166,8 +179,13 @@ IMPORTANT:
         }
     }
 
+    api_url = (
+        "https://generativelanguage.googleapis.com/v1beta/"
+        f"models/{model}:generateContent"
+    )
+
     request = urllib.request.Request(
-        API_URL,
+        api_url,
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
@@ -183,7 +201,8 @@ IMPORTANT:
         try:
             print(
                 f"Generating Part {part['part']} "
-                f"(attempt {attempt}/{MAX_RETRIES})..."
+                f"(attempt {attempt}/{MAX_RETRIES}) "
+                f"using model {model}..."
             )
 
             with urllib.request.urlopen(
@@ -255,6 +274,13 @@ if not api_key:
     )
 
 
+MODEL = load_selected_model()
+
+print("===== GEMINI MODEL =====")
+print(f"Selected model: {MODEL}")
+print("========================")
+
+
 story = load_json(INPUT)
 
 topic = str(
@@ -286,6 +312,10 @@ if OUTPUT.exists():
             and existing.get("parts")
         ):
             ai_story = existing
+
+            # Always record the currently selected model.
+            ai_story["model"] = MODEL
+
             print(
                 "Existing AI story found. Resuming..."
             )
@@ -322,6 +352,7 @@ for part in story.get("parts", []):
 
     generated_scenes = generate_part(
         api_key,
+        MODEL,
         topic,
         part
     )
@@ -387,6 +418,7 @@ for part in story.get("parts", []):
 
 
 ai_story["status"] = "completed"
+ai_story["model"] = MODEL
 
 save_json(ai_story)
 
