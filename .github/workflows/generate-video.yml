@@ -71,6 +71,7 @@ jobs:
           mkdir -p output/shorts
           mkdir -p output/story
           mkdir -p output/narration
+          mkdir -p output/visuals
 
           echo "Output directories prepared."
 
@@ -159,8 +160,6 @@ jobs:
 
       - name: Generate Narration
         shell: bash
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
 
@@ -169,6 +168,17 @@ jobs:
           echo "===== NARRATION ====="
           cat output/narration/narration.json
           echo "====================="
+
+      - name: Prepare Visual Generation
+        shell: bash
+        run: |
+          set -e
+
+          python3 scripts/prepare_visuals.py
+
+          echo "===== VISUAL JOB MANIFEST ====="
+          cat output/visuals/visual_jobs.json
+          echo "================================"
 
       - name: Create initial checkpoint
         shell: bash
@@ -217,11 +227,12 @@ jobs:
             output/story/ai_story.json \
             output/story/character_bible.json \
             output/scenes/scenes.json \
-            output/narration/narration.json
+            output/narration/narration.json \
+            output/visuals/visual_jobs.json
 
           if git diff --cached --quiet; then
             echo "No checkpoint changes to commit."
           else
-            git commit -m "Add narration generation checkpoint"
+            git commit -m "Add visual generation preparation stage"
             git push
           fi
