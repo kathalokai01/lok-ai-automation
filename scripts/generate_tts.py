@@ -11,9 +11,17 @@ NARRATION = Path("output/narration/narration.json")
 OUT = Path("output/narration/audio")
 MANIFEST = Path("output/narration/audio_jobs.json")
 
+# Ordered fallback list.
+# Hindi voices first; if one fails, try the next one.
 VOICE_MAP = {
-    "male": "hi-IN-MadhurNeural",
-    "female": "hi-IN-SwaraNeural",
+    "male": [
+        "hi-IN-MadhurNeural",
+        "hi-IN-SwaraNeural",
+    ],
+    "female": [
+        "hi-IN-SwaraNeural",
+        "hi-IN-MadhurNeural",
+    ],
 }
 
 
@@ -51,7 +59,6 @@ def parse_rate(value):
 
     number = float(match.group(1))
 
-    # Edge TTS requires explicit + sign for neutral rate.
     if number == 0:
         return "+0%"
 
@@ -93,6 +100,103 @@ async def synthesize(text, voice, rate, output):
     await communicate.save(str(output))
 
 
+async def synthesize_with_fallback(
+    text,
+    voices,
+    configured_rate,
+    output,
+):
+    """
+    Try each Hindi voice with the configured rate first.
+    If Edge TTS returns no usable audio, retry that voice
+    without an explicit rate.
+    """
+
+    attempts = []
+
+    for voice in voices:
+
+        # Attempt 1: configured rate
+        attempts.append(
+            {
+                "voice": voice,
+                "rate": configured_rate,
+            }
+        )
+
+        output.unlink(missing_ok=True)
+
+        try:
+            print(
+                f"  TRY  {voice} | rate={configured_rate}"
+            )
+
+            await synthesize(
+                text,
+                voice,
+                configured_rate,
+                output,
+            )
+
+            if (
+                output.exists()
+                and output.stat().st_size > 1000
+            ):
+                return voice, configured_rate, attempts
+
+            print(
+                f"  RETRY {voice} | "
+                "default rate"
+            )
+
+        except Exception as exc:
+            print(
+                f"  RETRY {voice} | "
+                f"default rate | first error: {exc}"
+            )
+
+        # Attempt 2: let Edge TTS use its default rate.
+        attempts.append(
+            {
+                "voice": voice,
+                "rate": None,
+            }
+        )
+
+        output.unlink(missing_ok=True)
+
+        try:
+            print(
+                f"  TRY  {voice} | rate=default"
+            )
+
+            await synthesize(
+                text,
+                voice,
+                None,
+                output,
+            )
+
+            if (
+                output.exists()
+                and output.stat().st_size > 1000
+            ):
+                return voice, None, attempts
+
+        except Exception as exc:
+            print(
+                f"  FAIL {voice} | "
+                f"rate=default | {exc}"
+            )
+
+        output.unlink(missing_ok=True)
+
+    raise RuntimeError(
+        "All configured Hindi Edge TTS voices failed. "
+        f"Attempts: {json.dumps(attempts, ensure_ascii=False)}"
+    )
+
+
 async def main():
     if not NARRATION.exists():
         print("ERROR: narration.json not found")
@@ -100,7 +204,7 @@ async def main():
 
     OUT.mkdir(
         parents=True,
-        exist_ok=True
+        exist_ok=True,
     )
 
     data = json.loads(
@@ -117,20 +221,29 @@ async def main():
 
     configured_voice = cfg_value(
         "VOICE",
-        "male"
+        "male",
     ).lower()
 
     configured_speed = parse_rate(
         cfg_value(
             "SPEED",
-            "+0%"
+            "+0%",
         )
     )
 
-    voice = VOICE_MAP.get(
+    voices = VOICE_MAP.get(
         configured_voice,
-        VOICE_MAP["male"]
+        VOICE_MAP["male"],
     )
+
+    print("")
+    print("===== TTS CONFIGURATION =====")
+    print(f"Requested voice: {configured_voice}")
+    print(f"Voice fallback: {', '.join(voices)}")
+    print(f"Configured rate: {configured_speed}")
+    print(f"Scenes: {len(scenes)}")
+    print("==============================")
+    print("")
 
     jobs = []
     failures = []
@@ -138,13 +251,14 @@ async def main():
     for item in scenes:
         part = int(item["part"])
         scene = int(item["scene"])
+
         text = str(
             item.get("text", "")
         ).strip()
 
         raw_scene_speed = item.get(
             "speed",
-            ""
+            "",
         )
 
         if raw_scene_speed:
@@ -158,19 +272,19 @@ async def main():
 
         out_dir.mkdir(
             parents=True,
-            exist_ok=True
+            exist_ok=True,
         )
 
         output = (
-            out_dir /
-            f"scene_{scene:02d}.mp3"
+            out_dir
+            / f"scene_{scene:02d}.mp3"
         )
 
         job = {
             "part": part,
             "scene": scene,
-            "voice": voice,
-            "rate": scene_rate,
+            "requested_voice": configured_voice,
+            "configured_rate": scene_rate,
             "output": str(output),
             "status": "pending",
         }
@@ -193,7 +307,7 @@ async def main():
                 print(
                     f"SKIP part {part:02d} "
                     f"scene {scene:02d}: "
-                    f"audio exists"
+                    "audio exists"
                 )
 
                 continue
@@ -214,25 +328,35 @@ async def main():
 
         print(
             f"GENERATE part {part:02d} "
-            f"scene {scene:02d} | "
-            f"{voice} | {scene_rate}"
+            f"scene {scene:02d}"
+        )
+        print(
+            f"  Requested voice: "
+            f"{configured_voice}"
+        )
+        print(
+            f"  Rate: {scene_rate}"
         )
 
         try:
-            await synthesize(
+            (
+                used_voice,
+                used_rate,
+                attempts,
+            ) = await synthesize_with_fallback(
                 text,
-                voice,
+                voices,
                 scene_rate,
                 output,
             )
 
-            if (
-                not output.exists()
-                or output.stat().st_size <= 1000
-            ):
-                raise RuntimeError(
-                    "TTS returned no usable audio file"
-                )
+            job["voice"] = used_voice
+            job["rate"] = (
+                used_rate
+                if used_rate is not None
+                else "default"
+            )
+            job["attempts"] = attempts
 
             job["duration"] = get_duration(
                 output
@@ -243,7 +367,9 @@ async def main():
             print(
                 f"OK part {part:02d} "
                 f"scene {scene:02d}: "
-                f"{job['duration']}s"
+                f"{job['duration']}s | "
+                f"voice={used_voice} | "
+                f"rate={job['rate']}"
             )
 
         except Exception as exc:
@@ -258,43 +384,24 @@ async def main():
                 f"scene {scene:02d}: {exc}"
             )
 
-        if failures:
-            MANIFEST.write_text(
-                json.dumps(
-                    {
-                        "status": "failed",
-                        "voice": voice,
-                        "rate": configured_speed,
-                        "total": len(jobs),
-                        "completed": sum(
-                            1
-                            for j in jobs
-                            if j["status"] == "completed"
-                        ),
-                        "failed": len(failures),
-                        "jobs": jobs,
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
-
-            break
-
+        # Save checkpoint after every scene.
         MANIFEST.write_text(
             json.dumps(
                 {
-                    "status": "completed",
-                    "voice": voice,
-                    "rate": configured_speed,
+                    "status": (
+                        "failed"
+                        if failures
+                        else "completed"
+                    ),
+                    "requested_voice": configured_voice,
+                    "configured_rate": configured_speed,
                     "total": len(jobs),
                     "completed": sum(
                         1
                         for j in jobs
                         if j["status"] == "completed"
                     ),
-                    "failed": 0,
+                    "failed": len(failures),
                     "jobs": jobs,
                 },
                 ensure_ascii=False,
@@ -302,6 +409,10 @@ async def main():
             ),
             encoding="utf-8",
         )
+
+        # Stop after the first failed scene.
+        if failures:
+            break
 
     completed = sum(
         1
@@ -320,8 +431,8 @@ async def main():
 
     manifest = {
         "status": final_status,
-        "voice": voice,
-        "rate": configured_speed,
+        "requested_voice": configured_voice,
+        "configured_rate": configured_speed,
         "total": len(scenes),
         "completed": completed,
         "failed": failed,
@@ -342,8 +453,8 @@ async def main():
     print(f"Total: {len(scenes)}")
     print(f"Completed: {completed}")
     print(f"Failed: {failed}")
-    print(f"Voice: {voice}")
-    print(f"Rate: {configured_speed}")
+    print(f"Requested voice: {configured_voice}")
+    print(f"Configured rate: {configured_speed}")
     print("=======================")
 
     return 1 if failed else 0
