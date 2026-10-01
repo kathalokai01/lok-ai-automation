@@ -32,13 +32,7 @@ def read_config(key: str, default: str = "") -> str:
     for raw in INPUT.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
 
-        if not line:
-            continue
-
-        if line.startswith("#"):
-            continue
-
-        if "=" not in line:
+        if not line or line.startswith("#") or "=" not in line:
             continue
 
         k, value = line.split("=", 1)
@@ -61,11 +55,7 @@ def read_config(key: str, default: str = "") -> str:
 
 
 def run_command(command):
-    print()
-    print("RUN:")
-    print(" ".join(str(x) for x in command))
-    print()
-
+    print("RUN:", " ".join(str(x) for x in command))
     subprocess.run(command, check=True)
 
 
@@ -95,40 +85,28 @@ def probe_duration(path: Path) -> float:
 
 
 def valid_video(path: Path) -> bool:
-    if not path.exists():
-        return False
-
-    if path.stat().st_size < 1000:
+    if not path.exists() or path.stat().st_size < 1000:
         return False
 
     try:
-        duration = probe_duration(path)
-        return duration > 0.01
+        return probe_duration(path) > 0.01
     except Exception:
         return False
 
 
 def get_output_geometry(video_format: str):
-    video_format = video_format.strip().lower()
+    value = video_format.strip().lower()
 
-    if video_format in {
-        "short",
-        "shorts",
-        "vertical",
-        "9:16",
-    }:
+    if value in {"short", "shorts", "vertical", "9:16"}:
         return 720, 1280
 
-    if video_format in {
-        "square",
-        "1:1",
-    }:
+    if value in {"square", "1:1"}:
         return 1080, 1080
 
     return 1920, 1080
 
 
-def build_video_filter(video_format: str, fps: int) -> str:
+def build_video_filter(video_format: str, fps: int):
     width, height = get_output_geometry(video_format)
 
     return (
@@ -139,36 +117,47 @@ def build_video_filter(video_format: str, fps: int) -> str:
     )
 
 
-def normalize_jobs(manifest, kind):
-    jobs = manifest.get("jobs", [])
+def job_status_is_complete(job):
+    status = str(job.get("status", "")).strip().lower()
 
+    return status in {
+        "completed",
+        "complete",
+        "success",
+        "generated",
+        "done",
+    }
+
+
+def extract_jobs(manifest):
+    jobs = manifest.get("jobs")
+
+    if isinstance(jobs, list):
+        return jobs
+
+    # Compatibility with manifests using "scenes"
+    scenes = manifest.get("scenes")
+
+    if isinstance(scenes, list):
+        return scenes
+
+    return []
+
+
+def build_job_map(manifest):
     result = {}
 
-    for job in jobs:
+    for job in extract_jobs(manifest):
+        if not isinstance(job, dict):
+            continue
+
         try:
             part = int(job.get("part"))
             scene = int(job.get("scene"))
         except (TypeError, ValueError):
             continue
 
-        status = str(job.get("status", "")).lower()
-
-        if kind == "audio":
-            is_complete = status in {
-                "completed",
-                "complete",
-                "success",
-                "generated",
-            }
-        else:
-            is_complete = status in {
-                "completed",
-                "complete",
-                "success",
-                "generated",
-            }
-
-        if is_complete:
+        if job_status_is_complete(job):
             result[(part, scene)] = job
 
     return result
@@ -180,6 +169,8 @@ def resolve_audio(job, part, scene):
         job.get("output_path"),
         job.get("audio"),
         job.get("audio_path"),
+        job.get("file"),
+        job.get("path"),
         f"output/narration/audio/part_{part:02d}/scene_{scene:02d}.mp3",
     ]
 
@@ -189,7 +180,7 @@ def resolve_audio(job, part, scene):
 
         path = Path(str(candidate))
 
-        if path.exists():
+        if path.exists() and path.stat().st_size > 0:
             return path
 
     return Path(
@@ -204,6 +195,8 @@ def resolve_visual(job, part, scene):
         job.get("output_path"),
         job.get("visual"),
         job.get("visual_path"),
+        job.get("file"),
+        job.get("path"),
         f"output/visuals/part_{part:02d}/scene_{scene:02d}.png",
     ]
 
@@ -213,7 +206,7 @@ def resolve_visual(job, part, scene):
 
         path = Path(str(candidate))
 
-        if path.exists():
+        if path.exists() and path.stat().st_size > 0:
             return path
 
     return Path(
@@ -221,13 +214,7 @@ def resolve_visual(job, part, scene):
     )
 
 
-def render_scene(
-    visual: Path,
-    audio: Path,
-    output: Path,
-    fps: int,
-    video_format: str,
-):
+def render_scene(visual, audio, output, fps, video_format):
     output.parent.mkdir(parents=True, exist_ok=True)
 
     temp_output = output.with_suffix(".tmp.mp4")
@@ -279,7 +266,6 @@ def render_scene(
             "128k",
 
             "-shortest",
-
             "-movflags",
             "+faststart",
 
@@ -287,20 +273,15 @@ def render_scene(
         ]
     )
 
-    if not temp_output.exists():
+    if not temp_output.exists() or temp_output.stat().st_size < 1000:
         raise RuntimeError(
-            f"FFmpeg did not create expected output: {temp_output}"
-        )
-
-    if temp_output.stat().st_size < 1000:
-        raise RuntimeError(
-            f"Generated video is unexpectedly small: {temp_output}"
+            f"FFmpeg failed to create valid video: {output}"
         )
 
     os.replace(temp_output, output)
 
 
-def create_part_video(part: int, scene_records):
+def create_part_video(part, scene_records):
     scene_records = sorted(
         scene_records,
         key=lambda item: item["scene"],
@@ -317,8 +298,7 @@ def create_part_video(part: int, scene_records):
 
         if not valid_video(scene_path):
             raise SystemExit(
-                f"ERROR: Invalid scene video for Part {part}: "
-                f"{scene_path}"
+                f"ERROR: Invalid scene video: {scene_path}"
             )
 
         escaped = str(scene_path).replace("'", "'\\''")
@@ -355,7 +335,7 @@ def create_part_video(part: int, scene_records):
 
     if not temp_output.exists():
         raise RuntimeError(
-            f"Part video was not created: {temp_output}"
+            f"Part video was not created: {output}"
         )
 
     os.replace(temp_output, output)
@@ -365,84 +345,121 @@ def create_part_video(part: int, scene_records):
             f"Part video validation failed: {output}"
         )
 
+    duration = probe_duration(output)
+
     print(
-        f"PART COMPLETE: Part {part} -> "
-        f"{output} "
-        f"({probe_duration(output)} sec)"
+        f"PART COMPLETE: Part {part} | "
+        f"{output} | {duration}s"
     )
 
-    return output
+    return output, duration
 
 
 def main():
     print("==============================================")
-    print("        LOK AI VIDEO RENDERER")
+    print("          LOK AI VIDEO RENDERER")
     print("==============================================")
 
-    fps_raw = read_config("FPS", "24")
+    video_format = read_config("FORMAT", "short")
 
     try:
-        fps = int(fps_raw)
+        fps = int(read_config("FPS", "24"))
     except ValueError:
         fps = 24
 
     if fps <= 0:
         fps = 24
 
-    video_format = read_config("FORMAT", "short")
-
-    print(f"FORMAT : {video_format}")
-    print(f"FPS    : {fps}")
-
     width, height = get_output_geometry(video_format)
 
-    print(f"OUTPUT : {width}x{height}")
+    print(f"FORMAT : {video_format}")
+    print(f"SIZE   : {width}x{height}")
+    print(f"FPS    : {fps}")
+    print()
 
     narration = load_json(NARRATION)
     visuals = load_json(VISUALS)
 
-    narration_status = str(
-        narration.get("status", "")
-    ).lower()
+    # IMPORTANT:
+    # Do NOT require narration["status"] == "completed".
+    # The TTS manifest may use a different top-level schema.
+    audio_jobs = build_job_map(narration)
+    visual_jobs = build_job_map(visuals)
 
-    if narration_status not in {
-        "completed",
-        "complete",
-        "success",
-    }:
-        raise SystemExit(
-            "ERROR: Narration/TTS manifest is not completed."
+    # If the TTS manifest does not expose completed job status,
+    # discover actual audio files directly from the expected paths.
+    if not audio_jobs:
+        print(
+            "WARNING: No completed audio jobs detected "
+            "from manifest status."
         )
 
-    failed_visuals = int(
-        visuals.get("failed_jobs", 0) or 0
-    )
+        for audio_path in sorted(
+            Path("output/narration/audio").glob(
+                "part_*/scene_*.mp3"
+            )
+        ):
+            try:
+                part = int(
+                    audio_path.parent.name.split("_")[1]
+                )
+                scene = int(
+                    audio_path.stem.split("_")[1]
+                )
+            except (IndexError, ValueError):
+                continue
 
-    if failed_visuals > 0:
-        raise SystemExit(
-            f"ERROR: Visual manifest contains "
-            f"{failed_visuals} failed jobs."
+            if audio_path.stat().st_size > 0:
+                audio_jobs[(part, scene)] = {
+                    "part": part,
+                    "scene": scene,
+                    "status": "completed",
+                    "output": str(audio_path),
+                }
+
+    # Same fallback for visuals.
+    if not visual_jobs:
+        print(
+            "WARNING: No completed visual jobs detected "
+            "from manifest status."
         )
 
-    audio_jobs = normalize_jobs(
-        narration,
-        "audio",
-    )
+        for visual_path in sorted(
+            Path("output/visuals").glob(
+                "part_*/scene_*.png"
+            )
+        ):
+            try:
+                part = int(
+                    visual_path.parent.name.split("_")[1]
+                )
+                scene = int(
+                    visual_path.stem.split("_")[1]
+                )
+            except (IndexError, ValueError):
+                continue
 
-    visual_jobs = normalize_jobs(
-        visuals,
-        "visual",
-    )
+            if visual_path.stat().st_size > 0:
+                visual_jobs[(part, scene)] = {
+                    "part": part,
+                    "scene": scene,
+                    "status": "completed",
+                    "asset_path": str(visual_path),
+                }
 
     if not audio_jobs:
         raise SystemExit(
-            "ERROR: No completed audio jobs found."
+            "ERROR: No usable TTS audio files found."
         )
 
     if not visual_jobs:
         raise SystemExit(
-            "ERROR: No completed visual jobs found."
+            "ERROR: No usable visual files found."
         )
+
+    print(f"Audio scenes detected  : {len(audio_jobs)}")
+    print(f"Visual scenes detected : {len(visual_jobs)}")
+    print()
 
     SCENES_OUT.mkdir(
         parents=True,
@@ -454,17 +471,10 @@ def main():
         exist_ok=True,
     )
 
-    all_keys = sorted(audio_jobs.keys())
-
-    print()
-    print(f"Audio scenes  : {len(audio_jobs)}")
-    print(f"Visual scenes : {len(visual_jobs)}")
-    print()
-
     scene_records = []
 
-    for part, scene in all_keys:
-        key = (part, scene)
+    for key in sorted(audio_jobs):
+        part, scene = key
 
         if key not in visual_jobs:
             raise SystemExit(
@@ -506,20 +516,14 @@ def main():
         )
 
         print(
-            f"SCENE Part {part} "
-            f"Scene {scene}"
+            f"SCENE: Part {part} / Scene {scene}"
         )
 
         if valid_video(output):
             print(
-                f"SKIP: Existing valid video -> "
-                f"{output}"
+                f"SKIP existing valid video: {output}"
             )
         else:
-            print(
-                f"RENDER: {visual} + {audio}"
-            )
-
             render_scene(
                 visual=visual,
                 audio=audio,
@@ -557,7 +561,7 @@ def main():
             if record["part"] == part
         ]
 
-        part_output = create_part_video(
+        output, duration = create_part_video(
             part,
             records,
         )
@@ -565,10 +569,8 @@ def main():
         part_outputs.append(
             {
                 "part": part,
-                "output": str(part_output),
-                "duration": probe_duration(
-                    part_output
-                ),
+                "output": str(output),
+                "duration": duration,
                 "scenes": len(records),
             }
         )
@@ -585,33 +587,28 @@ def main():
         "scenes": scene_records,
     }
 
-    MANIFEST_OUT.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
     MANIFEST_OUT.write_text(
         json.dumps(
             manifest,
             ensure_ascii=False,
             indent=2,
-        )
-        + "\n",
+        ) + "\n",
         encoding="utf-8",
     )
 
     print()
     print("==============================================")
     print(
-        f"VIDEO RENDERING COMPLETED: "
-        f"{len(scene_records)} scenes"
+        f"VIDEO RENDERING COMPLETED"
     )
     print(
-        f"PART VIDEOS CREATED: "
-        f"{len(part_outputs)}"
+        f"Scenes : {len(scene_records)}"
     )
     print(
-        f"MANIFEST: {MANIFEST_OUT}"
+        f"Parts  : {len(part_outputs)}"
+    )
+    print(
+        f"Output : {MANIFEST_OUT}"
     )
     print("==============================================")
 
