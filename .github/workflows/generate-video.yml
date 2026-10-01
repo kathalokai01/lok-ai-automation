@@ -11,27 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      # ============================================================
-      # 1. CHECKOUT
-      # ============================================================
-
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      # ============================================================
-      # 2. READ CONFIGURATION
-      # ============================================================
 
       - name: Read configuration
         run: |
           echo "===== VIDEO CONFIGURATION ====="
           cat Input/topic.txt
           echo "==============================="
-
-      # ============================================================
-      # 3. VALIDATE CONFIGURATION
-      # ============================================================
 
       - name: Validate configuration
         shell: bash
@@ -71,10 +58,6 @@ jobs:
 
           echo "Configuration validation: PASSED"
 
-      # ============================================================
-      # 4. PREPARE DIRECTORIES
-      # ============================================================
-
       - name: Prepare directories
         shell: bash
         run: |
@@ -91,26 +74,13 @@ jobs:
           mkdir -p output/narration/audio
           mkdir -p output/visuals
 
-          echo "Output directories prepared."
-
-      # ============================================================
-      # 5. STORY PLAN
-      # ============================================================
-
       - name: Generate story plan
         shell: bash
         run: |
           set -e
 
           python3 scripts/generate_story_plan.py
-
-          echo "===== STORY PLAN ====="
           cat output/story/story_plan.json
-          echo "======================"
-
-      # ============================================================
-      # 6. STORY STRUCTURE
-      # ============================================================
 
       - name: Generate story structure
         shell: bash
@@ -118,14 +88,7 @@ jobs:
           set -e
 
           python3 scripts/generate_story.py
-
-          echo "===== STORY STRUCTURE ====="
           cat output/story/story.json
-          echo "==========================="
-
-      # ============================================================
-      # 7. GEMINI TEXT MODEL SELECTION
-      # ============================================================
 
       - name: Select Gemini Model
         shell: bash
@@ -135,14 +98,7 @@ jobs:
           set -e
 
           python3 scripts/select_gemini_model.py
-
-          echo "===== SELECTED GEMINI MODEL ====="
           cat output/config/selected_model.json
-          echo "=================================="
-
-      # ============================================================
-      # 8. TEST GEMINI
-      # ============================================================
 
       - name: Test Gemini API
         shell: bash
@@ -153,10 +109,6 @@ jobs:
 
           python3 scripts/test_gemini.py
 
-      # ============================================================
-      # 9. AI STORY
-      # ============================================================
-
       - name: Prepare AI story generation
         shell: bash
         env:
@@ -165,14 +117,7 @@ jobs:
           set -e
 
           python3 scripts/generate_ai_story.py
-
-          echo "===== AI STORY STRUCTURE ====="
           cat output/story/ai_story.json
-          echo "=============================="
-
-      # ============================================================
-      # 10. CHARACTER BIBLE
-      # ============================================================
 
       - name: Generate Character Bible
         shell: bash
@@ -182,14 +127,7 @@ jobs:
           set -e
 
           python3 scripts/generate_character_bible.py
-
-          echo "===== CHARACTER BIBLE ====="
           cat output/story/character_bible.json
-          echo "==========================="
-
-      # ============================================================
-      # 11. SCENES
-      # ============================================================
 
       - name: Generate Scenes
         shell: bash
@@ -199,14 +137,7 @@ jobs:
           set -e
 
           python3 scripts/generate_scenes.py
-
-          echo "===== GENERATED SCENES ====="
           cat output/scenes/scenes.json
-          echo "============================"
-
-      # ============================================================
-      # 12. NARRATION TEXT
-      # ============================================================
 
       - name: Generate Narration
         shell: bash
@@ -214,50 +145,26 @@ jobs:
           set -e
 
           python3 scripts/generate_narration.py
-
-          echo "===== NARRATION ====="
           cat output/narration/narration.json
-          echo "====================="
-
-      # ============================================================
-      # 13. INSTALL FFMPEG / FFPROBE
-      # ============================================================
 
       - name: Install FFmpeg
         shell: bash
         run: |
           set -e
 
-          echo "========================================"
-          echo "       INSTALLING FFMPEG"
-          echo "========================================"
-
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-          echo ""
-          echo "===== FFMPEG VERSION ====="
+          echo "===== FFmpeg ====="
           ffmpeg -version | head -n 1
 
-          echo ""
-          echo "===== FFPROBE VERSION ====="
+          echo "===== FFprobe ====="
           ffprobe -version | head -n 1
-
-          echo ""
-          echo "FFmpeg/FFprobe installation: PASSED"
-
-      # ============================================================
-      # 14. GENERATE HINDI TTS AUDIO
-      # ============================================================
 
       - name: Generate Hindi TTS Audio
         shell: bash
         run: |
           set +e
-
-          echo "========================================"
-          echo "       INSTALLING EDGE TTS"
-          echo "========================================"
 
           python3 -m pip install \
             --disable-pip-version-check \
@@ -271,30 +178,14 @@ jobs:
             exit "$INSTALL_STATUS"
           fi
 
-          echo ""
-          echo "========================================"
-          echo "       STARTING TTS GENERATION"
-          echo "========================================"
-
           python3 scripts/generate_tts.py
+
           TTS_STATUS=$?
 
-          echo ""
-          echo "========================================"
-          echo "       TTS AUDIO MANIFEST"
-          echo "========================================"
-
           if [ -f output/narration/audio_jobs.json ]; then
+            echo "===== TTS MANIFEST ====="
             cat output/narration/audio_jobs.json
-          else
-            echo "audio_jobs.json not found"
           fi
-
-          echo "========================================"
-
-          # --------------------------------------------------------
-          # Save TTS checkpoint
-          # --------------------------------------------------------
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -309,18 +200,10 @@ jobs:
           fi
 
           if [ "$TTS_STATUS" -ne 0 ]; then
-            echo ""
             echo "TTS generation failed."
             echo "Checkpoint was saved before stopping."
             exit "$TTS_STATUS"
           fi
-
-          echo ""
-          echo "TTS generation completed successfully."
-
-      # ============================================================
-      # 15. PREPARE VISUAL JOBS
-      # ============================================================
 
       - name: Prepare Visual Generation
         shell: bash
@@ -328,14 +211,7 @@ jobs:
           set -e
 
           python3 scripts/prepare_visuals.py
-
-          echo "===== VISUAL JOB MANIFEST ====="
           cat output/visuals/visual_jobs.json
-          echo "================================"
-
-      # ============================================================
-      # 16. CLOUDFLARE VISUAL MODEL SELECTION
-      # ============================================================
 
       - name: Select Cloudflare Visual Model
         shell: bash
@@ -346,14 +222,7 @@ jobs:
           set -e
 
           python3 scripts/select_visual_model.py
-
-          echo "===== SELECTED VISUAL MODEL ====="
           cat output/config/selected_visual_model.json
-          echo "================================="
-
-      # ============================================================
-      # 17. GENERATE VISUALS
-      # ============================================================
 
       - name: Generate Visuals
         shell: bash
@@ -363,25 +232,14 @@ jobs:
         run: |
           set +e
 
-          echo "===== STARTING VISUAL GENERATION ====="
-
           python3 scripts/generate_visuals.py
+
           GENERATION_STATUS=$?
 
-          echo ""
-          echo "===== VISUAL JOB MANIFEST AFTER GENERATION ====="
-
           if [ -f output/visuals/visual_jobs.json ]; then
+            echo "===== VISUAL MANIFEST ====="
             cat output/visuals/visual_jobs.json
-          else
-            echo "visual_jobs.json not found"
           fi
-
-          echo "================================================"
-
-          # --------------------------------------------------------
-          # Save visual checkpoint even when generation fails
-          # --------------------------------------------------------
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -396,18 +254,50 @@ jobs:
           fi
 
           if [ "$GENERATION_STATUS" -ne 0 ]; then
-            echo ""
             echo "Visual generation failed."
             echo "Checkpoint was saved before stopping."
             exit "$GENERATION_STATUS"
           fi
 
-          echo ""
-          echo "Visual generation completed successfully."
+      - name: Render Scene Videos
+        shell: bash
+        run: |
+          set -e
 
-      # ============================================================
-      # 18. INITIAL / GENERAL CHECKPOINT
-      # ============================================================
+          echo "======================================"
+          echo "       RENDERING SCENE VIDEOS"
+          echo "======================================"
+
+          test -f scripts/render_video.py
+          test -f output/narration/audio_jobs.json
+          test -f output/visuals/visual_jobs.json
+
+          python3 scripts/render_video.py
+
+          echo
+          echo "===== VIDEO RENDER MANIFEST ====="
+
+          test -f output/video_render_manifest.json
+          cat output/video_render_manifest.json
+
+          echo
+          echo "===== GENERATED PART VIDEOS ====="
+          find output/parts -maxdepth 1 -type f -name "*.mp4" -print | sort
+
+          echo
+          echo "===== GENERATED SCENE VIDEOS ====="
+          find output/scenes -type f -name "*.mp4" -print | sort
+
+      - name: Upload Rendered Video Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lok-ai-rendered-videos
+          path: |
+            output/scenes/**/*.mp4
+            output/parts/*.mp4
+            output/video_render_manifest.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Create initial checkpoint
         shell: bash
@@ -417,7 +307,6 @@ jobs:
           CHECKPOINT="output/checkpoints/progress.json"
 
           if [ -f "$CHECKPOINT" ]; then
-            echo "Existing checkpoint found."
             cat "$CHECKPOINT"
           else
             cat > "$CHECKPOINT" <<'EOF'
@@ -430,23 +319,12 @@ jobs:
             "last_completed": null
           }
           EOF
-
-            echo "Initial checkpoint created."
           fi
-
-      # ============================================================
-      # 19. SHOW PROJECT STATE
-      # ============================================================
 
       - name: Show project state
         run: |
-          echo "===== PROJECT STATE ====="
+          echo "===== OUTPUT FILES ====="
           find output -maxdepth 5 -type f | sort
-          echo "========================="
-
-      # ============================================================
-      # 20. SAVE CHECKPOINT
-      # ============================================================
 
       - name: Save checkpoint
         shell: bash
@@ -467,7 +345,8 @@ jobs:
             output/scenes/scenes.json \
             output/narration/narration.json \
             output/narration/audio_jobs.json \
-            output/visuals/visual_jobs.json
+            output/visuals/visual_jobs.json \
+            output/video_render_manifest.json
 
           if git diff --cached --quiet; then
             echo "No checkpoint changes to commit."
