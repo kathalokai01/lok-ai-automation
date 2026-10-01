@@ -1,0 +1,2653 @@
+{
+  "status": "ready",
+  "topic": "आत्माराम की कहानी",
+  "total_scenes": 44,
+  "completed_scenes": 0,
+  "pending_scenes": 44,
+  "failed_scenes": 0,
+  "character_bible_source": "output/story/character_bible.json",
+  "scene_source": "output/scenes/scenes.json",
+  "generated_at": "2026-10-01T07:23:07.228967+00:00",
+  "jobs": [
+    {
+      "part": 1,
+      "scene": 1,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Cinematic wide shot of an ancient dilapidated haveli in rural India at midnight, dusty winds blowing through the courtyard, realistic textures, photorealistic.",
+      "negative_prompt": "cartoon, anime, 3d render, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Slow panning wide shot moving towards the heavy wooden main door.",
+      "lighting_prompt": "Moonlight casting long shadows, dim ambient blue tone, realistic night lighting.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 2,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Close up shot of an old Indian man with deep wrinkles holding a heavy vintage brass key, interior of a dimly lit dusty room, high detail, photorealistic.",
+      "negative_prompt": "cartoon, anime, painting, deformed hands, extra fingers, text, watermark, modern elements",
+      "camera_prompt": "Macro slow push-in focusing on the old rusty key.",
+      "lighting_prompt": "Single warm flicker from an oil lamp illuminating the character's face.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 3,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Medium shot of an elderly Indian man in his late 50s with deep wrinkles and short grey hair, standing in a cobweb-filled hallway holding a kerosene lantern, looking around nervously, cinematic depth of field, photorealistic, 8k.",
+      "negative_prompt": "cartoon, anime, 3d graphics, low quality, bad anatomy, text, watermark, modern elements",
+      "camera_prompt": "Tracking shot following Atmaram from the side as he walks slowly.",
+      "lighting_prompt": "Chiaroscuro lighting with strong contrasts between deep shadows and warm lantern glow.",
+      "duration": 6.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 4,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Medium wide shot showing heavy wooden doors violently rattling on their hinges, dust falling from the ceiling, terrified elderly Indian man with deep wrinkles and short grey hair in foreground holding a vintage lantern.",
+      "negative_prompt": "cartoon, anime, CGI look, blurry, bad anatomy, extra limbs, text, watermark",
+      "camera_prompt": "Handheld shaky camera adding tension and panic.",
+      "lighting_prompt": "Flickering lantern light casting dancing distorted shadows on the peeling walls.",
+      "duration": 5.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 5,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Close up of an old cracked mirror being pushed aside by an elderly Indian man with deep wrinkles and short grey hair, revealing a hidden wooden recess in the brick wall, dusty document visible inside, cinematic lighting.",
+      "negative_prompt": "cartoon, anime, painting, digital art, watermark, text, low resolution, CGI look, blurry",
+      "camera_prompt": "Over-the-shoulder shot panning slowly towards the hidden compartment.",
+      "lighting_prompt": "Focused beam of light from the vintage lantern revealing dust motes floating in the air.",
+      "duration": 6.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 6,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Medium close up of Atmaram, an elderly Indian man in his late 50s with deep wrinkles and short grey hair, his shocked expression reflecting in a dusty metallic box while holding a yellowed letter with faded ink.",
+      "negative_prompt": "cartoon, anime, deformed face, unrealistic eyes, text, watermarks, low resolution",
+      "camera_prompt": "Slow zoom in on Atmaram's eyes widening in realization.",
+      "lighting_prompt": "Soft amber lighting catching the tears in his eyes, realistic skin texture.",
+      "duration": 7.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 7,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Wide shot of the dark corridor where a mysterious silhouette stands near the doorway, casting a long shadow towards Atmaram, an elderly Indian man with deep wrinkles and short grey hair who turns around in shock.",
+      "negative_prompt": "cartoon, anime, illustration, bad proportions, text, watermark, deformed face, low resolution",
+      "camera_prompt": "Low angle static shot looking past Atmaram toward the mysterious figure.",
+      "lighting_prompt": "Backlit silhouette against the faint moonlight coming from the open courtyard, casting deep shadows.",
+      "duration": 6.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 8,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Medium close up of Atmaram, an elderly Indian man in his 60s with deep wrinkles and short grey hair, looking horrified with trembling hands, dropping an antique lantern slightly in a dusty room.",
+      "negative_prompt": "cartoon, anime, CGI, distorted hands, extra fingers, text, watermark, low resolution, deformed face",
+      "camera_prompt": "Rapid push-in on Atmaram's shocked facial expression.",
+      "lighting_prompt": "Harsh side lighting emphasizing shock and panic on the face.",
+      "duration": 6.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 9,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Two-shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, facing a shadowy figure across the dusty ancient room, tense standoff atmosphere.",
+      "negative_prompt": "cartoon, anime, painting, bad anatomy, text, watermark, CGI, deformed face",
+      "camera_prompt": "Slow panning arc shot around both characters.",
+      "lighting_prompt": "Dramatic split lighting highlighting the emotional confrontation.",
+      "duration": 6.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 10,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Close up of Atmaram, an elderly Indian man in his late 50s with deep wrinkles and short grey hair, wearing a dark jacket, his hand gripping the letter tightly, knuckles turning white, determined expression.",
+      "negative_prompt": "cartoon, anime, illustration, deformed fingers, text, watermark, CGI, painting",
+      "camera_prompt": "Tight macro shot on the gripping hand and torn letter.",
+      "lighting_prompt": "High contrast dramatic lighting with deep shadows.",
+      "duration": 5.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 1,
+      "scene": 11,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Cinematic medium wide shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles and short grey hair, wearing a dark jacket, walking firmly towards the shadows, holding the letter high as lightning flashes outside.",
+      "negative_prompt": "cartoon, anime, 3d render, low quality, text, watermark, bad anatomy",
+      "camera_prompt": "Tracking forward shot matching Atmaram's resolute stride.",
+      "lighting_prompt": "A sudden flash of lightning illuminating the room in high contrast monochrome blue tint.",
+      "duration": 6.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 1,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "An old dilapidated haveli at night, eerie silence, cinematic wide shot, realistic textures.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Slow panning wide shot moving towards the heavy wooden door.",
+      "lighting_prompt": "Dim moonlight with deep shadows, mysterious atmospheric lighting.",
+      "duration": 5.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 2,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Interior of the dusty haveli, Atmaram in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, holding an antique lantern, cobwebs, ancient furniture covered in white sheets, cinematic medium shot.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Medium tracking shot following Atmaram as he enters the hallway.",
+      "lighting_prompt": "Flickering kerosene lantern light casting long trembling shadows.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 3,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "An old grandfather clock on a peeling wall, hands moving backwards, Atmaram standing beside it with a shocked expression, showing deep wrinkles, short grey hair, wearing a dark jacket, cinematic close-up shot.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Push-in close-up shot focusing on the clock face and Atmaram's shocked expression.",
+      "lighting_prompt": "Harsh directional light highlighting the dust particles in the air and casting dramatic shadows.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 4,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Atmaram, an elderly man in his late 50s with deep wrinkles, short grey hair, and a dark jacket, shivering intensely, visible breath vapor in freezing indoor air, panic on his face, cinematic portrait shot.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Handheld medium close-up showing rising panic and unease.",
+      "lighting_prompt": "Cold blue ambient lighting with high contrast shadows.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 5,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "An old red leather-bound diary lying on a dusty wooden floor, glowing faintly, cinematic macro shot, with Atmaram, an elderly man in his late 50s with deep wrinkles, short grey hair, and a dark jacket, looking down in shock.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Slow downward tilt shot from Atmaram's face to the diary on the floor.",
+      "lighting_prompt": "Focused beam of light illuminating the diary cover amidst surrounding darkness.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 6,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Atmaram, an elderly man in his late 50s with deep wrinkles, short grey hair, and a dark jacket, reading the glowing pages of the old diary with astonishment, cinematic medium shot.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Over-the-shoulder shot looking down at the ancient handwritten pages.",
+      "lighting_prompt": "Warm golden light emanating from the diary pages onto his face.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 7,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "A shadowy figure standing at the end of the dark corridor, cinematic wide angle shot.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Slow push-in shot toward the dark silhouette in the hallway.",
+      "lighting_prompt": "Backlit silhouette effect with deep dark shadows.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 8,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Heavy wooden front door slamming shut by itself, dust flying, cinematic action shot with Atmaram reacting in panic.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Rapid snap zoom on the slamming door handle.",
+      "lighting_prompt": "Strobe-like lightning flash from outside the window, casting harsh shadows.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 9,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Atmaram standing resolutely with determination replacing fear, cinematic close-up, featuring an elderly Indian man with deep wrinkles, short grey hair, wearing a traditional dark jacket.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Steady close-up shot capturing emotional transformation on his face.",
+      "lighting_prompt": "Soft dramatic rim lighting highlighting his determined expression.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 10,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "An elderly Indian man with deep wrinkles, tired eyes, short grey hair, wearing a dark jacket, walking resolutely towards the secret basement door, cinematic wide tracking shot, realistic human anatomy, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Low angle tracking shot walking alongside him.",
+      "lighting_prompt": "High contrast dramatic lighting guiding his path forward.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 2,
+      "scene": 11,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "An elderly Indian man with deep wrinkles, tired eyes, short grey hair, wearing a dark jacket, standing in awe inside a hidden underground chamber filled with ancient treasures and an open chest, bright golden light, cinematic wide shot, realistic human anatomy, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "camera_prompt": "Slow crane down shot revealing the magnificent secret chamber.",
+      "lighting_prompt": "Brilliant golden illumination flooding the dark underground room.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 1,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Cinematic shot of Atmaram, an elderly Indian man with deep wrinkles, tired eyes, short grey hair, wearing a dark jacket, standing in a dimly lit hallway of his old ancestral house, looking worried and anxious, highly detailed, photorealistic, realistic human anatomy, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Slow tracking shot moving towards Atmaram, medium closeup.",
+      "lighting_prompt": "Low-key dramatic lighting, deep shadows, flickering bulb effect.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 2,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Cinematic shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles, tired eyes, and short grey hair, wearing a dark jacket, kneeling in front of a heavy wooden chest covered in thick dust inside a dimly lit attic, highly detailed, photorealistic, realistic human anatomy, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "High angle shot looking down at Atmaram and the chest.",
+      "lighting_prompt": "Warm dusty light beam cutting through the darkness from a small high window.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 3,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Close up of Atmaram, an elderly Indian man with deep wrinkles, short grey hair, and weathered skin, holding an ancient leather-bound diary and a rusty key, dust particles floating in the air, hyper-realistic, photorealistic, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Macro shot focusing on the diary and the old rusty key in Atmaram's trembling hands.",
+      "lighting_prompt": "Focused spotlight on the diary pages, dramatic shadows.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 4,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Medium shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles, short grey hair, and weathered skin, reading the diary with an expression of shock and fear, realistic facial features and skin texture, wearing traditional simple Indian attire and a dark jacket, sitting at a rustic wooden table in a dimly lit room, hyper-realistic, photorealistic, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Push in slowly on Atmaram's terrified eyes.",
+      "lighting_prompt": "Harsh yellow light from a table lamp casting dramatic shadows on his face.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 5,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Close up of the hand-drawn old map on the diary page, showing a hidden basement blueprint.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Over the shoulder shot pointing down at the map.",
+      "lighting_prompt": "Warm directional reading light.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 6,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "An elderly Indian man in his late 50s with deep wrinkles and short grey hair, holding a vintage lantern, walking with determination down a dark corridor.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Steadicam tracking shot following Atmaram from behind.",
+      "lighting_prompt": "Warm flickering lantern light casting long dynamic shadows.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 7,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "An elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, shining his vintage lantern towards a dark mysterious silhouette standing in the doorway, cinematic smoke and dust.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Wide shot framing Atmaram on one side and the dark silhouette on the other.",
+      "lighting_prompt": "High contrast dramatic lighting with strong backlighting on the silhouette and warm lantern glow on Atmaram.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 8,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Close up of an elderly Indian man in his late 50s with deep wrinkles, short grey hair, breathing heavily in fear with sweat on his forehead, wearing a dark jacket, realistic cinematography.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Handheld shaky camera emphasizing panic and instability.",
+      "lighting_prompt": "Uneven flickering light illuminating terror-struck face.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 9,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "An elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, wiping his sweat, his expression turning from fear to absolute resolve, realistic cinematography.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Medium closeup slowly stabilizing to show newfound courage.",
+      "lighting_prompt": "Strong frontal key light illuminating his resolute face.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 10,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Macro shot of an elderly Indian man with deep wrinkles, short grey hair, wearing a dark jacket, sliding a rusty old key into a massive antique padlock, highly detailed metal textures, realistic cinematography.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Extreme closeup on the lock and key mechanism.",
+      "lighting_prompt": "Focused torchlight beam highlighting the lock.",
+      "duration": 5.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 3,
+      "scene": 11,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Wide cinematic reveal shot of an elderly Indian man with deep wrinkles, short grey hair, wearing a dark jacket, staring in utter shock as the heavy door swings open, revealing a glowing mystical chamber inside, volumetric lighting, realistic cinematography.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
+      "camera_prompt": "Slow pan forward revealing the breathtaking secret room and the man's shocked expression.",
+      "lighting_prompt": "Ethereal bright supernatural glow emanating from inside the room casting long shadows.",
+      "duration": 6.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 1,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Cinematic wide shot of an old dilapidated Indian mansion at night, moonlight casting long shadows, eerie atmosphere, hyper-realistic, 8k resolution.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Slow panning shot moving towards the heavy wooden main door.",
+      "lighting_prompt": "Cold moonlight with deep shadows, high contrast cinematic noir lighting.",
+      "duration": 6.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 2,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Medium close-up of an aging Indian man with deep wrinkles and worried expression holding an antique lantern, indoor hallway of an old mansion, dust particles in the air, hyper-realistic, 8k resolution.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Eye-level tracking shot following the character as he enters the dark hallway.",
+      "lighting_prompt": "Warm flickering lantern light illuminating the protagonist face against a dark background.",
+      "duration": 6.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 3,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Wide shot of a dusty hallway filled with vintage portraits on cracked walls, cobwebs in corners, cinematic lighting, hyper-realistic, 8k resolution.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Low angle shot looking up at the portraits, slightly tilting camera.",
+      "lighting_prompt": "Dim interior lighting with faint shafts of moonlight piercing through broken windows.",
+      "duration": 7.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 4,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Medium shot of Atmaram stopping in his tracks, looking upwards towards a dark wooden staircase with apprehension, aged Indian man in his late 50s with deep wrinkles and short grey hair, wearing a dark jacket, highly detailed cinematic look, 8k resolution.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Quick push-in on the character face capturing sudden shock.",
+      "lighting_prompt": "Dramatic chiaroscuro lighting focusing on the stairwell.",
+      "duration": 6.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 5,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Close-up shot of an antique silver diary lying on dusty wooden stairs, lantern light reflecting off its metallic cover, cinematic detail, photorealistic, 8k resolution.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "High angle panning down to the diary, then slow zoom in.",
+      "lighting_prompt": "Focused spotlight effect from the lantern onto the diary.",
+      "duration": 5.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 6,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Medium close-up of Atmaram an elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, reading an old handwritten diary page by lantern light, eyes wide in disbelief.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Slow orbit shot around the character as realization hits him.",
+      "lighting_prompt": "Intense warm glow on the character face revealing tear-filled eyes.",
+      "duration": 6.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 7,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Over-the-shoulder shot showing a mysterious shrouded silhouette standing at the end of the dark corridor.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Slow dolly back creating a tense standoff between the two figures.",
+      "lighting_prompt": "Backlighting casting a dark shadow over the approaching stranger.",
+      "duration": 5.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 8,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Close-up of Atmaram face showing betrayal, fear, and emotional breakdown, deep wrinkles, worried eyes, weathered skin.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Extreme close-up shot focusing on the emotional turmoil in his eyes.",
+      "lighting_prompt": "Harsh side lighting emphasizing facial expressions.",
+      "duration": 5.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 9,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Wide angle shot of Atmaram an elderly Indian man with deep wrinkles, short grey hair, wearing traditional dark layered attire, standing opposite a mysterious shrouded figure in the grand ruined hall, moonlight framing the tense atmosphere.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Slow cinematic pan from Atmaram to the mysterious figure.",
+      "lighting_prompt": "Dramatic split lighting dividing the frame into light and shadow.",
+      "duration": 6.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 10,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Medium shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark layered jacket, gripping a heavy iron rod with a determined and fierce expression, ready for a fight inside the old dusty haveli.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Low angle heroic framing shot enhancing the character resolve.",
+      "lighting_prompt": "High contrast lighting highlighting his determined posture.",
+      "duration": 5.5,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    },
+    {
+      "part": 4,
+      "scene": 11,
+      "status": "pending",
+      "asset_type": "visual",
+      "visual_prompt": "Action-packed cinematic wide shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles and short grey hair wearing a dark layered jacket, engaged in a fierce confrontation against a mysterious shadowy figure inside the ruined mansion, lightning flashing through broken windows.",
+      "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
+      "camera_prompt": "Dynamic handheld tracking shot capturing fast motion and struggle.",
+      "lighting_prompt": "Flashing bright lightning illuminating the chaotic fight scene.",
+      "duration": 6.0,
+      "character_bible": [
+        {
+          "character_id": "CHAR_001",
+          "name": "Atmaram",
+          "role": "Protagonist",
+          "importance": "Primary",
+          "age": "Late 50s to early 60s",
+          "gender": "Male",
+          "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
+          "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
+          "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
+          "hair": "Short grey hair, slightly unkempt",
+          "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
+          "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
+          "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
+          "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+          "consistency_rules": [
+            "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
+            "Hair must remain short and grey",
+            "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
+            "Clothing should consistently reflect an older rustic wardrobe"
+          ]
+        },
+        {
+          "character_id": "CHAR_002",
+          "name": "Mysterious Figure",
+          "role": "Antagonist / Shadowy Intruder",
+          "importance": "Secondary",
+          "age": "Adult",
+          "gender": "Ambiguous / Not specified",
+          "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
+          "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
+          "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
+          "hair": "Not visible or obscured by hoods/shadows",
+          "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
+          "body_features": "Average human height and build, moving silently",
+          "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
+          "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+          "consistency_rules": [
+            "Must remain shadowy, obscure, or silhouetted in appearance",
+            "Should always be framed in doorways, dark corridors, or distant background shots",
+            "Face and detailed features must remain hidden to preserve mystery"
+          ]
+        }
+      ],
+      "asset_path": null,
+      "provider": null,
+      "model": null,
+      "error": null
+    }
+  ]
+}

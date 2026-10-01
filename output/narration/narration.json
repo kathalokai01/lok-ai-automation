@@ -449,16 +449,6 @@
       "status": "completed"
     }
   ],
-  "generated_at": "2026-10-01T07:03:07.849185+00:00",
-  "last_completed": {
-    "part": 4,
-    "scene": 11,
-    "text": "बिजली की कड़कड़ाहट के बीच दोनों के बीच निर्णायक संघर्ष शुरू हो गया, और हवेली का हर कोना उनके संघर्ष की गूंज से थर्रा उठा।",
-    "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
-    "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
-    "duration": "auto",
-    "estimated_duration": "auto",
-    "status": "completed"
-  },
-  "completed_at": "2026-10-01T07:03:07.863474+00:00"
+  "generated_at": "2026-10-01T07:23:07.112997+00:00",
+  "completed_at": "2026-10-01T07:23:07.113340+00:00"
 }
