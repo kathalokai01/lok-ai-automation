@@ -1,7 +1,7 @@
 {
   "status": "failed",
   "voice": "hi-IN-MadhurNeural",
-  "rate": "0%",
+  "rate": "+0%",
   "total": 44,
   "completed": 0,
   "failed": 1,
@@ -10,10 +10,10 @@
       "part": 1,
       "scene": 1,
       "voice": "hi-IN-MadhurNeural",
-      "rate": "0%",
+      "rate": "+0%",
       "output": "output/narration/audio/part_01/scene_01.mp3",
       "status": "failed",
-      "error": "Invalid rate '0%'."
+      "error": "No audio was received. Please verify that your parameters are correct."
     }
   ]
 }
