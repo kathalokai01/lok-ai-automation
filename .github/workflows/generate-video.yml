@@ -59,6 +59,7 @@ jobs:
           echo "Configuration validation: PASSED"
 
       - name: Prepare directories
+        shell: bash
         run: |
           set -e
 
@@ -69,6 +70,7 @@ jobs:
           mkdir -p output/parts
           mkdir -p output/shorts
           mkdir -p output/story
+          mkdir -p output/narration
 
           echo "Output directories prepared."
 
@@ -155,6 +157,19 @@ jobs:
           cat output/scenes/scenes.json
           echo "============================"
 
+      - name: Generate Narration
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -e
+
+          python3 scripts/generate_narration.py
+
+          echo "===== NARRATION ====="
+          cat output/narration/narration.json
+          echo "====================="
+
       - name: Create initial checkpoint
         shell: bash
         run: |
@@ -201,11 +216,12 @@ jobs:
             output/story/story.json \
             output/story/ai_story.json \
             output/story/character_bible.json \
-            output/scenes/scenes.json
+            output/scenes/scenes.json \
+            output/narration/narration.json
 
           if git diff --cached --quiet; then
             echo "No checkpoint changes to commit."
           else
-            git commit -m "Save Gemini model and video generation checkpoint"
+            git commit -m "Add narration generation checkpoint"
             git push
           fi
