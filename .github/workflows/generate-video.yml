@@ -247,7 +247,61 @@ jobs:
           echo "================================="
 
       # ============================================================
-      # 14. INITIAL CHECKPOINT
+      # 14. GENERATE VISUALS
+      # ============================================================
+
+      - name: Generate Visuals
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set +e
+
+          echo "===== STARTING VISUAL GENERATION ====="
+
+          python3 scripts/generate_visuals.py
+          GENERATION_STATUS=$?
+
+          echo ""
+          echo "===== VISUAL JOB MANIFEST AFTER GENERATION ====="
+
+          if [ -f output/visuals/visual_jobs.json ]; then
+            cat output/visuals/visual_jobs.json
+          else
+            echo "visual_jobs.json not found"
+          fi
+
+          echo "================================================"
+
+          # --------------------------------------------------------
+          # Save visual checkpoint even when generation fails
+          # --------------------------------------------------------
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add output/visuals/visual_jobs.json
+
+          if git diff --cached --quiet; then
+            echo "No visual checkpoint changes to commit."
+          else
+            git commit -m "Checkpoint visual generation"
+            git push
+          fi
+
+          if [ "$GENERATION_STATUS" -ne 0 ]; then
+            echo ""
+            echo "Visual generation failed."
+            echo "Checkpoint was saved before stopping."
+            exit "$GENERATION_STATUS"
+          fi
+
+          echo ""
+          echo "Visual generation completed successfully."
+
+      # ============================================================
+      # 15. INITIAL / GENERAL CHECKPOINT
       # ============================================================
 
       - name: Create initial checkpoint
@@ -276,17 +330,17 @@ jobs:
           fi
 
       # ============================================================
-      # 15. SHOW PROJECT STATE
+      # 16. SHOW PROJECT STATE
       # ============================================================
 
       - name: Show project state
         run: |
           echo "===== PROJECT STATE ====="
-          find output -maxdepth 3 -type f | sort
+          find output -maxdepth 4 -type f | sort
           echo "========================="
 
       # ============================================================
-      # 16. SAVE CHECKPOINT
+      # 17. SAVE CHECKPOINT
       # ============================================================
 
       - name: Save checkpoint
@@ -312,6 +366,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No checkpoint changes to commit."
           else
-            git commit -m "Add Cloudflare visual model selection"
+            git commit -m "Save video pipeline checkpoint"
             git push
           fi
