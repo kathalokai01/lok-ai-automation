@@ -41,12 +41,19 @@ def cfg_value(key, default=""):
 
 
 def parse_rate(value):
-    match = re.search(r"([+-]?\d+(?:\.\d+)?)\s*%", value or "")
+    match = re.search(
+        r"([+-]?\d+(?:\.\d+)?)\s*%",
+        value or ""
+    )
 
     if not match:
         return "+0%"
 
     number = float(match.group(1))
+
+    # Edge TTS requires explicit + sign for neutral rate.
+    if number == 0:
+        return "+0%"
 
     if number > 0:
         return f"+{number:g}%"
@@ -87,15 +94,19 @@ async def synthesize(text, voice, rate, output):
 
 
 async def main():
-
     if not NARRATION.exists():
         print("ERROR: narration.json not found")
         return 1
 
-    OUT.mkdir(parents=True, exist_ok=True)
+    OUT.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     data = json.loads(
-        NARRATION.read_text(encoding="utf-8")
+        NARRATION.read_text(
+            encoding="utf-8"
+        )
     )
 
     scenes = data.get("scenes", [])
@@ -125,30 +136,26 @@ async def main():
     failures = []
 
     for item in scenes:
-
         part = int(item["part"])
         scene = int(item["scene"])
-
         text = str(
             item.get("text", "")
         ).strip()
 
-        scene_rate = parse_rate(
-            str(
-                item.get(
-                    "speed",
-                    configured_speed
-                )
-            )
+        raw_scene_speed = item.get(
+            "speed",
+            ""
         )
 
-        if (
-            scene_rate == "+0%"
-            and configured_speed != "+0%"
-        ):
+        if raw_scene_speed:
+            scene_rate = parse_rate(
+                str(raw_scene_speed)
+            )
+        else:
             scene_rate = configured_speed
 
         out_dir = OUT / f"part_{part:02d}"
+
         out_dir.mkdir(
             parents=True,
             exist_ok=True
@@ -168,7 +175,7 @@ async def main():
             "status": "pending",
         }
 
-        # Resume support
+        # Resume support.
         if (
             output.exists()
             and output.stat().st_size > 1000
@@ -197,7 +204,6 @@ async def main():
                 )
 
         if not text:
-
             job["status"] = "failed"
             job["error"] = "Empty narration text"
 
@@ -213,7 +219,6 @@ async def main():
         )
 
         try:
-
             await synthesize(
                 text,
                 voice,
@@ -242,28 +247,45 @@ async def main():
             )
 
         except Exception as exc:
-
             job["status"] = "failed"
             job["error"] = str(exc)
 
             failures.append(job)
+            jobs.append(job)
 
             print(
                 f"FAILED part {part:02d} "
                 f"scene {scene:02d}: {exc}"
             )
 
-        jobs.append(job)
+        if failures:
+            MANIFEST.write_text(
+                json.dumps(
+                    {
+                        "status": "failed",
+                        "voice": voice,
+                        "rate": configured_speed,
+                        "total": len(jobs),
+                        "completed": sum(
+                            1
+                            for j in jobs
+                            if j["status"] == "completed"
+                        ),
+                        "failed": len(failures),
+                        "jobs": jobs,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
 
-        # Checkpoint after every scene
+            break
+
         MANIFEST.write_text(
             json.dumps(
                 {
-                    "status": (
-                        "completed"
-                        if not failures
-                        else "failed"
-                    ),
+                    "status": "completed",
                     "voice": voice,
                     "rate": configured_speed,
                     "total": len(jobs),
@@ -272,7 +294,7 @@ async def main():
                         for j in jobs
                         if j["status"] == "completed"
                     ),
-                    "failed": len(failures),
+                    "failed": 0,
                     "jobs": jobs,
                 },
                 ensure_ascii=False,
@@ -280,11 +302,6 @@ async def main():
             ),
             encoding="utf-8",
         )
-
-        # Failure policy:
-        # stop after first failed scene
-        if failures:
-            break
 
     completed = sum(
         1
@@ -294,13 +311,15 @@ async def main():
 
     failed = len(failures)
 
+    final_status = (
+        "completed"
+        if failed == 0
+        and completed == len(scenes)
+        else "failed"
+    )
+
     manifest = {
-        "status": (
-            "completed"
-            if failed == 0
-            and completed == len(scenes)
-            else "failed"
-        ),
+        "status": final_status,
         "voice": voice,
         "rate": configured_speed,
         "total": len(scenes),
