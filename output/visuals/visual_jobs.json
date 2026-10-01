@@ -7,12 +7,12 @@
   "failed_scenes": 0,
   "character_bible_source": "output/story/character_bible.json",
   "scene_source": "output/scenes/scenes.json",
-  "generated_at": "2026-10-01T11:20:25.698276+00:00",
+  "generated_at": "2026-10-01T11:36:56.383249+00:00",
   "jobs": [
     {
       "part": 1,
       "scene": 1,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Cinematic wide shot of an ancient dilapidated haveli in rural India at midnight, dusty winds blowing through the courtyard, realistic textures, photorealistic.",
       "negative_prompt": "cartoon, anime, 3d render, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, unrealistic lighting",
@@ -64,15 +64,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_01.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:00.732537+00:00"
     },
     {
       "part": 1,
       "scene": 2,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Close up shot of an old Indian man with deep wrinkles holding a heavy vintage brass key, interior of a dimly lit dusty room, high detail, photorealistic.",
       "negative_prompt": "cartoon, anime, painting, deformed hands, extra fingers, text, watermark, modern elements",
@@ -124,15 +125,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_02.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:02.390061+00:00"
     },
     {
       "part": 1,
       "scene": 3,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Medium shot of an elderly Indian man in his late 50s with deep wrinkles and short grey hair, standing in a cobweb-filled hallway holding a kerosene lantern, looking around nervously, cinematic depth of field, photorealistic, 8k.",
       "negative_prompt": "cartoon, anime, 3d graphics, low quality, bad anatomy, text, watermark, modern elements",
@@ -184,15 +186,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_03.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:04.087083+00:00"
     },
     {
       "part": 1,
       "scene": 4,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Medium wide shot showing heavy wooden doors violently rattling on their hinges, dust falling from the ceiling, terrified elderly Indian man with deep wrinkles and short grey hair in foreground holding a vintage lantern.",
       "negative_prompt": "cartoon, anime, CGI look, blurry, bad anatomy, extra limbs, text, watermark",
@@ -244,15 +247,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_04.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:05.308232+00:00"
     },
     {
       "part": 1,
       "scene": 5,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Close up of an old cracked mirror being pushed aside by an elderly Indian man with deep wrinkles and short grey hair, revealing a hidden wooden recess in the brick wall, dusty document visible inside, cinematic lighting.",
       "negative_prompt": "cartoon, anime, painting, digital art, watermark, text, low resolution, CGI look, blurry",
@@ -304,15 +308,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_05.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:08.330478+00:00"
     },
     {
       "part": 1,
       "scene": 6,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Medium close up of Atmaram, an elderly Indian man in his late 50s with deep wrinkles and short grey hair, his shocked expression reflecting in a dusty metallic box while holding a yellowed letter with faded ink.",
       "negative_prompt": "cartoon, anime, deformed face, unrealistic eyes, text, watermarks, low resolution",
@@ -364,15 +369,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_06.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:09.719420+00:00"
     },
     {
       "part": 1,
       "scene": 7,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Wide shot of the dark corridor where a mysterious silhouette stands near the doorway, casting a long shadow towards Atmaram, an elderly Indian man with deep wrinkles and short grey hair who turns around in shock.",
       "negative_prompt": "cartoon, anime, illustration, bad proportions, text, watermark, deformed face, low resolution",
@@ -424,15 +430,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_07.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:11.941367+00:00"
     },
     {
       "part": 1,
       "scene": 8,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Medium close up of Atmaram, an elderly Indian man in his 60s with deep wrinkles and short grey hair, looking horrified with trembling hands, dropping an antique lantern slightly in a dusty room.",
       "negative_prompt": "cartoon, anime, CGI, distorted hands, extra fingers, text, watermark, low resolution, deformed face",
@@ -484,15 +491,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_08.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:13.216507+00:00"
     },
     {
       "part": 1,
       "scene": 9,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Two-shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, facing a shadowy figure across the dusty ancient room, tense standoff atmosphere.",
       "negative_prompt": "cartoon, anime, painting, bad anatomy, text, watermark, CGI, deformed face",
@@ -544,15 +552,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_09.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:14.366455+00:00"
     },
     {
       "part": 1,
       "scene": 10,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Close up of Atmaram, an elderly Indian man in his late 50s with deep wrinkles and short grey hair, wearing a dark jacket, his hand gripping the letter tightly, knuckles turning white, determined expression.",
       "negative_prompt": "cartoon, anime, illustration, deformed fingers, text, watermark, CGI, painting",
@@ -604,15 +613,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_10.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:15.368313+00:00"
     },
     {
       "part": 1,
       "scene": 11,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Cinematic medium wide shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles and short grey hair, wearing a dark jacket, walking firmly towards the shadows, holding the letter high as lightning flashes outside.",
       "negative_prompt": "cartoon, anime, 3d render, low quality, text, watermark, bad anatomy",
@@ -664,15 +674,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_01/scene_11.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:16.587073+00:00"
     },
     {
       "part": 2,
       "scene": 1,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "An old dilapidated haveli at night, eerie silence, cinematic wide shot, realistic textures.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -724,15 +735,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_01.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:18.219078+00:00"
     },
     {
       "part": 2,
       "scene": 2,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Interior of the dusty haveli, Atmaram in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, holding an antique lantern, cobwebs, ancient furniture covered in white sheets, cinematic medium shot.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -784,15 +796,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_02.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:19.947577+00:00"
     },
     {
       "part": 2,
       "scene": 3,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "An old grandfather clock on a peeling wall, hands moving backwards, Atmaram standing beside it with a shocked expression, showing deep wrinkles, short grey hair, wearing a dark jacket, cinematic close-up shot.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -844,15 +857,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_03.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:21.057394+00:00"
     },
     {
       "part": 2,
       "scene": 4,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Atmaram, an elderly man in his late 50s with deep wrinkles, short grey hair, and a dark jacket, shivering intensely, visible breath vapor in freezing indoor air, panic on his face, cinematic portrait shot.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -904,15 +918,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_04.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:22.655802+00:00"
     },
     {
       "part": 2,
       "scene": 5,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "An old red leather-bound diary lying on a dusty wooden floor, glowing faintly, cinematic macro shot, with Atmaram, an elderly man in his late 50s with deep wrinkles, short grey hair, and a dark jacket, looking down in shock.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -964,15 +979,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_05.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:24.155866+00:00"
     },
     {
       "part": 2,
       "scene": 6,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Atmaram, an elderly man in his late 50s with deep wrinkles, short grey hair, and a dark jacket, reading the glowing pages of the old diary with astonishment, cinematic medium shot.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -1024,15 +1040,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_06.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:25.706469+00:00"
     },
     {
       "part": 2,
       "scene": 7,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "A shadowy figure standing at the end of the dark corridor, cinematic wide angle shot.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -1084,15 +1101,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_07.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:27.373303+00:00"
     },
     {
       "part": 2,
       "scene": 8,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Heavy wooden front door slamming shut by itself, dust flying, cinematic action shot with Atmaram reacting in panic.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -1144,15 +1162,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_08.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:29.093919+00:00"
     },
     {
       "part": 2,
       "scene": 9,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Atmaram standing resolutely with determination replacing fear, cinematic close-up, featuring an elderly Indian man with deep wrinkles, short grey hair, wearing a traditional dark jacket.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -1204,15 +1223,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_09.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:30.812696+00:00"
     },
     {
       "part": 2,
       "scene": 10,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "An elderly Indian man with deep wrinkles, tired eyes, short grey hair, wearing a dark jacket, walking resolutely towards the secret basement door, cinematic wide tracking shot, realistic human anatomy, 8k resolution.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -1264,15 +1284,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_10.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:32.670460+00:00"
     },
     {
       "part": 2,
       "scene": 11,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "An elderly Indian man with deep wrinkles, tired eyes, short grey hair, wearing a dark jacket, standing in awe inside a hidden underground chamber filled with ancient treasures and an open chest, bright golden light, cinematic wide shot, realistic human anatomy, 8k resolution.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
@@ -1324,15 +1345,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_02/scene_11.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:33.677309+00:00"
     },
     {
       "part": 3,
       "scene": 1,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Cinematic shot of Atmaram, an elderly Indian man with deep wrinkles, tired eyes, short grey hair, wearing a dark jacket, standing in a dimly lit hallway of his old ancestral house, looking worried and anxious, highly detailed, photorealistic, realistic human anatomy, 8k resolution.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1384,15 +1406,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_01.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:34.984808+00:00"
     },
     {
       "part": 3,
       "scene": 2,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Cinematic shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles, tired eyes, and short grey hair, wearing a dark jacket, kneeling in front of a heavy wooden chest covered in thick dust inside a dimly lit attic, highly detailed, photorealistic, realistic human anatomy, 8k resolution.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1444,15 +1467,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_02.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:38.188175+00:00"
     },
     {
       "part": 3,
       "scene": 3,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Close up of Atmaram, an elderly Indian man with deep wrinkles, short grey hair, and weathered skin, holding an ancient leather-bound diary and a rusty key, dust particles floating in the air, hyper-realistic, photorealistic, 8k resolution.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1504,15 +1528,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_03.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:39.875343+00:00"
     },
     {
       "part": 3,
       "scene": 4,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Medium shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles, short grey hair, and weathered skin, reading the diary with an expression of shock and fear, realistic facial features and skin texture, wearing traditional simple Indian attire and a dark jacket, sitting at a rustic wooden table in a dimly lit room, hyper-realistic, photorealistic, 8k resolution.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1564,15 +1589,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_04.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:40.954120+00:00"
     },
     {
       "part": 3,
       "scene": 5,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Close up of the hand-drawn old map on the diary page, showing a hidden basement blueprint.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1624,15 +1650,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_05.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:42.393399+00:00"
     },
     {
       "part": 3,
       "scene": 6,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "An elderly Indian man in his late 50s with deep wrinkles and short grey hair, holding a vintage lantern, walking with determination down a dark corridor.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1684,15 +1711,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_06.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:43.484459+00:00"
     },
     {
       "part": 3,
       "scene": 7,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "An elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, shining his vintage lantern towards a dark mysterious silhouette standing in the doorway, cinematic smoke and dust.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1744,15 +1772,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_07.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:45.051146+00:00"
     },
     {
       "part": 3,
       "scene": 8,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Close up of an elderly Indian man in his late 50s with deep wrinkles, short grey hair, breathing heavily in fear with sweat on his forehead, wearing a dark jacket, realistic cinematography.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1804,15 +1833,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_08.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:46.153765+00:00"
     },
     {
       "part": 3,
       "scene": 9,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "An elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, wiping his sweat, his expression turning from fear to absolute resolve, realistic cinematography.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1864,15 +1894,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_09.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:47.506945+00:00"
     },
     {
       "part": 3,
       "scene": 10,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Macro shot of an elderly Indian man with deep wrinkles, short grey hair, wearing a dark jacket, sliding a rusty old key into a massive antique padlock, highly detailed metal textures, realistic cinematography.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1924,15 +1955,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_10.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:49.150704+00:00"
     },
     {
       "part": 3,
       "scene": 11,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Wide cinematic reveal shot of an elderly Indian man with deep wrinkles, short grey hair, wearing a dark jacket, staring in utter shock as the heavy door swings open, revealing a glowing mystical chamber inside, volumetric lighting, realistic cinematography.",
       "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon/glitch appearance, unrealistic lighting",
@@ -1984,15 +2016,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_03/scene_11.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:50.415570+00:00"
     },
     {
       "part": 4,
       "scene": 1,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Cinematic wide shot of an old dilapidated Indian mansion at night, moonlight casting long shadows, eerie atmosphere, hyper-realistic, 8k resolution.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2044,15 +2077,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_01.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:51.576581+00:00"
     },
     {
       "part": 4,
       "scene": 2,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Medium close-up of an aging Indian man with deep wrinkles and worried expression holding an antique lantern, indoor hallway of an old mansion, dust particles in the air, hyper-realistic, 8k resolution.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2104,15 +2138,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_02.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:52.945620+00:00"
     },
     {
       "part": 4,
       "scene": 3,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Wide shot of a dusty hallway filled with vintage portraits on cracked walls, cobwebs in corners, cinematic lighting, hyper-realistic, 8k resolution.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2164,15 +2199,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_03.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:55.150052+00:00"
     },
     {
       "part": 4,
       "scene": 4,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Medium shot of Atmaram stopping in his tracks, looking upwards towards a dark wooden staircase with apprehension, aged Indian man in his late 50s with deep wrinkles and short grey hair, wearing a dark jacket, highly detailed cinematic look, 8k resolution.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2224,15 +2260,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_04.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:56.406834+00:00"
     },
     {
       "part": 4,
       "scene": 5,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Close-up shot of an antique silver diary lying on dusty wooden stairs, lantern light reflecting off its metallic cover, cinematic detail, photorealistic, 8k resolution.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2284,15 +2321,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_05.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:57.577221+00:00"
     },
     {
       "part": 4,
       "scene": 6,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Medium close-up of Atmaram an elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark jacket, reading an old handwritten diary page by lantern light, eyes wide in disbelief.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2344,15 +2382,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_06.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:37:58.598175+00:00"
     },
     {
       "part": 4,
       "scene": 7,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Over-the-shoulder shot showing a mysterious shrouded silhouette standing at the end of the dark corridor.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2404,15 +2443,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_07.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:38:00.115128+00:00"
     },
     {
       "part": 4,
       "scene": 8,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Close-up of Atmaram face showing betrayal, fear, and emotional breakdown, deep wrinkles, worried eyes, weathered skin.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2464,15 +2504,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_08.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:38:01.139136+00:00"
     },
     {
       "part": 4,
       "scene": 9,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Wide angle shot of Atmaram an elderly Indian man with deep wrinkles, short grey hair, wearing traditional dark layered attire, standing opposite a mysterious shrouded figure in the grand ruined hall, moonlight framing the tense atmosphere.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2524,15 +2565,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_09.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:38:02.411822+00:00"
     },
     {
       "part": 4,
       "scene": 10,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Medium shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles, short grey hair, wearing a dark layered jacket, gripping a heavy iron rod with a determined and fierce expression, ready for a fight inside the old dusty haveli.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2584,15 +2626,16 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_10.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:38:03.544360+00:00"
     },
     {
       "part": 4,
       "scene": 11,
-      "status": "pending",
+      "status": "completed",
       "asset_type": "visual",
       "visual_prompt": "Action-packed cinematic wide shot of Atmaram, an elderly Indian man in his late 50s with deep wrinkles and short grey hair wearing a dark layered jacket, engaged in a fierce confrontation against a mysterious shadowy figure inside the ruined mansion, lightning flashing through broken windows.",
       "negative_prompt": "cartoon, anime, illustration, distorted anatomy, extra limbs, text, watermarks, neon, glitch, low quality.",
@@ -2644,10 +2687,17 @@
           ]
         }
       ],
-      "asset_path": null,
-      "provider": null,
-      "model": null,
-      "error": null
+      "asset_path": "output/visuals/part_04/scene_11.png",
+      "provider": "cloudflare_workers_ai",
+      "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "error": null,
+      "completed_at": "2026-10-01T11:38:04.705090+00:00"
     }
-  ]
+  ],
+  "updated_at": "2026-10-01T11:38:04.708382+00:00",
+  "provider": "cloudflare_workers_ai",
+  "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+  "total_jobs": 44,
+  "completed_jobs": 44,
+  "failed_jobs": 0
 }
