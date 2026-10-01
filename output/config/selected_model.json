@@ -1,32 +1,12 @@
 {
   "status": "selected",
-  "model": "gemini-3.1-flash-lite",
-  "model_resource": "models/gemini-3.1-flash-lite",
-  "display_name": "Gemini 3.1 Flash Lite",
-  "selected_at": "2026-10-01T11:20:24.517502+00:00",
+  "model": "gemini-3.5-flash-lite",
+  "model_resource": "models/gemini-3.5-flash-lite",
+  "display_name": "Gemini 3.5 Flash Lite",
+  "selected_at": "2026-10-01T11:36:40.498423+00:00",
   "tested_models": [
     {
       "model": "gemini-3.5-flash-lite",
-      "success": false,
-      "detail": "HTTP 503: Service Unavailable. {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
-    },
-    {
-      "model": "gemini-flash-lite-latest",
-      "success": false,
-      "detail": "HTTP 503: Service Unavailable. {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
-    },
-    {
-      "model": "gemini-2.5-flash-lite",
-      "success": false,
-      "detail": "HTTP 404: Not Found. {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"This model models/gemini-2.5-flash-lite is no longer available to new users. Please update your code to use models/gemini-3.5-flash-lite for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemin"
-    },
-    {
-      "model": "gemini-3.1-flash-lite-preview",
-      "success": false,
-      "detail": "HTTP 503: Service Unavailable. {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
-    },
-    {
-      "model": "gemini-3.1-flash-lite",
       "success": true,
       "detail": "GEMINI_OK"
     }

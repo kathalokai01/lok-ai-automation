@@ -1,7 +1,7 @@
 {
   "status": "completed",
   "topic": "आत्माराम की कहानी",
-  "model": "gemini-3.1-flash-lite",
+  "model": "gemini-3.5-flash-lite",
   "api_calls": 0,
   "total_parts": 4,
   "total_scenes": 44,
@@ -449,6 +449,6 @@
       "status": "completed"
     }
   ],
-  "generated_at": "2026-10-01T11:20:25.649542+00:00",
-  "completed_at": "2026-10-01T11:20:25.649805+00:00"
+  "generated_at": "2026-10-01T11:36:56.062337+00:00",
+  "completed_at": "2026-10-01T11:36:56.062612+00:00"
 }
