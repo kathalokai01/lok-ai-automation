@@ -1,0 +1,464 @@
+{
+  "status": "completed",
+  "topic": "आत्माराम की कहानी",
+  "model": "gemini-3.5-flash-lite",
+  "api_calls": 0,
+  "total_parts": 4,
+  "total_scenes": 44,
+  "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+  "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+  "scenes": [
+    {
+      "part": 1,
+      "scene": 1,
+      "text": "रात के सन्नाटे में आत्माराम की पुरानी हवेली के बाहर धूल उड़ रही थी, जहाँ बरसों से किसी ने कदम नहीं रखा था।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 2,
+      "text": "आत्माराम ने कांपते हाथों से अपनी तिजोरी की चाबी निकाली, जो उसने कई दशकों से संभाल कर रखी थी।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 3,
+      "text": "हवेली के भीतर कदम रखते ही उसे अपने अतीत की परछाइयां हर कोने में नजर आने लगीं।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 4,
+      "text": "अचानक हवेली के बंद दरवाजे खुद-ब-खुद जोर से खड़खड़ाने लगे, जिससे आत्माराम की सांसे अटक गईं।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 5,
+      "text": "दीवार पर टंगे एक पुराने पुश्तैनी आईने के पीछे से उसे एक छुपा हुआ गुप्त बक्सा मिला।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 6,
+      "text": "जैसे ही उसने वह बक्सा खोला, हवा में एक भूली हुई खुशबू और उसके साथ जुड़े भयानक सच का अहसास हुआ।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 7,
+      "text": "तभी पीछे से किसी के भारी कदमों की आहट सुनाई दी, कोई और भी था उस अंधेरे कमरे में।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 8,
+      "text": "उस आने वाले की एक झलक ने आत्माराम के पैरों तले जमीन खिसका दी, वह जिसे मरा समझ चुका था।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 9,
+      "text": "बरसों का झूठ पल भर में बिखर गया, और अतीत के घाव एक बार फिर हरे हो गए।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 10,
+      "text": "अब फैसले की घड़ी आ चुकी थी, या तो सच दफ़न रहता या फिर सब कुछ तबाह हो जाता।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 1,
+      "scene": 11,
+      "text": "आत्माराम ने गहरी सांस ली और उस आखिरी सच का सामना करने के लिए आगे कदम बढ़ा दिया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 1,
+      "text": "रात के अंधेरे में आत्माराम की पुरानी हवेली के बाहर सन्नाटा छाया हुआ था।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 2,
+      "text": "हवेली के अंदर कदम रखते ही आत्माराम को किसी अनहोनी का अहसास हुआ।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 3,
+      "text": "दीवार पर टंगे पुश्तैनी घड़ी के पास पहुँचकर मुख्य संघर्ष की शुरुआत हुई।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 4,
+      "text": "कमरे का तापमान अचानक गिरने लगा और दांव पर अब आत्माराम की खुद की जान थी।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 5,
+      "text": "फर्श पर गिरी हुई एक पुरानी डायरी ने इस रहस्य से पर्दा उठाने का पहला संकेत दिया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 6,
+      "text": "डायरी का पन्ना पलटते ही हवेली का इतिहास आत्माराम के सामने एक नए मोड़ पर आ गया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 7,
+      "text": "अचानक अंधेरे कोने से किसी के होने का अहसास हुआ और सीधा सामना सामने आ गया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 8,
+      "text": "इस खुलासे और टकराव का परिणाम यह हुआ कि हवेली का मुख्य दरवाजा अपने आप बंद हो गया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 9,
+      "text": "भय के इस माहौल में आत्माराम के भीतर अपने पुरखों के प्रति सम्मान और गहरा होता गया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 10,
+      "text": "अंतिम और निर्णायक मुकाबले के लिए आत्माराम ने अपनी हिम्मत जुटाई और आगे बढ़ा।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 2,
+      "scene": 11,
+      "text": "बेसमेंट के दरवाजे को खोलते ही एक तेज रोशनी चमकी और सारा सच सामने आ गया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 1,
+      "text": "रात के सन्नाटे में आत्माराम का पुराना घर अजीब सी आहटों से गूंज रहा था।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 2,
+      "text": "वह अपने पुराने बक्से के पास पहुँचा, जो सालों से बंद पड़ा था।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 3,
+      "text": "जैसे ही उसने ढक्कन खोला, अंदर से एक पुरानी डायरी और एक अजीब सी चाबी निकली।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 4,
+      "text": "डायरी के पन्ने पलटते ही अतीत के वे राज़ खुलने लगे जो दफ़्न हो चुके थे।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 5,
+      "text": "डायरी के आखिरी पन्ने पर एक नक्शा बना था जो तहखाने की तरफ इशारा कर रहा था।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 6,
+      "text": "आत्माराम ने बिना एक पल गंवाए उस गुप्त रास्ते को ढूंढने का फैसला किया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 7,
+      "text": "अचानक तहखाने के दरवाजे के पास पहुँचते ही किसी साए ने उसका रास्ता रोक लिया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 8,
+      "text": "साए की उस डरावनी हरकत से आत्माराम का दिल जोर से धड़कने लगा।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 9,
+      "text": "हर डर को पीछे छोड़कर उसने समझा कि यह परीक्षा उसकी अपनी ही हिम्मत की थी।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 10,
+      "text": "उसने अपनी जेब से पुरानी चाबी निकाली और तहखाने के भारी ताले की तरफ बढ़ाया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 3,
+      "scene": 11,
+      "text": "ताला खुला और दरवाजे के पीछे जो दिखा, उसने आत्माराम की रूह तक को हिला दिया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 1,
+      "text": "रात के सन्नाटे में आत्माराम की पुरानी हवेली के बाहर हवा की सरसराहट एक अजीब सा रहस्य पैदा कर रही थी।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 2,
+      "text": "आत्माराम ने अपने हाथ में पकड़ी हुई पुरानी लालटेन को मजबूत किया और हवेली के मुख्य द्वार को धीरे से धक्का दिया।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 3,
+      "text": "हवेली के भीतर कदम रखते ही उसे दीवारों पर टंगे पुरखों के चित्रों की घूरती हुई आंखें महसूस हुईं।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 4,
+      "text": "अचानक ऊपर की मंजिल से किसी भारी चीज के गिरने की आवाज आई, जिससे उसका दिल जोर से धड़क उठा।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 5,
+      "text": "सीढ़ियों के पास पहुँचने पर उसकी नजर जमीन पर गिरी हुई एक पुरानी चांदी की डायरी पर पड़ी, जो उसके पिता की थी।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 6,
+      "text": "जैसे ही उसने डायरी उठाई, उसका एक पन्ना खुला जिस पर उस रात का सच लिखा था जिसे सालों से छुपाया गया था।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 7,
+      "text": "तभी पीछे से किसी के कदमों की आहट गूंजी और एक गहरी आवाज ने अंधेरे में उसका नाम पुकारा।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 8,
+      "text": "उस आवाज को सुनते ही आत्माराम के रोंगटे खड़े हो गए, क्योंकि वह आवाज किसी और की नहीं बल्कि उसके अपने सबसे करीबी रिश्ते की थी।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 9,
+      "text": "बरसों का भरोसा पल भर में चकनाचूर हो चुका था, और अब हवेली की दीवारें दोनों के बीच के खूनी इतिहास की गवाह बन रही थीं।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 10,
+      "text": "आत्माराम ने डायरी को अपनी जैकेट के भीतर मजबूती से छिपाया और अपनी रक्षा के लिए एक भारी लोहे की रॉड उठा ली।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    },
+    {
+      "part": 4,
+      "scene": 11,
+      "text": "बिजली की कड़कड़ाहट के बीच दोनों के बीच निर्णायक संघर्ष शुरू हो गया, और हवेली का हर कोना उनके संघर्ष की गूंज से थर्रा उठा।",
+      "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+      "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+      "duration": "auto",
+      "estimated_duration": "auto",
+      "status": "completed"
+    }
+  ],
+  "generated_at": "2026-10-01T07:03:07.849185+00:00",
+  "last_completed": {
+    "part": 4,
+    "scene": 11,
+    "text": "बिजली की कड़कड़ाहट के बीच दोनों के बीच निर्णायक संघर्ष शुरू हो गया, और हवेली का हर कोना उनके संघर्ष की गूंज से थर्रा उठा।",
+    "voice": "male\"                    # male = पुरुष voice | female = महिला voice",
+    "speed": "+0%\"                     # -10% = धीमी | 0% = normal | +10% = तेज",
+    "duration": "auto",
+    "estimated_duration": "auto",
+    "status": "completed"
+  },
+  "completed_at": "2026-10-01T07:03:07.863474+00:00"
+}
