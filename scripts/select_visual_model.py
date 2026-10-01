@@ -1,220 +1,167 @@
 import os
 import json
+import base64
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 
 
-API_KEY = os.environ.get("GEMINI_API_KEY")
+ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
+API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
 
-if not API_KEY:
-    raise SystemExit("ERROR: GEMINI_API_KEY is not set")
-
-
-BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 OUTPUT_FILE = "output/config/selected_visual_model.json"
 
+BASE_URL = "https://api.cloudflare.com/client/v4/accounts"
 
-def api_request(url, method="GET", payload=None, timeout=90):
+VISUAL_MODELS = [
+    {
+        "model": "@cf/bytedance/stable-diffusion-xl-lightning",
+        "display_name": "Stable Diffusion XL Lightning",
+        "priority": 0,
+    },
+    {
+        "model": "@cf/black-forest-labs/flux-1-schnell",
+        "display_name": "FLUX.1 Schnell",
+        "priority": 10,
+    },
+]
+
+
+def api_request(model, payload, timeout=180):
+    url = (
+        f"{BASE_URL}/{ACCOUNT_ID}"
+        f"/ai/run/{model}"
+    )
+
     headers = {
-        "x-goog-api-key": API_KEY,
+        "Authorization": f"Bearer {API_TOKEN}",
         "Content-Type": "application/json",
     }
 
-    data = None
-
-    if payload is not None:
-        data = json.dumps(payload).encode("utf-8")
+    data = json.dumps(payload).encode("utf-8")
 
     request = urllib.request.Request(
         url,
         data=data,
         headers=headers,
-        method=method,
+        method="POST",
     )
 
     with urllib.request.urlopen(
         request,
         timeout=timeout,
     ) as response:
-        return json.loads(
-            response.read().decode("utf-8")
+        return response.read()
+
+
+def extract_image(response_bytes):
+    """
+    Cloudflare image responses can be returned as
+    raw image bytes or JSON containing base64 data.
+    """
+
+    if not response_bytes:
+        return None
+
+    # Direct image response
+    if response_bytes.startswith(b"\x89PNG"):
+        return response_bytes
+
+    if response_bytes.startswith(b"\xff\xd8"):
+        return response_bytes
+
+    # JSON response
+    try:
+        result = json.loads(
+            response_bytes.decode("utf-8")
         )
+    except Exception:
+        return None
 
+    if not isinstance(result, dict):
+        return None
 
-def get_available_visual_models():
-    url = f"{BASE_URL}/models"
+    candidates = []
 
-    result = api_request(url)
+    def collect(value):
+        if isinstance(value, str):
+            candidates.append(value)
 
-    models = []
+        elif isinstance(value, dict):
+            for item in value.values():
+                collect(item)
 
-    for model in result.get("models", []):
-        name = model.get("name", "")
-        methods = model.get(
-            "supportedGenerationMethods",
-            [],
-        )
+        elif isinstance(value, list):
+            for item in value:
+                collect(item)
 
-        if not name:
-            continue
+    collect(result)
 
-        if "generateContent" not in methods:
-            continue
-
-        if not name.startswith("models/"):
-            continue
-
-        model_id = name.split("/", 1)[1]
-        lower = model_id.lower()
-
-        # Image-generation Gemini models are explicitly
-        # identified by "image" in the model ID.
-        if "gemini" not in lower:
-            continue
-
-        if "image" not in lower:
-            continue
-
-        # Exclude unrelated image/vision-only naming variants.
-        if any(
-            word in lower
-            for word in (
-                "embedding",
-                "vision",
-                "audio",
-                "tts",
+    for value in candidates:
+        try:
+            decoded = base64.b64decode(
+                value,
+                validate=True,
             )
-        ):
+
+            if (
+                decoded.startswith(b"\x89PNG")
+                or decoded.startswith(b"\xff\xd8")
+            ):
+                return decoded
+
+        except Exception:
             continue
 
-        models.append(
-            {
-                "name": name,
-                "model_id": model_id,
-                "display_name": model.get(
-                    "displayName",
-                    "",
-                ),
-                "methods": methods,
-            }
-        )
-
-    return models
+    return None
 
 
-def model_priority(model):
-    model_id = model["model_id"].lower()
+def test_model(model_info):
+    model = model_info["model"]
 
-    # Current high-volume Nano Banana 2 model.
-    if model_id == "gemini-3.1-flash-image":
-        return 0
-
-    # Current Lite image model.
-    if model_id == "gemini-3.1-flash-lite-image":
-        return 5
-
-    # Older Flash image generation model.
-    if model_id == "gemini-2.5-flash-image":
-        return 10
-
-    # Other Flash image models.
-    if "flash" in model_id and "image" in model_id:
-        return 20
-
-    # Other Gemini image models.
-    if "gemini" in model_id and "image" in model_id:
-        return 30
-
-    return 100
-
-
-def test_visual_model(model):
-    model_id = model["model_id"]
-
-    url = (
-        f"{BASE_URL}/models/"
-        f"{model_id}:generateContent"
+    prompt = (
+        "A cinematic realistic Indian village road "
+        "at dusk, natural lighting, realistic "
+        "environment, detailed photography, "
+        "dramatic atmosphere, no text."
     )
 
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "text": (
-                            "Generate a simple cinematic "
-                            "realistic image of an empty "
-                            "Indian village road at dusk."
-                        )
-                    }
-                ]
-            }
-        ],
-        "generationConfig": {
-            "responseModalities": [
-                "IMAGE"
-            ],
-        },
-    }
+    if "stable-diffusion-xl-lightning" in model:
+        payload = {
+            "prompt": prompt,
+            "negative_prompt": (
+                "cartoon, anime, illustration, "
+                "neon, glitch, distorted, blurry, "
+                "text, watermark, logo"
+            ),
+            "width": 768,
+            "height": 432,
+            "num_steps": 4,
+            "guidance": 7.5,
+            "seed": 123456,
+        }
+
+    else:
+        payload = {
+            "prompt": prompt,
+            "steps": 4,
+            "seed": 123456,
+        }
 
     try:
-        result = api_request(
-            url,
-            method="POST",
-            payload=payload,
-            timeout=120,
+        response = api_request(
+            model,
+            payload,
         )
 
-        candidates = result.get(
-            "candidates",
-            [],
+        image_bytes = extract_image(
+            response
         )
 
-        if not candidates:
-            return False, "No candidates returned"
-
-        content = candidates[0].get(
-            "content",
-            {},
-        )
-
-        parts = content.get(
-            "parts",
-            [],
-        )
-
-        if not parts:
-            return False, "No response parts returned"
-
-        image_found = False
-
-        for part in parts:
-            inline_data = part.get(
-                "inlineData"
-            )
-
-            if inline_data:
-                mime_type = inline_data.get(
-                    "mimeType",
-                    "",
-                )
-
-                data = inline_data.get(
-                    "data",
-                    "",
-                )
-
-                if data and mime_type.startswith(
-                    "image/"
-                ):
-                    image_found = True
-                    break
-
-        if not image_found:
+        if not image_bytes:
             return (
                 False,
-                "API returned no image data",
+                "API returned no valid image data",
             )
 
         return (
@@ -225,7 +172,8 @@ def test_visual_model(model):
     except urllib.error.HTTPError as e:
         try:
             body = e.read().decode(
-                "utf-8"
+                "utf-8",
+                errors="replace",
             )
         except Exception:
             body = ""
@@ -238,29 +186,28 @@ def test_visual_model(model):
         )
 
     except Exception as e:
-        return False, str(e)
+        return (
+            False,
+            str(e),
+        )
 
 
 def save_selection(
-    model,
+    model_info,
     tested_models,
 ):
     os.makedirs(
-        os.path.dirname(
-            OUTPUT_FILE
-        ),
+        os.path.dirname(OUTPUT_FILE),
         exist_ok=True,
     )
 
     result = {
         "status": "selected",
-        "provider": "gemini",
-        "model": model["model_id"],
-        "model_resource": model["name"],
-        "display_name": model.get(
-            "display_name",
-            "",
-        ),
+        "provider": "cloudflare_workers_ai",
+        "model": model_info["model"],
+        "display_name": model_info[
+            "display_name"
+        ],
         "selected_at": datetime.now(
             timezone.utc
         ).isoformat(),
@@ -294,48 +241,36 @@ def save_selection(
 
 def main():
     print(
-        "===== GEMINI VISUAL MODEL DISCOVERY ====="
+        "===== CLOUDFLARE VISUAL MODEL SELECTION ====="
+    )
+
+    if not ACCOUNT_ID:
+        raise SystemExit(
+            "ERROR: CLOUDFLARE_ACCOUNT_ID "
+            "is not set"
+        )
+
+    if not API_TOKEN:
+        raise SystemExit(
+            "ERROR: CLOUDFLARE_API_TOKEN "
+            "is not set"
+        )
+
+    print(
+        "Cloudflare credentials detected."
+    )
+
+    tested_models = []
+
+    models = sorted(
+        VISUAL_MODELS,
+        key=lambda item: item[
+            "priority"
+        ],
     )
 
     print(
-        "Fetching available image-generation models..."
-    )
-
-    try:
-        models = (
-            get_available_visual_models()
-        )
-
-    except urllib.error.HTTPError as e:
-        raise SystemExit(
-            "ERROR: Failed to list Gemini "
-            f"models: HTTP {e.code} "
-            f"{e.reason}"
-        )
-
-    except Exception as e:
-        raise SystemExit(
-            "ERROR: Failed to list Gemini "
-            f"visual models: {e}"
-        )
-
-    if not models:
-        raise SystemExit(
-            "ERROR: No Gemini image-generation "
-            "models were found for this API key."
-        )
-
-    models.sort(
-        key=model_priority
-    )
-
-    print(
-        f"Visual models found: "
-        f"{len(models)}"
-    )
-
-    print(
-        "\n===== VISUAL MODEL PRIORITY ====="
+        "\n===== MODEL PRIORITY ====="
     )
 
     for index, model in enumerate(
@@ -344,32 +279,29 @@ def main():
     ):
         print(
             f"{index}. "
-            f"{model['model_id']}"
+            f"{model['model']}"
         )
 
     print(
-        "================================="
+        "=========================="
     )
 
-    tested_models = []
-
-    for model in models:
-        model_id = model[
-            "model_id"
+    for model_info in models:
+        model = model_info[
+            "model"
         ]
 
         print(
-            f"\nTesting visual model: "
-            f"{model_id}"
+            f"\nTesting model: {model}"
         )
 
-        success, detail = (
-            test_visual_model(model)
+        success, detail = test_model(
+            model_info
         )
 
         tested_models.append(
             {
-                "model": model_id,
+                "model": model,
                 "success": success,
                 "detail": detail[:500],
             }
@@ -377,7 +309,7 @@ def main():
 
         if success:
             selected = save_selection(
-                model,
+                model_info,
                 tested_models,
             )
 
@@ -386,13 +318,13 @@ def main():
             )
 
             print(
-                f"Selected model: "
-                f"{selected['model']}"
+                f"Provider: "
+                f"{selected['provider']}"
             )
 
             print(
-                f"Provider: "
-                f"{selected['provider']}"
+                f"Model: "
+                f"{selected['model']}"
             )
 
             print(
@@ -407,7 +339,7 @@ def main():
             return
 
         print(
-            f"FAILED: {model_id}"
+            f"FAILED: {model}"
         )
 
         print(
@@ -415,17 +347,18 @@ def main():
         )
 
         print(
-            "Trying next visual model..."
+            "Trying next model..."
         )
 
     print(
-        "\n===== VISUAL MODEL SELECTION FAILED ====="
+        "\n===== ALL VISUAL MODELS FAILED ====="
     )
 
-    print(
-        "All discovered Gemini image-generation "
-        "models failed the live image test."
-    )
+    for item in tested_models:
+        print(
+            f"- {item['model']}: "
+            f"{item['detail']}"
+        )
 
     raise SystemExit(1)
 
