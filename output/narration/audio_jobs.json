@@ -4,24 +4,6 @@
   "configured_rate": "+0%",
   "total": 44,
   "completed": 0,
-  "failed": 1,
-  "jobs": [
-    {
-      "part": 1,
-      "scene": 1,
-      "requested_voice": "male",
-      "configured_rate": "+0%",
-      "output": "output/narration/audio/part_01/scene_01.mp3",
-      "status": "failed",
-      "voice": "hi-IN-MadhurNeural",
-      "rate": "+0%",
-      "attempts": [
-        {
-          "voice": "hi-IN-MadhurNeural",
-          "rate": "+0%"
-        }
-      ],
-      "error": "[Errno 2] No such file or directory: 'ffprobe'"
-    }
-  ]
+  "failed": 0,
+  "jobs": []
 }
