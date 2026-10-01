@@ -14,11 +14,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ============================================================
+      # 1. READ CONFIGURATION
+      # ============================================================
+
       - name: Read configuration
         run: |
           echo "===== VIDEO CONFIGURATION ====="
           cat Input/topic.txt
           echo "==============================="
+
+      # ============================================================
+      # 2. VALIDATE CONFIGURATION
+      # ============================================================
 
       - name: Validate configuration
         shell: bash
@@ -58,6 +66,10 @@ jobs:
 
           echo "Configuration validation: PASSED"
 
+      # ============================================================
+      # 3. PREPARE DIRECTORIES
+      # ============================================================
+
       - name: Prepare directories
         shell: bash
         run: |
@@ -75,6 +87,10 @@ jobs:
 
           echo "Output directories prepared."
 
+      # ============================================================
+      # 4. STORY PLAN
+      # ============================================================
+
       - name: Generate story plan
         shell: bash
         run: |
@@ -86,6 +102,10 @@ jobs:
           cat output/story/story_plan.json
           echo "======================"
 
+      # ============================================================
+      # 5. STORY STRUCTURE
+      # ============================================================
+
       - name: Generate story structure
         shell: bash
         run: |
@@ -96,6 +116,10 @@ jobs:
           echo "===== STORY STRUCTURE ====="
           cat output/story/story.json
           echo "==========================="
+
+      # ============================================================
+      # 6. GEMINI TEXT MODEL SELECTION
+      # ============================================================
 
       - name: Select Gemini Model
         shell: bash
@@ -110,6 +134,10 @@ jobs:
           cat output/config/selected_model.json
           echo "=================================="
 
+      # ============================================================
+      # 7. TEST GEMINI
+      # ============================================================
+
       - name: Test Gemini API
         shell: bash
         env:
@@ -118,6 +146,10 @@ jobs:
           set -e
 
           python3 scripts/test_gemini.py
+
+      # ============================================================
+      # 8. AI STORY
+      # ============================================================
 
       - name: Prepare AI story generation
         shell: bash
@@ -132,6 +164,10 @@ jobs:
           cat output/story/ai_story.json
           echo "=============================="
 
+      # ============================================================
+      # 9. CHARACTER BIBLE
+      # ============================================================
+
       - name: Generate Character Bible
         shell: bash
         env:
@@ -144,6 +180,10 @@ jobs:
           echo "===== CHARACTER BIBLE ====="
           cat output/story/character_bible.json
           echo "==========================="
+
+      # ============================================================
+      # 10. SCENES
+      # ============================================================
 
       - name: Generate Scenes
         shell: bash
@@ -158,6 +198,10 @@ jobs:
           cat output/scenes/scenes.json
           echo "============================"
 
+      # ============================================================
+      # 11. NARRATION
+      # ============================================================
+
       - name: Generate Narration
         shell: bash
         run: |
@@ -168,6 +212,10 @@ jobs:
           echo "===== NARRATION ====="
           cat output/narration/narration.json
           echo "====================="
+
+      # ============================================================
+      # 12. PREPARE VISUAL JOBS
+      # ============================================================
 
       - name: Prepare Visual Generation
         shell: bash
@@ -180,18 +228,27 @@ jobs:
           cat output/visuals/visual_jobs.json
           echo "================================"
 
-      - name: Select Gemini Visual Model
+      # ============================================================
+      # 13. CLOUDFLARE VISUAL MODEL SELECTION
+      # ============================================================
+
+      - name: Select Cloudflare Visual Model
         shell: bash
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -e
 
           python3 scripts/select_visual_model.py
 
-          echo "===== SELECTED GEMINI VISUAL MODEL ====="
+          echo "===== SELECTED VISUAL MODEL ====="
           cat output/config/selected_visual_model.json
-          echo "========================================="
+          echo "================================="
+
+      # ============================================================
+      # 14. INITIAL CHECKPOINT
+      # ============================================================
 
       - name: Create initial checkpoint
         shell: bash
@@ -218,11 +275,19 @@ jobs:
             echo "Initial checkpoint created."
           fi
 
+      # ============================================================
+      # 15. SHOW PROJECT STATE
+      # ============================================================
+
       - name: Show project state
         run: |
           echo "===== PROJECT STATE ====="
           find output -maxdepth 3 -type f | sort
           echo "========================="
+
+      # ============================================================
+      # 16. SAVE CHECKPOINT
+      # ============================================================
 
       - name: Save checkpoint
         shell: bash
@@ -247,6 +312,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No checkpoint changes to commit."
           else
-            git commit -m "Add visual model selection stage"
+            git commit -m "Add Cloudflare visual model selection"
             git push
           fi
