@@ -180,6 +180,19 @@ jobs:
           cat output/visuals/visual_jobs.json
           echo "================================"
 
+      - name: Select Gemini Visual Model
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -e
+
+          python3 scripts/select_visual_model.py
+
+          echo "===== SELECTED GEMINI VISUAL MODEL ====="
+          cat output/config/selected_visual_model.json
+          echo "========================================="
+
       - name: Create initial checkpoint
         shell: bash
         run: |
@@ -221,6 +234,7 @@ jobs:
 
           git add \
             output/config/selected_model.json \
+            output/config/selected_visual_model.json \
             output/checkpoints/progress.json \
             output/story/story_plan.json \
             output/story/story.json \
@@ -233,6 +247,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No checkpoint changes to commit."
           else
-            git commit -m "Add visual generation preparation stage"
+            git commit -m "Add visual model selection stage"
             git push
           fi
