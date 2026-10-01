@@ -11,11 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # ============================================================
+      # 1. CHECKOUT
+      # ============================================================
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # ============================================================
-      # 1. READ CONFIGURATION
+      # 2. READ CONFIGURATION
       # ============================================================
 
       - name: Read configuration
@@ -25,7 +30,7 @@ jobs:
           echo "==============================="
 
       # ============================================================
-      # 2. VALIDATE CONFIGURATION
+      # 3. VALIDATE CONFIGURATION
       # ============================================================
 
       - name: Validate configuration
@@ -67,7 +72,7 @@ jobs:
           echo "Configuration validation: PASSED"
 
       # ============================================================
-      # 3. PREPARE DIRECTORIES
+      # 4. PREPARE DIRECTORIES
       # ============================================================
 
       - name: Prepare directories
@@ -83,12 +88,13 @@ jobs:
           mkdir -p output/shorts
           mkdir -p output/story
           mkdir -p output/narration
+          mkdir -p output/narration/audio
           mkdir -p output/visuals
 
           echo "Output directories prepared."
 
       # ============================================================
-      # 4. STORY PLAN
+      # 5. STORY PLAN
       # ============================================================
 
       - name: Generate story plan
@@ -103,7 +109,7 @@ jobs:
           echo "======================"
 
       # ============================================================
-      # 5. STORY STRUCTURE
+      # 6. STORY STRUCTURE
       # ============================================================
 
       - name: Generate story structure
@@ -118,7 +124,7 @@ jobs:
           echo "==========================="
 
       # ============================================================
-      # 6. GEMINI TEXT MODEL SELECTION
+      # 7. GEMINI TEXT MODEL SELECTION
       # ============================================================
 
       - name: Select Gemini Model
@@ -135,7 +141,7 @@ jobs:
           echo "=================================="
 
       # ============================================================
-      # 7. TEST GEMINI
+      # 8. TEST GEMINI
       # ============================================================
 
       - name: Test Gemini API
@@ -148,7 +154,7 @@ jobs:
           python3 scripts/test_gemini.py
 
       # ============================================================
-      # 8. AI STORY
+      # 9. AI STORY
       # ============================================================
 
       - name: Prepare AI story generation
@@ -165,7 +171,7 @@ jobs:
           echo "=============================="
 
       # ============================================================
-      # 9. CHARACTER BIBLE
+      # 10. CHARACTER BIBLE
       # ============================================================
 
       - name: Generate Character Bible
@@ -182,7 +188,7 @@ jobs:
           echo "==========================="
 
       # ============================================================
-      # 10. SCENES
+      # 11. SCENES
       # ============================================================
 
       - name: Generate Scenes
@@ -199,7 +205,7 @@ jobs:
           echo "============================"
 
       # ============================================================
-      # 11. NARRATION
+      # 12. NARRATION TEXT
       # ============================================================
 
       - name: Generate Narration
@@ -214,7 +220,79 @@ jobs:
           echo "====================="
 
       # ============================================================
-      # 12. PREPARE VISUAL JOBS
+      # 13. GENERATE HINDI TTS AUDIO
+      # ============================================================
+
+      - name: Generate Hindi TTS Audio
+        shell: bash
+        run: |
+          set +e
+
+          echo "========================================"
+          echo "       INSTALLING EDGE TTS"
+          echo "========================================"
+
+          python3 -m pip install \
+            --disable-pip-version-check \
+            --no-cache-dir \
+            edge-tts
+
+          INSTALL_STATUS=$?
+
+          if [ "$INSTALL_STATUS" -ne 0 ]; then
+            echo "ERROR: Edge TTS installation failed."
+            exit "$INSTALL_STATUS"
+          fi
+
+          echo ""
+          echo "========================================"
+          echo "       STARTING TTS GENERATION"
+          echo "========================================"
+
+          python3 scripts/generate_tts.py
+          TTS_STATUS=$?
+
+          echo ""
+          echo "========================================"
+          echo "       TTS AUDIO MANIFEST"
+          echo "========================================"
+
+          if [ -f output/narration/audio_jobs.json ]; then
+            cat output/narration/audio_jobs.json
+          else
+            echo "audio_jobs.json not found"
+          fi
+
+          echo "========================================"
+
+          # --------------------------------------------------------
+          # Save TTS checkpoint
+          # --------------------------------------------------------
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add output/narration/audio_jobs.json
+
+          if git diff --cached --quiet; then
+            echo "No TTS checkpoint changes to commit."
+          else
+            git commit -m "Checkpoint TTS audio generation"
+            git push
+          fi
+
+          if [ "$TTS_STATUS" -ne 0 ]; then
+            echo ""
+            echo "TTS generation failed."
+            echo "Checkpoint was saved before stopping."
+            exit "$TTS_STATUS"
+          fi
+
+          echo ""
+          echo "TTS generation completed successfully."
+
+      # ============================================================
+      # 14. PREPARE VISUAL JOBS
       # ============================================================
 
       - name: Prepare Visual Generation
@@ -229,7 +307,7 @@ jobs:
           echo "================================"
 
       # ============================================================
-      # 13. CLOUDFLARE VISUAL MODEL SELECTION
+      # 15. CLOUDFLARE VISUAL MODEL SELECTION
       # ============================================================
 
       - name: Select Cloudflare Visual Model
@@ -247,7 +325,7 @@ jobs:
           echo "================================="
 
       # ============================================================
-      # 14. GENERATE VISUALS
+      # 16. GENERATE VISUALS
       # ============================================================
 
       - name: Generate Visuals
@@ -301,7 +379,7 @@ jobs:
           echo "Visual generation completed successfully."
 
       # ============================================================
-      # 15. INITIAL / GENERAL CHECKPOINT
+      # 17. INITIAL / GENERAL CHECKPOINT
       # ============================================================
 
       - name: Create initial checkpoint
@@ -330,17 +408,17 @@ jobs:
           fi
 
       # ============================================================
-      # 16. SHOW PROJECT STATE
+      # 18. SHOW PROJECT STATE
       # ============================================================
 
       - name: Show project state
         run: |
           echo "===== PROJECT STATE ====="
-          find output -maxdepth 4 -type f | sort
+          find output -maxdepth 5 -type f | sort
           echo "========================="
 
       # ============================================================
-      # 17. SAVE CHECKPOINT
+      # 19. SAVE CHECKPOINT
       # ============================================================
 
       - name: Save checkpoint
@@ -361,6 +439,7 @@ jobs:
             output/story/character_bible.json \
             output/scenes/scenes.json \
             output/narration/narration.json \
+            output/narration/audio_jobs.json \
             output/visuals/visual_jobs.json
 
           if git diff --cached --quiet; then
