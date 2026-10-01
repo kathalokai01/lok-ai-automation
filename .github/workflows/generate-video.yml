@@ -220,7 +220,34 @@ jobs:
           echo "====================="
 
       # ============================================================
-      # 13. GENERATE HINDI TTS AUDIO
+      # 13. INSTALL FFMPEG / FFPROBE
+      # ============================================================
+
+      - name: Install FFmpeg
+        shell: bash
+        run: |
+          set -e
+
+          echo "========================================"
+          echo "       INSTALLING FFMPEG"
+          echo "========================================"
+
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+          echo ""
+          echo "===== FFMPEG VERSION ====="
+          ffmpeg -version | head -n 1
+
+          echo ""
+          echo "===== FFPROBE VERSION ====="
+          ffprobe -version | head -n 1
+
+          echo ""
+          echo "FFmpeg/FFprobe installation: PASSED"
+
+      # ============================================================
+      # 14. GENERATE HINDI TTS AUDIO
       # ============================================================
 
       - name: Generate Hindi TTS Audio
@@ -292,7 +319,7 @@ jobs:
           echo "TTS generation completed successfully."
 
       # ============================================================
-      # 14. PREPARE VISUAL JOBS
+      # 15. PREPARE VISUAL JOBS
       # ============================================================
 
       - name: Prepare Visual Generation
@@ -307,7 +334,7 @@ jobs:
           echo "================================"
 
       # ============================================================
-      # 15. CLOUDFLARE VISUAL MODEL SELECTION
+      # 16. CLOUDFLARE VISUAL MODEL SELECTION
       # ============================================================
 
       - name: Select Cloudflare Visual Model
@@ -325,7 +352,7 @@ jobs:
           echo "================================="
 
       # ============================================================
-      # 16. GENERATE VISUALS
+      # 17. GENERATE VISUALS
       # ============================================================
 
       - name: Generate Visuals
@@ -379,7 +406,7 @@ jobs:
           echo "Visual generation completed successfully."
 
       # ============================================================
-      # 17. INITIAL / GENERAL CHECKPOINT
+      # 18. INITIAL / GENERAL CHECKPOINT
       # ============================================================
 
       - name: Create initial checkpoint
@@ -408,7 +435,7 @@ jobs:
           fi
 
       # ============================================================
-      # 18. SHOW PROJECT STATE
+      # 19. SHOW PROJECT STATE
       # ============================================================
 
       - name: Show project state
@@ -418,7 +445,7 @@ jobs:
           echo "========================="
 
       # ============================================================
-      # 19. SAVE CHECKPOINT
+      # 20. SAVE CHECKPOINT
       # ============================================================
 
       - name: Save checkpoint
