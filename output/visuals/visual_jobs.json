@@ -7,7 +7,7 @@
   "failed_scenes": 0,
   "character_bible_source": "output/story/character_bible.json",
   "scene_source": "output/scenes/scenes.json",
-  "generated_at": "2026-10-01T16:33:25.898720+00:00",
+  "generated_at": "2026-10-01T16:53:23.171983+00:00",
   "jobs": [
     {
       "part": 1,
@@ -68,7 +68,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:29.599110+00:00"
+      "completed_at": "2026-10-01T16:53:36.625410+00:00"
     },
     {
       "part": 1,
@@ -129,7 +129,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:31.111835+00:00"
+      "completed_at": "2026-10-01T16:53:43.539456+00:00"
     },
     {
       "part": 1,
@@ -190,7 +190,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:32.658448+00:00"
+      "completed_at": "2026-10-01T16:53:49.972202+00:00"
     },
     {
       "part": 1,
@@ -251,7 +251,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:34.396743+00:00"
+      "completed_at": "2026-10-01T16:53:55.161699+00:00"
     },
     {
       "part": 1,
@@ -312,7 +312,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:35.524508+00:00"
+      "completed_at": "2026-10-01T16:53:58.478088+00:00"
     },
     {
       "part": 1,
@@ -373,7 +373,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:38.732377+00:00"
+      "completed_at": "2026-10-01T16:54:11.752197+00:00"
     },
     {
       "part": 1,
@@ -434,7 +434,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:40.388040+00:00"
+      "completed_at": "2026-10-01T16:54:17.470786+00:00"
     },
     {
       "part": 1,
@@ -495,7 +495,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:42.189633+00:00"
+      "completed_at": "2026-10-01T16:54:18.918828+00:00"
     },
     {
       "part": 1,
@@ -556,7 +556,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:43.461208+00:00"
+      "completed_at": "2026-10-01T16:54:28.065049+00:00"
     },
     {
       "part": 1,
@@ -617,7 +617,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:45.132046+00:00"
+      "completed_at": "2026-10-01T16:54:30.308963+00:00"
     },
     {
       "part": 1,
@@ -678,7 +678,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:46.585255+00:00"
+      "completed_at": "2026-10-01T16:54:35.966879+00:00"
     },
     {
       "part": 2,
@@ -739,7 +739,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:48.379656+00:00"
+      "completed_at": "2026-10-01T16:54:39.370437+00:00"
     },
     {
       "part": 2,
@@ -800,7 +800,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:50.252482+00:00"
+      "completed_at": "2026-10-01T16:54:43.599324+00:00"
     },
     {
       "part": 2,
@@ -861,7 +861,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:51.395897+00:00"
+      "completed_at": "2026-10-01T16:54:54.849348+00:00"
     },
     {
       "part": 2,
@@ -922,7 +922,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:52.742017+00:00"
+      "completed_at": "2026-10-01T16:54:59.510151+00:00"
     },
     {
       "part": 2,
@@ -983,7 +983,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:54.310691+00:00"
+      "completed_at": "2026-10-01T16:55:06.090758+00:00"
     },
     {
       "part": 2,
@@ -1044,7 +1044,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:33:55.775816+00:00"
+      "completed_at": "2026-10-01T16:55:10.737859+00:00"
     },
     {
       "part": 2,
@@ -1105,7 +1105,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:00.296451+00:00"
+      "completed_at": "2026-10-01T16:55:17.392022+00:00"
     },
     {
       "part": 2,
@@ -1166,7 +1166,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:01.400285+00:00"
+      "completed_at": "2026-10-01T16:55:19.039201+00:00"
     },
     {
       "part": 2,
@@ -1227,7 +1227,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:03.034800+00:00"
+      "completed_at": "2026-10-01T16:55:20.489673+00:00"
     },
     {
       "part": 2,
@@ -1288,7 +1288,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:04.596878+00:00"
+      "completed_at": "2026-10-01T16:55:22.177074+00:00"
     },
     {
       "part": 2,
@@ -1349,7 +1349,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:06.318708+00:00"
+      "completed_at": "2026-10-01T16:55:26.389951+00:00"
     },
     {
       "part": 3,
@@ -1410,7 +1410,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:07.856027+00:00"
+      "completed_at": "2026-10-01T16:55:29.689860+00:00"
     },
     {
       "part": 3,
@@ -1471,7 +1471,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:12.983908+00:00"
+      "completed_at": "2026-10-01T16:55:32.241446+00:00"
     },
     {
       "part": 3,
@@ -1532,7 +1532,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:14.455991+00:00"
+      "completed_at": "2026-10-01T16:55:40.611328+00:00"
     },
     {
       "part": 3,
@@ -1593,7 +1593,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:18.852962+00:00"
+      "completed_at": "2026-10-01T16:55:55.396305+00:00"
     },
     {
       "part": 3,
@@ -1654,7 +1654,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:22.022472+00:00"
+      "completed_at": "2026-10-01T16:56:07.450616+00:00"
     },
     {
       "part": 3,
@@ -1715,7 +1715,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:23.912588+00:00"
+      "completed_at": "2026-10-01T16:56:16.008835+00:00"
     },
     {
       "part": 3,
@@ -1776,7 +1776,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:25.380933+00:00"
+      "completed_at": "2026-10-01T16:56:19.626843+00:00"
     },
     {
       "part": 3,
@@ -1837,7 +1837,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:26.959457+00:00"
+      "completed_at": "2026-10-01T16:56:23.144452+00:00"
     },
     {
       "part": 3,
@@ -1898,7 +1898,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:28.501067+00:00"
+      "completed_at": "2026-10-01T16:56:24.738491+00:00"
     },
     {
       "part": 3,
@@ -1959,7 +1959,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:30.083244+00:00"
+      "completed_at": "2026-10-01T16:56:29.630187+00:00"
     },
     {
       "part": 3,
@@ -2020,7 +2020,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:31.604276+00:00"
+      "completed_at": "2026-10-01T16:56:30.865364+00:00"
     },
     {
       "part": 4,
@@ -2081,7 +2081,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:33.325793+00:00"
+      "completed_at": "2026-10-01T16:56:32.143884+00:00"
     },
     {
       "part": 4,
@@ -2142,7 +2142,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:34.487593+00:00"
+      "completed_at": "2026-10-01T16:56:34.252197+00:00"
     },
     {
       "part": 4,
@@ -2203,7 +2203,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:41.676426+00:00"
+      "completed_at": "2026-10-01T16:56:35.499762+00:00"
     },
     {
       "part": 4,
@@ -2264,7 +2264,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:43.499710+00:00"
+      "completed_at": "2026-10-01T16:56:36.825467+00:00"
     },
     {
       "part": 4,
@@ -2325,7 +2325,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:44.874461+00:00"
+      "completed_at": "2026-10-01T16:56:47.140655+00:00"
     },
     {
       "part": 4,
@@ -2386,7 +2386,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:46.268856+00:00"
+      "completed_at": "2026-10-01T16:56:52.503174+00:00"
     },
     {
       "part": 4,
@@ -2447,7 +2447,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:47.806869+00:00"
+      "completed_at": "2026-10-01T16:56:57.721250+00:00"
     },
     {
       "part": 4,
@@ -2508,7 +2508,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:49.238883+00:00"
+      "completed_at": "2026-10-01T16:56:59.238437+00:00"
     },
     {
       "part": 4,
@@ -2569,7 +2569,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:50.697707+00:00"
+      "completed_at": "2026-10-01T16:57:05.800151+00:00"
     },
     {
       "part": 4,
@@ -2630,7 +2630,7 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:51.805050+00:00"
+      "completed_at": "2026-10-01T16:57:10.577670+00:00"
     },
     {
       "part": 4,
@@ -2691,10 +2691,10 @@
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-01T16:34:53.166604+00:00"
+      "completed_at": "2026-10-01T16:57:12.253856+00:00"
     }
   ],
-  "updated_at": "2026-10-01T16:34:53.169715+00:00",
+  "updated_at": "2026-10-01T16:57:12.256272+00:00",
   "provider": "cloudflare_workers_ai",
   "model": "@cf/bytedance/stable-diffusion-xl-lightning",
   "total_jobs": 44,
