@@ -13,6 +13,7 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
     steps:
 
@@ -62,6 +63,16 @@ jobs:
 
           if ! [[ "$SCENES" =~ ^[0-9]+$ ]]; then
             echo "ERROR: Invalid SCENES: $SCENES"
+            exit 1
+          fi
+
+          if [ "$PARTS" -lt 1 ]; then
+            echo "ERROR: PARTS must be >= 1"
+            exit 1
+          fi
+
+          if [ "$SCENES" -lt 1 ]; then
+            echo "ERROR: SCENES must be >= 1"
             exit 1
           fi
 
@@ -162,7 +173,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/generate_story_plan.py
 
 
@@ -174,7 +184,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/generate_story.py
 
 
@@ -186,7 +195,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/select_gemini_model.py
 
 
@@ -198,7 +206,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/test_gemini.py
 
 
@@ -210,7 +217,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/generate_ai_story.py
 
 
@@ -222,7 +228,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/generate_character_bible.py
 
 
@@ -241,11 +246,9 @@ jobs:
 
           python3 scripts/generate_scenes.py
 
-          echo
-          echo "Scene generation completed."
-
           python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
 
           p = Path("output/scenes/scenes.json")
@@ -257,7 +260,9 @@ jobs:
               p.read_text(encoding="utf-8")
           )
 
-          expected = int("${{ env.EXPECTED_TOTAL }}")
+          expected = int(
+              os.environ["EXPECTED_TOTAL"]
+          )
 
           actual = len(
               data.get("scenes", [])
@@ -291,7 +296,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/generate_narration.py
 
 
@@ -331,7 +335,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/prepare_visuals.py
 
 
@@ -343,7 +346,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/select_visual_model.py
 
 
@@ -355,7 +357,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/generate_visuals.py
 
 
@@ -374,9 +375,20 @@ jobs:
 
           python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
 
-          expected = int("${{ env.EXPECTED_TOTAL }}")
+          expected = int(
+              os.environ["EXPECTED_TOTAL"]
+          )
+
+          parts = int(
+              os.environ["PARTS"]
+          )
+
+          scenes_per_part = int(
+              os.environ["SCENES"]
+          )
 
           # ----------------------------
           # Scenes
@@ -490,8 +502,14 @@ jobs:
 
           visual_files = []
 
-          for part in range(1, int("${{ env.PARTS }}") + 1):
-              for scene in range(1, int("${{ env.SCENES }}") + 1):
+          for part in range(
+              1,
+              parts + 1
+          ):
+              for scene in range(
+                  1,
+                  scenes_per_part + 1
+              ):
 
                   candidates = [
                       Path(
@@ -553,7 +571,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 -m pip install pillow
 
 
@@ -561,7 +578,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/generate_thumbnail.py
 
 
@@ -690,6 +706,7 @@ jobs:
           print(
               f"Final video: {output}"
           )
+
           print(
               f"Size: {output.stat().st_size} bytes"
           )
@@ -753,7 +770,9 @@ jobs:
           do
             if [ -d "output/$dir" ]; then
               mkdir -p "/tmp/lok-ai-checkpoint/output/$dir"
-              cp -a "output/$dir/." \
+
+              cp -a \
+                "output/$dir/." \
                 "/tmp/lok-ai-checkpoint/output/$dir/"
             fi
           done
