@@ -114,17 +114,15 @@ jobs:
 
           TOTAL=$((PARTS * SCENES))
 
-          echo "TOPIC              : $TOPIC"
-          echo "PARTS              : $PARTS"
-          echo "SCENES PER PART    : $SCENES"
-          echo "TOTAL SCENES       : $TOTAL"
+          echo "TOPIC           : $TOPIC"
+          echo "PARTS           : $PARTS"
+          echo "SCENES PER PART : $SCENES"
+          echo "TOTAL SCENES    : $TOTAL"
 
           echo "TOPIC=$TOPIC" >> "$GITHUB_ENV"
           echo "PARTS=$PARTS" >> "$GITHUB_ENV"
           echo "SCENES=$SCENES" >> "$GITHUB_ENV"
           echo "EXPECTED_TOTAL=$TOTAL" >> "$GITHUB_ENV"
-
-          echo "=============================================="
 
       # ============================================================
       # PREPARE DIRECTORIES
@@ -145,12 +143,12 @@ jobs:
             output/thumbnails \
             output/publish \
             output/rendered \
-            output/checkpoints \
             output/parts \
-            output/final
+            output/final \
+            output/checkpoints
 
       # ============================================================
-      # RESTORE ONLY SUCCESSFUL CHECKPOINT
+      # RESTORE SUCCESSFUL CHECKPOINT
       # ============================================================
       - name: Restore previous successful checkpoint
         shell: bash
@@ -194,10 +192,7 @@ jobs:
                 output/
 
               echo "Checkpoint restored."
-            else
-              echo "WARNING: Checkpoint output directory missing."
             fi
-
           else
             echo "No checkpoint artifact available."
           fi
@@ -278,14 +273,10 @@ jobs:
           path = Path("output/scenes/scenes.json")
 
           if not path.exists():
-              raise SystemExit(
-                  "ERROR: scenes.json missing"
-              )
+              raise SystemExit("ERROR: scenes.json missing")
 
           data = json.loads(
-              path.read_text(
-                  encoding="utf-8"
-              )
+              path.read_text(encoding="utf-8")
           )
 
           expected = int(
@@ -296,13 +287,11 @@ jobs:
               data.get("scenes", [])
           )
 
-          status = data.get("status")
-
-          print(f"Scene status : {status}")
+          print(f"Scene status : {data.get('status')}")
           print(f"Expected     : {expected}")
           print(f"Actual       : {actual}")
 
-          if status != "completed":
+          if data.get("status") != "completed":
               raise SystemExit(
                   "ERROR: scenes.json is not completed"
               )
@@ -377,7 +366,7 @@ jobs:
           python3 scripts/generate_visuals.py
 
       # ============================================================
-      # FINAL ASSET INTEGRITY CHECK
+      # FINAL ASSET CHECK
       # ============================================================
       - name: Validate all assets before render
         shell: bash
@@ -393,21 +382,13 @@ jobs:
           import os
           from pathlib import Path
 
-          expected = int(
-              os.environ["EXPECTED_TOTAL"]
-          )
+          expected = int(os.environ["EXPECTED_TOTAL"])
+          parts = int(os.environ["PARTS"])
+          scenes_per_part = int(os.environ["SCENES"])
 
-          parts = int(
-              os.environ["PARTS"]
-          )
-
-          scenes_per_part = int(
-              os.environ["SCENES"]
-          )
-
-          # ------------------------------------------
+          # -------------------------------
           # SCENES
-          # ------------------------------------------
+          # -------------------------------
           scenes_file = Path(
               "output/scenes/scenes.json"
           )
@@ -442,13 +423,9 @@ jobs:
                   f"found {scene_count}"
               )
 
-          # ------------------------------------------
+          # -------------------------------
           # AUDIO
-          #
-          # IMPORTANT:
-          # generate_tts.py writes here:
-          # output/narration/audio/part_XX/scene_XX.mp3
-          # ------------------------------------------
+          # -------------------------------
           audio_dir = Path(
               "output/narration/audio"
           )
@@ -459,8 +436,7 @@ jobs:
           )
 
           valid_audio = [
-              p
-              for p in audio_files
+              p for p in audio_files
               if p.exists()
               and p.stat().st_size > 1000
           ]
@@ -476,9 +452,9 @@ jobs:
                   f"found {len(valid_audio)}."
               )
 
-          # ------------------------------------------
+          # -------------------------------
           # AUDIO MANIFEST
-          # ------------------------------------------
+          # -------------------------------
           audio_manifest = Path(
               "output/narration/audio_jobs.json"
           )
@@ -500,9 +476,8 @@ jobs:
           )
 
           completed_audio_jobs = [
-              job
-              for job in audio_jobs
-              if job.get("status") == "completed"
+              j for j in audio_jobs
+              if j.get("status") == "completed"
           ]
 
           print(
@@ -525,9 +500,9 @@ jobs:
                   "ERROR: Audio manifest incomplete."
               )
 
-          # ------------------------------------------
+          # -------------------------------
           # VISUAL MANIFEST
-          # ------------------------------------------
+          # -------------------------------
           visual_manifest = Path(
               "output/visuals/visual_jobs.json"
           )
@@ -549,9 +524,8 @@ jobs:
           )
 
           completed_visual_jobs = [
-              job
-              for job in visual_jobs
-              if job.get("status") == "completed"
+              j for j in visual_jobs
+              if j.get("status") == "completed"
           ]
 
           print(
@@ -574,15 +548,12 @@ jobs:
                   "ERROR: Visual manifest incomplete."
               )
 
-          # ------------------------------------------
-          # PHYSICAL VISUAL FILES
-          # ------------------------------------------
+          # -------------------------------
+          # PHYSICAL VISUALS
+          # -------------------------------
           visual_files = []
 
-          for part in range(
-              1,
-              parts + 1
-          ):
+          for part in range(1, parts + 1):
               for scene in range(
                   1,
                   scenes_per_part + 1
@@ -608,23 +579,20 @@ jobs:
 
                   found = next(
                       (
-                          p
-                          for p in candidates
+                          p for p in candidates
                           if p.exists()
                           and p.stat().st_size > 1000
                       ),
                       None
                   )
 
-                  if found:
-                      visual_files.append(
-                          found
-                      )
-                  else:
+                  if not found:
                       raise SystemExit(
                           f"ERROR: Missing visual "
                           f"Part {part} Scene {scene}"
                       )
+
+                  visual_files.append(found)
 
           print(
               f"Physical visuals: "
@@ -636,9 +604,6 @@ jobs:
                   "ERROR: Physical visual count mismatch."
               )
 
-          # ------------------------------------------
-          # FINAL PASS
-          # ------------------------------------------
           print()
           print(
               "=============================================="
@@ -649,23 +614,6 @@ jobs:
           print(
               "=============================================="
           )
-
-          print(
-              f"Scenes  : {scene_count}/{expected}"
-          )
-
-          print(
-              f"Audio   : {len(valid_audio)}/{expected}"
-          )
-
-          print(
-              f"Visuals : {len(visual_files)}/{expected}"
-          )
-
-          print(
-              "=============================================="
-          )
-          PY
 
       # ============================================================
       # THUMBNAILS
@@ -684,7 +632,6 @@ jobs:
 
       # ============================================================
       # YOUTUBE PACKAGE
-      # MANUAL UPLOAD ONLY
       # ============================================================
       - name: Generate YouTube upload package
         shell: bash
@@ -711,14 +658,45 @@ jobs:
 
           python3 scripts/render_video.py
 
+          echo
+          echo "=============================================="
+          echo "          RENDER OUTPUT CHECK"
+          echo "=============================================="
+
+          if ! find output/parts \
+            -maxdepth 1 \
+            -type f \
+            -name "*.mp4" \
+            -size +1000c \
+            | grep -q .; then
+
+            echo "ERROR: Render produced no part videos."
+            echo
+            echo "Contents of output/parts:"
+            find output/parts \
+              -maxdepth 2 \
+              -type f \
+              -print \
+              || true
+
+            exit 1
+          fi
+
+          echo "Rendered part videos:"
+          find output/parts \
+            -maxdepth 1 \
+            -type f \
+            -name "*.mp4" \
+            -print
+
       # ============================================================
-      # UPLOAD RENDERED VIDEOS
+      # UPLOAD RENDERED PART VIDEOS
       # ============================================================
       - name: Upload rendered videos
         uses: actions/upload-artifact@v4
         with:
           name: lok-ai-rendered-videos
-          path: output/rendered
+          path: output/parts/*.mp4
           if-no-files-found: error
           retention-days: 7
 
@@ -737,13 +715,17 @@ jobs:
           import subprocess
 
           rendered = sorted(
-              Path("output/rendered").glob("*.mp4")
+              Path("output/parts").glob("*.mp4")
           )
 
           if not rendered:
               raise SystemExit(
-                  "ERROR: No rendered videos found."
+                  "ERROR: No rendered part videos found."
               )
+
+          print(
+              f"Found {len(rendered)} rendered part videos."
+          )
 
           list_file = Path(
               "output/final/concat.txt"
@@ -753,7 +735,9 @@ jobs:
               "w",
               encoding="utf-8"
           ) as f:
+
               for video in rendered:
+
                   safe = str(
                       video.resolve()
                   ).replace(
@@ -781,6 +765,8 @@ jobs:
                   str(list_file),
                   "-c",
                   "copy",
+                  "-movflags",
+                  "+faststart",
                   str(output),
               ],
               check=True,
@@ -823,6 +809,8 @@ jobs:
             -show_entries stream=codec_name \
             -of default=noprint_wrappers=1 \
             "$FINAL"
+
+          echo "FINAL VIDEO VALIDATION: PASS"
 
       # ============================================================
       # UPLOAD FINAL VIDEO
