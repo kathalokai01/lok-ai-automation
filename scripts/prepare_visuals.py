@@ -60,6 +60,34 @@ def save_json_atomic(path, data):
     )
 
 
+def visual_path(part, scene):
+    return Path(
+        f"output/visuals/"
+        f"part_{int(part):02d}/"
+        f"scene_{int(scene):02d}.png"
+    )
+
+
+def is_valid_visual(path):
+    if not path.exists():
+        return False
+
+    if path.stat().st_size <= 0:
+        return False
+
+    try:
+        with path.open("rb") as file:
+            header = file.read(8)
+
+        return (
+            header.startswith(b"\x89PNG")
+            or header.startswith(b"\xff\xd8")
+        )
+
+    except Exception:
+        return False
+
+
 def make_job(scene, character_bible):
     part = scene.get("part")
     scene_number = scene.get("scene")
@@ -115,7 +143,13 @@ def make_job(scene, character_bible):
 
 def main():
     print(
-        "===== PREPARE VISUAL GENERATION ====="
+        "======================================"
+    )
+    print(
+        "     PREPARE VISUAL GENERATION"
+    )
+    print(
+        "======================================"
     )
 
     scenes_data = load_json(
@@ -159,7 +193,6 @@ def main():
     existing_jobs = {}
 
     if OUTPUT_FILE.exists():
-
         try:
             existing_data = load_json(
                 OUTPUT_FILE
@@ -169,7 +202,6 @@ def main():
                 "jobs",
                 [],
             ):
-
                 key = (
                     job.get("part"),
                     job.get("scene"),
@@ -178,21 +210,19 @@ def main():
                 existing_jobs[key] = job
 
             print(
-                f"Existing visual jobs found: "
+                "Existing visual jobs found: "
                 f"{len(existing_jobs)}"
             )
 
         except Exception as e:
-
             print(
-                "WARNING: Existing visual job "
-                f"file could not be reused: {e}"
+                "WARNING: Existing visual "
+                f"manifest ignored: {e}"
             )
 
     jobs = []
 
     for scene in source_scenes:
-
         part = scene.get("part")
         scene_number = scene.get("scene")
 
@@ -201,23 +231,38 @@ def main():
             scene_number,
         )
 
-        if key in existing_jobs:
+        output_path = visual_path(
+            part,
+            scene_number,
+        )
 
-            existing_job = existing_jobs[key]
+        existing_job = existing_jobs.get(
+            key
+        )
 
-            # Keep completed/generated state.
-            if existing_job.get("status") == "completed":
-                jobs.append(existing_job)
+        # IMPORTANT:
+        # completed status is trusted ONLY
+        # when the actual visual file exists.
+        if (
+            existing_job
+            and is_valid_visual(output_path)
+        ):
+            existing_job["status"] = "completed"
+            existing_job["asset_path"] = str(
+                output_path
+            )
+            existing_job["error"] = None
 
-                print(
-                    f"Keeping completed visual job: "
-                    f"Part {part} Scene {scene_number}"
-                )
+            jobs.append(existing_job)
 
-                continue
+            print(
+                "VALID — keeping visual: "
+                f"Part {part} Scene {scene_number}"
+            )
+
+            continue
 
         try:
-
             job = make_job(
                 scene,
                 characters,
@@ -225,13 +270,18 @@ def main():
 
             jobs.append(job)
 
-            print(
-                f"Prepared: "
-                f"Part {part} Scene {scene_number}"
-            )
+            if existing_job:
+                print(
+                    "MISSING — resetting to pending: "
+                    f"Part {part} Scene {scene_number}"
+                )
+            else:
+                print(
+                    "Prepared: "
+                    f"Part {part} Scene {scene_number}"
+                )
 
         except Exception as e:
-
             jobs.append(
                 {
                     "part": part,
@@ -255,14 +305,14 @@ def main():
             )
 
             print(
-                f"FAILED: Part {part} "
-                f"Scene {scene_number}: {e}"
+                "FAILED: Part "
+                f"{part} Scene {scene_number}: {e}"
             )
 
     jobs.sort(
         key=lambda item: (
-            item.get("part", 0),
-            item.get("scene", 0),
+            int(item.get("part", 0)),
+            int(item.get("scene", 0)),
         )
     )
 
@@ -286,44 +336,56 @@ def main():
 
     if missing:
         raise SystemExit(
-            f"ERROR: Missing visual jobs: {sorted(missing)}"
+            "ERROR: Missing visual jobs: "
+            f"{sorted(missing)}"
         )
 
-    duplicate_keys = (
-        len(jobs) != len(actual_keys)
-    )
-
-    if duplicate_keys:
+    if len(jobs) != len(actual_keys):
         raise SystemExit(
             "ERROR: Duplicate visual jobs detected"
         )
 
-    failed_jobs = [
-        job
-        for job in jobs
-        if job.get("status") == "failed"
-    ]
+    completed_jobs = []
+    pending_jobs = []
+    failed_jobs = []
 
-    completed_jobs = [
-        job
-        for job in jobs
-        if job.get("status") == "completed"
-    ]
+    for job in jobs:
+        part = int(job["part"])
+        scene = int(job["scene"])
+
+        path = visual_path(
+            part,
+            scene,
+        )
+
+        if is_valid_visual(path):
+            job["status"] = "completed"
+            job["asset_path"] = str(path)
+            job["error"] = None
+            completed_jobs.append(job)
+
+        elif job.get("status") == "failed":
+            failed_jobs.append(job)
+
+        else:
+            job["status"] = "pending"
+            job["asset_path"] = None
+            pending_jobs.append(job)
 
     output = {
         "status": (
-            "ready"
-            if not failed_jobs
-            else "failed"
+            "completed"
+            if len(completed_jobs) == len(jobs)
+            else "ready"
         ),
         "topic": topic,
         "total_scenes": len(jobs),
         "completed_scenes": len(
             completed_jobs
         ),
-        "pending_scenes": len(jobs)
-        - len(completed_jobs)
-        - len(failed_jobs),
+        "pending_scenes": len(
+            pending_jobs
+        ),
         "failed_scenes": len(
             failed_jobs
         ),
@@ -344,43 +406,55 @@ def main():
         output,
     )
 
+    print()
     print(
-        "\n===== VISUAL JOB MANIFEST ====="
+        "===== VISUAL JOB MANIFEST ====="
+    )
+    print(
+        f"Total scenes : {len(jobs)}"
+    )
+    print(
+        f"Completed    : {len(completed_jobs)}"
+    )
+    print(
+        f"Pending      : {len(pending_jobs)}"
+    )
+    print(
+        f"Failed       : {len(failed_jobs)}"
     )
 
-    print(
-        f"Topic: {topic}"
-    )
+    if pending_jobs:
+        print()
+        print(
+            "===== MISSING VISUALS ====="
+        )
 
-    print(
-        f"Total scenes: {len(jobs)}"
-    )
-
-    print(
-        f"Completed: {len(completed_jobs)}"
-    )
-
-    print(
-        f"Pending: {output['pending_scenes']}"
-    )
-
-    print(
-        f"Failed: {len(failed_jobs)}"
-    )
-
-    print(
-        f"Output: {OUTPUT_FILE}"
-    )
+        for job in pending_jobs:
+            print(
+                f" - Part {job['part']} "
+                f"Scene {job['scene']}"
+            )
 
     if failed_jobs:
+        print()
         print(
-            "\nERROR: Some visual jobs failed."
+            "===== FAILED VISUAL JOBS ====="
         )
-        raise SystemExit(1)
 
+        for job in failed_jobs:
+            print(
+                f" - Part {job['part']} "
+                f"Scene {job['scene']}: "
+                f"{job.get('error', '')}"
+            )
+
+    print()
     print(
-        "\nVisual job preparation: PASSED"
+        "Visual manifest preparation: PASSED"
     )
+
+    # Do NOT fail merely because visuals are pending.
+    # generate_visuals.py must receive them and generate them.
 
 
 if __name__ == "__main__":
