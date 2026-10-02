@@ -2,56 +2,64 @@
 
 import base64
 import json
+import mimetypes
 import os
 import random
 import sys
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+CONFIG_FILE = Path("Input/topic.txt")
+SCENES_FILE = Path("output/scenes/scenes.json")
 
 VISUAL_DIR = Path("output/visuals")
-VIDEO_DIR = Path("output/i2v")
-SCENES_FILE = Path("output/scenes/scenes.json")
-CONFIG_FILE = Path("Input/topic.txt")
+AUDIO_DIR = Path("output/narration/audio")
+I2V_DIR = Path("output/i2v")
 
-ACCOUNT_ID = os.environ.get(
-    "CLOUDFLARE_ACCOUNT_ID",
-    ""
-).strip()
+JOBS_FILE = I2V_DIR / "i2v_jobs.json"
 
-API_TOKEN = os.environ.get(
-    "CLOUDFLARE_API_TOKEN",
-    ""
-).strip()
+ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
 
 MODEL = "alibaba/hh1.1-i2v"
 
-MAX_RETRIES = 5
-INITIAL_BACKOFF = 15
-MAX_BACKOFF = 180
+API_URL = (
+    "https://api.cloudflare.com/client/v4/accounts/"
+    "{account_id}/ai/run/{model}"
+)
 
+MAX_RETRIES = 6
+INITIAL_BACKOFF = 20
+MAX_BACKOFF = 300
 REQUEST_TIMEOUT = 300
 
 
-def clean_value(value):
+# ============================================================
+# CONFIG HELPERS
+# ============================================================
+
+def clean_config_value(value):
+
     value = value.strip()
 
     if "#" in value:
         value = value.split("#", 1)[0].strip()
 
-    if len(value) >= 2:
-        if value[0] == value[-1] and value[0] in ('"', "'"):
-            value = value[1:-1]
-
-    return value.strip()
+    return value.strip().strip('"').strip("'")
 
 
-def read_config():
+def load_config():
+
     if not CONFIG_FILE.exists():
         raise RuntimeError(
-            "Missing Input/topic.txt"
+            "Input/topic.txt not found."
         )
 
     config = {}
@@ -62,10 +70,7 @@ def read_config():
 
         line = raw.strip()
 
-        if not line:
-            continue
-
-        if line.startswith("#"):
+        if not line or line.startswith("#"):
             continue
 
         if "=" not in line:
@@ -73,186 +78,451 @@ def read_config():
 
         key, value = line.split("=", 1)
 
-        config[key.strip().upper()] = clean_value(
-            value
+        config[key.strip().upper()] = (
+            clean_config_value(value)
         )
 
     return config
 
 
-def read_format(config):
-    value = config.get(
-        "FORMAT",
-        "full"
-    ).lower().strip()
+CONFIG = load_config()
 
-    if value not in ("short", "full"):
-        raise RuntimeError(
-            f"Invalid FORMAT: {value}"
+FORMAT = CONFIG.get(
+    "FORMAT",
+    "full"
+).lower()
+
+if FORMAT not in {"short", "full"}:
+    raise RuntimeError(
+        f"Invalid FORMAT: {FORMAT}"
+    )
+
+
+# ============================================================
+# VALIDATE API
+# ============================================================
+
+if not ACCOUNT_ID:
+    raise RuntimeError(
+        "CLOUDFLARE_ACCOUNT_ID is not set."
+    )
+
+if not API_TOKEN:
+    raise RuntimeError(
+        "CLOUDFLARE_API_TOKEN is not set."
+    )
+
+
+# ============================================================
+# DIRECTORIES
+# ============================================================
+
+I2V_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+
+# ============================================================
+# JSON HELPERS
+# ============================================================
+
+def load_json(path, default):
+
+    if not path.exists():
+        return default
+
+    try:
+
+        return json.loads(
+            path.read_text(
+                encoding="utf-8"
+            )
         )
 
-    return value
+    except Exception:
 
+        return default
+
+
+def save_json(path, data):
+
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    path.write_text(
+        json.dumps(
+            data,
+            ensure_ascii=False,
+            indent=2
+        ),
+        encoding="utf-8"
+    )
+
+
+jobs = load_json(
+    JOBS_FILE,
+    {
+        "status": "running",
+        "format": FORMAT,
+        "model": MODEL,
+        "jobs": []
+    }
+)
+
+
+# ============================================================
+# FILE HELPERS
+# ============================================================
 
 def find_visual(part, scene):
-    folder = VISUAL_DIR / f"part_{part:02d}"
+
+    directory = (
+        VISUAL_DIR /
+        f"part_{part:02d}"
+    )
 
     candidates = [
-        folder / f"scene_{scene:02d}.png",
-        folder / f"scene_{scene:02d}.jpg",
-        folder / f"scene_{scene:02d}.jpeg",
+        directory / f"scene_{scene:02d}.png",
+        directory / f"scene_{scene:02d}.jpg",
+        directory / f"scene_{scene:02d}.jpeg",
+        directory / f"scene_{scene}.png",
+        directory / f"scene_{scene}.jpg",
+        directory / f"scene_{scene}.jpeg",
     ]
 
     for path in candidates:
-        if path.exists() and path.stat().st_size > 1000:
+
+        if (
+            path.exists()
+            and path.stat().st_size > 1000
+        ):
             return path
 
     return None
 
 
-def visual_to_data_uri(path):
-    suffix = path.suffix.lower()
+def find_audio(part, scene):
 
-    if suffix == ".png":
-        mime = "image/png"
-    elif suffix in (".jpg", ".jpeg"):
-        mime = "image/jpeg"
-    else:
+    directory = (
+        AUDIO_DIR /
+        f"part_{part:02d}"
+    )
+
+    candidates = [
+        directory / f"scene_{scene:02d}.mp3",
+        directory / f"scene_{scene}.mp3",
+        directory / f"scene_{scene:02d}.wav",
+        directory / f"scene_{scene}.wav",
+    ]
+
+    for path in candidates:
+
+        if (
+            path.exists()
+            and path.stat().st_size > 1000
+        ):
+            return path
+
+    return None
+
+
+def get_audio_duration(path):
+
+    import subprocess
+
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    if result.returncode != 0:
         raise RuntimeError(
-            f"Unsupported visual format: {path}"
+            f"Unable to read audio duration: {path}"
         )
+
+    try:
+
+        return float(
+            result.stdout.strip()
+        )
+
+    except Exception:
+
+        raise RuntimeError(
+            f"Invalid audio duration: {path}"
+        )
+
+
+# ============================================================
+# I2V DURATION
+# ============================================================
+
+def choose_duration(audio_duration):
+
+    """
+    Cloudflare HH 1.1 I2V supports approximately
+    3-15 seconds.
+
+    We request enough time for the narration while
+    avoiding unnecessary looping during rendering.
+    """
+
+    if FORMAT == "short":
+
+        # Short scenes should remain fast.
+        # Give the scene enough motion time for narration.
+        target = audio_duration + 0.5
+
+    else:
+
+        target = audio_duration + 0.5
+
+    # Model limits.
+    target = max(
+        3.0,
+        min(15.0, target)
+    )
+
+    # API expects an integer duration.
+    duration = int(
+        round(target)
+    )
+
+    duration = max(
+        3,
+        min(15, duration)
+    )
+
+    return duration
+
+
+# ============================================================
+# IMAGE -> DATA URI
+# ============================================================
+
+def image_to_data_uri(path):
+
+    mime_type, _ = mimetypes.guess_type(
+        str(path)
+    )
+
+    if not mime_type:
+
+        if path.suffix.lower() == ".png":
+            mime_type = "image/png"
+
+        else:
+            mime_type = "image/jpeg"
 
     encoded = base64.b64encode(
         path.read_bytes()
     ).decode("ascii")
 
-    return f"data:{mime};base64,{encoded}"
+    return (
+        f"data:{mime_type};base64,{encoded}"
+    )
 
 
-def build_motion_prompt(
+# ============================================================
+# MOTION PROMPT
+# ============================================================
+
+def build_prompt(
     scene,
-    format_value,
+    part,
+    scene_number,
+    duration
 ):
-    visual = str(
-        scene.get("visual", "")
+
+    base = str(
+        scene.get(
+            "visual_prompt",
+            scene.get(
+                "prompt",
+                ""
+            )
+        )
     ).strip()
 
-    narration = str(
-        scene.get("narration", "")
+    scene_description = str(
+        scene.get(
+            "description",
+            ""
+        )
     ).strip()
 
-    purpose = str(
-        scene.get("purpose", "")
+    action = str(
+        scene.get(
+            "action",
+            ""
+        )
     ).strip()
 
-    base = f"""
-Create a photorealistic live-action cinematic video from the reference image.
+    if FORMAT == "short":
 
-The people must look like real human beings.
-The environment must look physically real.
-Natural skin texture.
-Natural facial expressions.
-Natural body movement.
-Natural hand movement.
-Realistic clothing movement.
-Realistic environmental motion.
-Realistic depth and lighting.
+        format_instruction = """
+This is an ORIGINAL short-form video scene.
 
-Do NOT turn the scene into:
-cartoon,
-comic,
+Motion must begin immediately in the first moment.
+Do not make the opening feel like a still photograph.
+
+Create immediate visual curiosity and tension.
+Use purposeful human movement, environmental movement,
+camera movement, or a combination.
+
+The scene must feel designed specifically for a short video,
+not like a clipped section from a longer movie.
+
+Maintain momentum throughout the shot.
+Avoid a static opening.
+Avoid a static ending.
+"""
+
+    else:
+
+        format_instruction = """
+This is a cinematic long-form video scene.
+
+Create continuous natural motion throughout the shot.
+Use subtle human movement, environmental movement,
+and purposeful cinematic camera movement.
+
+Do not make the scene feel like a photograph.
+"""
+
+    return f"""
+Create a REALISTIC AI IMAGE-TO-VIDEO shot.
+
+PART: {part}
+SCENE: {scene_number}
+TARGET DURATION: {duration} seconds
+
+SOURCE IMAGE IS THE VISUAL REFERENCE.
+
+{format_instruction}
+
+SOURCE SCENE DESCRIPTION:
+{scene_description}
+
+SOURCE ACTION:
+{action}
+
+SOURCE VISUAL PROMPT:
+{base}
+
+ANIMATION REQUIREMENTS:
+
+- Real human beings.
+- Real-world environment.
+- Photorealistic appearance.
+- Natural human anatomy.
+- Natural skin texture.
+- Natural facial movement.
+- Natural eye movement.
+- Natural blinking when appropriate.
+- Natural breathing.
+- Realistic body movement.
+- Realistic clothing movement.
+- Realistic environmental motion.
+- Physically believable lighting.
+- Realistic shadows.
+- Natural depth of field.
+- Cinematic but believable camera movement.
+- Preserve the identity of every person.
+- Preserve age, face, hairstyle, clothing and body proportions.
+- Preserve the location and important objects.
+- Preserve continuity with the source image.
+- Do not change the characters into different people.
+- Do not change the scene into a different location.
+
+CAMERA:
+
+Use subtle real camera movement such as:
+slow handheld movement,
+controlled dolly movement,
+slow push-in,
+gentle tracking,
+or realistic documentary-style movement.
+
+The camera must not move randomly.
+
+IMPORTANT:
+
+The generated result must look like footage captured
+with a real camera in the real world.
+
+It must NOT look like:
+a comic,
+a cartoon,
+an illustration,
 anime,
-illustration,
-painting,
 3D animation,
+CGI,
 game graphics,
-plastic-looking characters,
-fantasy CGI.
+a slideshow,
+a moving photograph,
+or a painted image.
 
-Maintain the identity, clothing, age, facial appearance and location
-from the reference image.
+Do not freeze the subjects.
 
-SCENE PURPOSE:
-{purpose}
+Do not simply zoom a still image.
 
-SCENE DESCRIPTION:
-{visual}
+Create genuine temporal motion between frames.
 
-NARRATION CONTEXT:
-{narration}
+NEGATIVE PROMPT:
 
-Generate genuine motion rather than a static camera effect.
-The subjects should naturally move according to the scene.
-Use subtle eye movement, breathing, head movement and realistic gestures
-when appropriate.
+cartoon, comic, anime, manga, illustration,
+painting, drawing, sketch, 3d render, CGI,
+game graphics, plastic skin, doll face,
+unrealistic anatomy, distorted face,
+extra fingers, extra limbs, duplicate person,
+face deformation, identity change,
+age change, clothing change,
+location change, object morphing,
+frozen pose, static image, slideshow,
+moving photograph, artificial camera motion,
+warping, flickering, jitter,
+frame interpolation artifacts,
+ghosting, duplicated body parts,
+neon colors, fantasy environment,
+surreal environment, low detail,
+blurry face, deformed hands,
+watermark, text, logo
+""".strip()
 
-Use cinematic camera movement such as:
-slow dolly,
-subtle tracking,
-natural handheld movement,
-gentle push-in,
-slow lateral movement,
-or realistic camera repositioning.
 
-Do not use an artificial slideshow effect.
+# ============================================================
+# HTTP REQUEST
+# ============================================================
 
-Keep the scene visually coherent from beginning to end.
-"""
+def call_cloudflare(payload):
 
-    if format_value == "short":
-        base += """
-SHORT-FORM PACING:
-
-This is a short video.
-Motion must begin immediately.
-
-Do not waste the opening seconds on an empty establishing shot.
-
-Make the movement visually support curiosity, tension or suspense.
-If this scene is a hook, make the first moment visually intriguing.
-If this scene is an escalation, increase movement or visual tension.
-If this scene is the final reveal, make the visual moment feel important.
-
-The visual storytelling must feel intentionally made for a short video,
-not like a section cut out of a long movie.
-"""
-
-    return " ".join(
-        base.split()
+    url = API_URL.format(
+        account_id=ACCOUNT_ID,
+        model=MODEL
     )
 
-
-def call_i2v(image_uri, prompt, duration):
-    url = (
-        "https://api.cloudflare.com/client/v4/accounts/"
-        f"{ACCOUNT_ID}/ai/run/{MODEL}"
-    )
-
-    payload = {
-        "input": {
-            "image": image_uri,
-            "prompt": prompt,
-            "negative_prompt": (
-                "cartoon, comic, anime, illustration, "
-                "painting, drawing, 3d render, CGI, "
-                "plastic skin, distorted face, "
-                "deformed hands, extra fingers, "
-                "frozen person, static image, "
-                "slideshow, artificial motion"
-            ),
-            "resolution": "720P",
-            "duration": duration,
-            "watermark": False,
-        }
-    }
-
-    data = json.dumps(
+    body = json.dumps(
         payload
     ).encode("utf-8")
 
-    request = urllib.request.Request(
+    request = Request(
         url,
-        data=data,
+        data=body,
         headers={
             "Authorization":
                 f"Bearer {API_TOKEN}",
@@ -262,424 +532,594 @@ def call_i2v(image_uri, prompt, duration):
         method="POST",
     )
 
+    try:
+
+        with urlopen(
+            request,
+            timeout=REQUEST_TIMEOUT
+        ) as response:
+
+            raw = response.read()
+
+            return json.loads(
+                raw.decode("utf-8")
+            )
+
+    except HTTPError as error:
+
+        response_body = ""
+
+        try:
+            response_body = (
+                error.read()
+                .decode("utf-8", errors="replace")
+            )
+        except Exception:
+            pass
+
+        raise RuntimeError(
+            f"HTTP {error.code}: "
+            f"{response_body[:2000]}"
+        )
+
+    except URLError as error:
+
+        raise RuntimeError(
+            f"Network error: {error}"
+        )
+
+
+# ============================================================
+# VIDEO RESPONSE
+# ============================================================
+
+def extract_video_bytes(result):
+
+    if not isinstance(result, dict):
+        raise RuntimeError(
+            "Invalid Cloudflare response."
+        )
+
+    if result.get("success") is False:
+
+        errors = result.get(
+            "errors",
+            []
+        )
+
+        raise RuntimeError(
+            f"Cloudflare AI error: "
+            f"{errors}"
+        )
+
+    result_data = result.get(
+        "result"
+    )
+
+    if isinstance(
+        result_data,
+        dict
+    ):
+
+        video = result_data.get(
+            "video"
+        )
+
+        if isinstance(
+            video,
+            str
+        ):
+
+            # Some responses may return a URL.
+            if video.startswith(
+                "http://"
+            ) or video.startswith(
+                "https://"
+            ):
+
+                request = Request(
+                    video,
+                    headers={
+                        "Authorization":
+                            f"Bearer {API_TOKEN}"
+                    }
+                )
+
+                with urlopen(
+                    request,
+                    timeout=REQUEST_TIMEOUT
+                ) as response:
+
+                    return response.read()
+
+            # Otherwise treat as base64.
+            try:
+
+                return base64.b64decode(
+                    video
+                )
+
+            except Exception:
+                pass
+
+        if isinstance(
+            video,
+            dict
+        ):
+
+            data = video.get(
+                "data"
+            )
+
+            if data:
+
+                return base64.b64decode(
+                    data
+                )
+
+    raise RuntimeError(
+        "Cloudflare response does not contain "
+        "a usable video result."
+    )
+
+
+# ============================================================
+# GENERATE ONE CLIP
+# ============================================================
+
+def generate_clip(
+    part,
+    scene_number,
+    scene,
+    visual_path,
+    audio_path,
+    output_path
+):
+
+    audio_duration = get_audio_duration(
+        audio_path
+    )
+
+    duration = choose_duration(
+        audio_duration
+    )
+
+    prompt = build_prompt(
+        scene=scene,
+        part=part,
+        scene_number=scene_number,
+        duration=duration
+    )
+
+    print()
+    print("=" * 70)
+    print(
+        f"GENERATING I2V "
+        f"Part {part} Scene {scene_number}"
+    )
+    print("=" * 70)
+
+    print(
+        f"Audio duration : "
+        f"{audio_duration:.2f}s"
+    )
+
+    print(
+        f"I2V duration   : "
+        f"{duration}s"
+    )
+
+    print(
+        f"Model          : "
+        f"{MODEL}"
+    )
+
+    image_uri = image_to_data_uri(
+        visual_path
+    )
+
+    payload = {
+        "input": {
+            "image": image_uri,
+            "prompt": prompt,
+            "negative_prompt": (
+                "cartoon, comic, anime, illustration, "
+                "painting, CGI, 3D render, slideshow, "
+                "static image, distorted face, "
+                "identity change, body deformation, "
+                "warping, flicker, jitter"
+            ),
+            "resolution": "720P",
+            "duration": duration,
+            "watermark": False,
+        }
+    }
+
     last_error = None
 
     for attempt in range(
         1,
         MAX_RETRIES + 1
     ):
+
         try:
 
-            with urllib.request.urlopen(
-                request,
-                timeout=REQUEST_TIMEOUT
-            ) as response:
+            print(
+                f"Attempt {attempt}/"
+                f"{MAX_RETRIES}"
+            )
 
-                raw = response.read().decode(
-                    "utf-8"
-                )
+            result = call_cloudflare(
+                payload
+            )
 
-            result = json.loads(raw)
-
-            state = str(
-                result.get(
-                    "state",
-                    ""
-                )
-            ).lower()
-
-            if state not in (
-                "",
-                "completed",
-                "complete",
-                "success"
-            ):
-                print(
-                    f"Cloudflare state: {state}"
-                )
-
-            video_url = (
+            video_bytes = extract_video_bytes(
                 result
-                .get("result", {})
-                .get("video")
             )
 
-            if not video_url:
+            if not video_bytes:
                 raise RuntimeError(
-                    "Cloudflare did not return "
-                    "result.video"
+                    "Cloudflare returned empty video."
                 )
 
-            return video_url
-
-        except urllib.error.HTTPError as exc:
-
-            body = exc.read().decode(
-                "utf-8",
-                errors="replace"
+            output_path.parent.mkdir(
+                parents=True,
+                exist_ok=True
             )
 
-            last_error = RuntimeError(
-                f"Cloudflare HTTP {exc.code}: "
-                f"{body[:1200]}"
+            output_path.write_bytes(
+                video_bytes
             )
 
-            retryable = exc.code in (
-                408,
-                429,
-                500,
-                502,
-                503,
-                504,
+            if output_path.stat().st_size < 1000:
+
+                output_path.unlink(
+                    missing_ok=True
+                )
+
+                raise RuntimeError(
+                    "Generated video is too small."
+                )
+
+            print(
+                f"SUCCESS: {output_path}"
             )
 
-            if not retryable:
-                raise last_error
+            return duration
 
         except Exception as exc:
+
             last_error = exc
 
-        if attempt < MAX_RETRIES:
+            print(
+                f"Attempt {attempt} failed: "
+                f"{exc}"
+            )
+
+            if attempt >= MAX_RETRIES:
+                break
 
             delay = min(
-                INITIAL_BACKOFF *
-                (2 ** (attempt - 1)),
-                MAX_BACKOFF
+                MAX_BACKOFF,
+                INITIAL_BACKOFF
+                * (2 ** (attempt - 1))
             )
 
-            jitter = random.randint(
+            delay += random.randint(
                 0,
-                8
-            )
-
-            delay += jitter
-
-            print(
-                f"I2V attempt {attempt} failed: "
-                f"{last_error}"
+                10
             )
 
             print(
-                f"Retrying in {delay}s..."
+                f"Waiting {delay}s before retry..."
             )
 
-            time.sleep(delay)
-
-    raise last_error or RuntimeError(
-        "I2V generation failed"
-    )
-
-
-def download_video(url, output):
-    request = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent":
-                "lok-ai-automation/1.0"
-        }
-    )
-
-    with urllib.request.urlopen(
-        request,
-        timeout=REQUEST_TIMEOUT
-    ) as response:
-
-        data = response.read()
-
-    if len(data) < 1000:
-        raise RuntimeError(
-            "Downloaded I2V video is too small"
-        )
-
-    output.parent.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-    output.write_bytes(data)
-
-
-def valid_video(path):
-    if not path.exists():
-        return False
-
-    if path.stat().st_size <= 1000:
-        return False
-
-    header = path.read_bytes()[:32]
-
-    return (
-        b"ftyp" in header
-        or header.startswith(b"\x00\x00\x00")
-    )
-
-
-def load_scenes():
-    if not SCENES_FILE.exists():
-        raise RuntimeError(
-            "Missing output/scenes/scenes.json"
-        )
-
-    data = json.loads(
-        SCENES_FILE.read_text(
-            encoding="utf-8"
-        )
-    )
-
-    if data.get("status") != "completed":
-        raise RuntimeError(
-            "scenes.json is not completed"
-        )
-
-    scenes = data.get(
-        "scenes",
-        []
-    )
-
-    if not scenes:
-        raise RuntimeError(
-            "No scenes found"
-        )
-
-    return scenes
-
-
-def choose_duration(scene):
-    raw = str(
-        scene.get(
-            "duration",
-            ""
-        )
-    ).strip()
-
-    try:
-        value = float(raw)
-
-        if value > 0:
-            value = int(round(value))
-
-            return max(
-                3,
-                min(
-                    15,
-                    value
-                )
+            time.sleep(
+                delay
             )
-    except Exception:
-        pass
 
-    return 6
+    raise RuntimeError(
+        f"Part {part} Scene {scene_number} "
+        f"failed after {MAX_RETRIES} attempts: "
+        f"{last_error}"
+    )
 
+
+# ============================================================
+# MAIN
+# ============================================================
 
 def main():
-    print("=" * 60)
-    print("        IMAGE TO VIDEO GENERATION")
-    print("=" * 60)
 
-    if not ACCOUNT_ID:
-        raise RuntimeError(
-            "CLOUDFLARE_ACCOUNT_ID is not set"
-        )
-
-    if not API_TOKEN:
-        raise RuntimeError(
-            "CLOUDFLARE_API_TOKEN is not set"
-        )
-
-    config = read_config()
-
-    format_value = read_format(
-        config
-    )
+    print("=" * 70)
+    print("       REAL AI IMAGE-TO-VIDEO GENERATION")
+    print("=" * 70)
 
     print(
-        f"Format : {format_value}"
+        f"Format : {FORMAT}"
     )
 
     print(
         f"Model  : {MODEL}"
     )
 
-    scenes = load_scenes()
+    if not SCENES_FILE.exists():
+        raise RuntimeError(
+            "output/scenes/scenes.json not found."
+        )
 
-    VIDEO_DIR.mkdir(
-        parents=True,
-        exist_ok=True
+    scenes_data = json.loads(
+        SCENES_FILE.read_text(
+            encoding="utf-8"
+        )
     )
 
-    jobs = []
+    if scenes_data.get("status") != "completed":
+        raise RuntimeError(
+            "Scenes are not marked completed."
+        )
 
-    total = len(scenes)
+    scenes = scenes_data.get(
+        "scenes",
+        []
+    )
 
-    for index, scene in enumerate(
-        scenes,
-        start=1
+    if not scenes:
+        raise RuntimeError(
+            "No scenes found."
+        )
+
+    print(
+        f"Scenes: {len(scenes)}"
+    )
+
+    # --------------------------------------------------------
+    # Existing jobs
+    # --------------------------------------------------------
+
+    old_jobs = {}
+
+    for job in jobs.get(
+        "jobs",
+        []
     ):
 
+        key = (
+            int(job["part"]),
+            int(job["scene"])
+        )
+
+        old_jobs[key] = job
+
+    final_jobs = []
+
+    # --------------------------------------------------------
+    # Process scenes
+    # --------------------------------------------------------
+
+    for scene in scenes:
+
         part = int(
-            scene.get(
-                "part",
-                1
-            )
+            scene.get("part", 0)
         )
 
         scene_number = int(
-            scene.get(
-                "scene",
-                index
-            )
+            scene.get("scene", 0)
         )
 
-        output = (
-            VIDEO_DIR /
-            f"part_{part:02d}" /
-            f"scene_{scene_number:02d}.mp4"
-        )
-
-        print()
-        print(
-            f"[{index}/{total}] "
-            f"Part {part} Scene {scene_number}"
-        )
-
-        if valid_video(output):
-
-            print(
-                "Existing valid I2V video found. "
-                "Skipping."
+        if part <= 0:
+            raise RuntimeError(
+                f"Invalid part: {part}"
             )
 
-            jobs.append({
-                "part": part,
-                "scene": scene_number,
-                "status": "completed",
-                "file": str(output),
-                "model": MODEL,
-            })
+        if scene_number <= 0:
+            raise RuntimeError(
+                f"Invalid scene: {scene_number}"
+            )
 
-            continue
-
-        image = find_visual(
+        visual_path = find_visual(
             part,
             scene_number
         )
 
-        if not image:
+        if visual_path is None:
             raise RuntimeError(
                 f"Missing visual for "
                 f"Part {part} Scene {scene_number}"
             )
 
-        print(
-            f"Reference image: {image}"
+        audio_path = find_audio(
+            part,
+            scene_number
         )
 
-        image_uri = visual_to_data_uri(
-            image
-        )
-
-        prompt = build_motion_prompt(
-            scene,
-            format_value
-        )
-
-        duration = choose_duration(
-            scene
-        )
-
-        print(
-            f"Duration: {duration}s"
-        )
-
-        print(
-            "Generating real AI motion..."
-        )
-
-        video_url = call_i2v(
-            image_uri,
-            prompt,
-            duration
-        )
-
-        print(
-            "Downloading generated video..."
-        )
-
-        download_video(
-            video_url,
-            output
-        )
-
-        if not valid_video(output):
+        if audio_path is None:
             raise RuntimeError(
-                f"Invalid generated video: "
-                f"{output}"
+                f"Missing narration for "
+                f"Part {part} Scene {scene_number}"
             )
 
-        print(
-            f"SUCCESS: {output}"
+        output_path = (
+            I2V_DIR /
+            f"part_{part:02d}" /
+            f"scene_{scene_number:02d}.mp4"
         )
 
-        jobs.append({
-            "part": part,
-            "scene": scene_number,
-            "status": "completed",
-            "file": str(output),
-            "model": MODEL,
-            "duration": duration,
-        })
-
-    manifest = {
-        "status": "completed",
-        "format": format_value,
-        "model": MODEL,
-        "total": total,
-        "completed": len(jobs),
-        "jobs": jobs,
-    }
-
-    manifest_path = (
-        VIDEO_DIR /
-        "i2v_jobs.json"
-    )
-
-    manifest_path.write_text(
-        json.dumps(
-            manifest,
-            ensure_ascii=False,
-            indent=2
-        ),
-        encoding="utf-8"
-    )
-
-    if len(jobs) != total:
-        raise RuntimeError(
-            f"I2V count mismatch: "
-            f"{len(jobs)}/{total}"
+        key = (
+            part,
+            scene_number
         )
+
+        # ----------------------------------------------------
+        # Resume valid completed clip
+        # ----------------------------------------------------
+
+        if (
+            output_path.exists()
+            and output_path.stat().st_size > 1000
+        ):
+
+            print()
+            print(
+                f"SKIP existing I2V: "
+                f"Part {part} Scene {scene_number}"
+            )
+
+            duration = 0
+
+            try:
+                duration = get_audio_duration(
+                    audio_path
+                )
+            except Exception:
+                pass
+
+            final_jobs.append(
+                {
+                    "part": part,
+                    "scene": scene_number,
+                    "status": "completed",
+                    "model": MODEL,
+                    "format": FORMAT,
+                    "visual": str(
+                        visual_path
+                    ),
+                    "audio": str(
+                        audio_path
+                    ),
+                    "output": str(
+                        output_path
+                    ),
+                    "audio_duration":
+                        duration,
+                }
+            )
+
+            continue
+
+        # ----------------------------------------------------
+        # Generate new clip
+        # ----------------------------------------------------
+
+        generated_duration = generate_clip(
+            part=part,
+            scene_number=scene_number,
+            scene=scene,
+            visual_path=visual_path,
+            audio_path=audio_path,
+            output_path=output_path,
+        )
+
+        audio_duration = get_audio_duration(
+            audio_path
+        )
+
+        final_jobs.append(
+            {
+                "part": part,
+                "scene": scene_number,
+                "status": "completed",
+                "model": MODEL,
+                "format": FORMAT,
+                "visual": str(
+                    visual_path
+                ),
+                "audio": str(
+                    audio_path
+                ),
+                "output": str(
+                    output_path
+                ),
+                "audio_duration":
+                    audio_duration,
+                "requested_duration":
+                    generated_duration,
+            }
+        )
+
+        jobs["jobs"] = final_jobs
+        jobs["status"] = "running"
+
+        save_json(
+            JOBS_FILE,
+            jobs
+        )
+
+    # --------------------------------------------------------
+    # Final validation
+    # --------------------------------------------------------
+
+    expected = len(scenes)
+
+    completed = 0
+
+    for job in final_jobs:
+
+        output = Path(
+            job["output"]
+        )
+
+        if (
+            output.exists()
+            and output.stat().st_size > 1000
+        ):
+
+            completed += 1
 
     print()
-    print("=" * 60)
-    print("       I2V GENERATION SUCCESS")
-    print("=" * 60)
+    print("=" * 70)
+    print("             I2V VALIDATION")
+    print("=" * 70)
+
     print(
-        f"Videos: {len(jobs)}/{total}"
+        f"Completed: {completed}/{expected}"
     )
+
+    if completed != expected:
+        raise RuntimeError(
+            "I2V clip count mismatch."
+        )
+
+    jobs["jobs"] = final_jobs
+    jobs["status"] = "completed"
+    jobs["format"] = FORMAT
+    jobs["model"] = MODEL
+    jobs["total"] = expected
+
+    save_json(
+        JOBS_FILE,
+        jobs
+    )
+
+    print()
     print(
-        f"Model : {MODEL}"
+        "REAL AI IMAGE-TO-VIDEO GENERATION COMPLETE."
     )
+
     print(
-        f"Output: {VIDEO_DIR}"
+        f"Output directory: {I2V_DIR}"
     )
-    print("=" * 60)
 
 
 if __name__ == "__main__":
+
     try:
+
         main()
-    except Exception as exc:
+
+    except KeyboardInterrupt:
+
         print(
-            f"ERROR: {exc}",
-            file=sys.stderr
+            "Interrupted."
         )
+
+        sys.exit(130)
+
+    except Exception as exc:
+
+        print()
+        print(
+            f"ERROR: {exc}"
+        )
+
         sys.exit(1)
