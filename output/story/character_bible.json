@@ -1,51 +1,51 @@
 {
   "status": "completed",
   "topic": "आत्माराम की कहानी",
-  "character_count": 2,
+  "model": "gemini-3.5-flash-lite",
   "characters": [
     {
       "character_id": "CHAR_001",
       "name": "Atmaram",
-      "role": "Protagonist",
+      "role": "Protagonist / Seeker of Truth",
       "importance": "Primary",
-      "age": "Late 50s to early 60s",
+      "age": "Late 60s",
       "gender": "Male",
-      "personality": "Curious, determined, haunted by past secrets, anxious yet resolute when facing danger",
-      "appearance": "An elderly Indian man with deep wrinkles, tired eyes, and weathered skin reflecting a lifetime of worry and secrets",
-      "face_features": "Deep wrinkles across his forehead, worried eyes, prominent nose, thin lips, stubble beard",
-      "hair": "Short grey hair, slightly unkempt",
-      "clothing": "Traditional or simple middle-aged Indian attire, dark jacket, wearing layers suitable for an old dusty environment",
-      "body_features": "Medium build, hands that tremble occasionally when anxious but capable of gripping firmly",
-      "distinctive_features": "Deeply expressive eyes showing shock, fear, and ultimate resolve; often seen holding an antique lantern or a diary",
-      "visual_identity": "An aging man navigating dark, dusty corridors with vintage clothing and a lantern",
+      "personality": "Determined, courageous, haunted by the past, inquisitive",
+      "appearance": "An elderly Indian man with a weathered, rugged look, deeply etched wrinkles from age and sorrow, and a lean yet sturdy frame suited for his age.",
+      "face_features": "Deep-set brown eyes reflecting shock and resolve, prominent cheekbones, sharp jawline covered by subtle stubble, intense and expressive gaze.",
+      "hair": "Short silver-white hair, neatly combed back with receding hairline, matching a neatly trimmed silver beard and mustache.",
+      "clothing": "Traditional layered Indian attire consisting of a loose cotton kurta, a dark vest over it, and loose trousers, often draped with a simple shawl for the cold nights.",
+      "body_features": "Lean build, slightly hunched with age but stands straight when determined, hands showing prominent veins and weathered knuckles.",
+      "distinctive_features": "A scar on his left hand from an old incident, piercing observant eyes, often seen carrying a wooden walking stick.",
+      "visual_identity": "Elderly Indian man, late 60s, silver-white hair, trimmed silver beard, deep wrinkles, traditional kurta and vest, intense and determined expression.",
       "consistency_rules": [
-        "Must always appear as an older man in his late 50s or 60s with deep wrinkles",
-        "Hair must remain short and grey",
-        "Must maintain a worried, shocked, or determined facial expression suited to a mystery thriller",
-        "Clothing should consistently reflect an older rustic wardrobe"
+        "Must always maintain silver-white hair and trimmed silver beard",
+        "Must wear traditional Indian kurta and vest combinations across all scenes",
+        "Facial wrinkles and deep-set eyes must remain consistent",
+        "Must look like a man in his late 60s with a lean and weathered frame"
       ]
     },
     {
       "character_id": "CHAR_002",
-      "name": "Mysterious Figure",
-      "role": "Antagonist / Shadowy Intruder",
+      "name": "Village Leader",
+      "role": "Antagonist / Obstacle to Truth",
       "importance": "Secondary",
-      "age": "Adult",
-      "gender": "Ambiguous / Not specified",
-      "personality": "Menacing, stealthy, vengeful, looming presence in the shadows",
-      "appearance": "A shrouded silhouette or shadowy figure casting long, eerie shadows across the ruined haveli",
-      "face_features": "Obscured by shadows and darkness, mostly seen as a silhouette",
-      "hair": "Not visible or obscured by hoods/shadows",
-      "clothing": "Dark shrouded garments or heavy coat blending into the dark corridors",
-      "body_features": "Average human height and build, moving silently",
-      "distinctive_features": "Always surrounded by darkness, casting a long ominous shadow, appearing unexpectedly in hallways and doorways",
-      "visual_identity": "A dark, mysterious silhouette or shrouded figure standing in dim corridors",
+      "age": "Late 50s",
+      "gender": "Male",
+      "personality": "Stern, authoritarian, manipulative, protective of dark secrets",
+      "appearance": "A commanding and intimidating middle-aged man with an imposing physical presence and authoritative demeanor.",
+      "face_features": "Stern expression, sharp piercing eyes, thick eyebrows, strong jawline, cold and calculating look.",
+      "hair": "Short salt-and-pepper hair, slicked back neatly, clean-shaven face with a sharp mustache.",
+      "clothing": "Traditional upper-class rural attire including a well-fitted white kurta-pyjama and a dark Nehru jacket, exuding power and status.",
+      "body_features": "Tall, broad-shouldered, upright posture reflecting dominance.",
+      "distinctive_features": "A commanding aura, sharp intimidating gaze, authoritative stance.",
+      "visual_identity": "Middle-aged Indian man, late 50s, salt-and-pepper hair, clean-shaven with mustache, white kurta-pyjama with dark Nehru jacket, stern and authoritative expression.",
       "consistency_rules": [
-        "Must remain shadowy, obscure, or silhouetted in appearance",
-        "Should always be framed in doorways, dark corridors, or distant background shots",
-        "Face and detailed features must remain hidden to preserve mystery"
+        "Must always look stern and authoritative",
+        "Must wear traditional upper-class rural clothing like Nehru jackets",
+        "Hair must remain short salt-and-pepper",
+        "Must be visibly imposing compared to the protagonist"
       ]
     }
-  ],
-  "model": "gemini-3.5-flash-lite"
+  ]
 }
