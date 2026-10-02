@@ -1,10 +1,14 @@
-name: Generate Lok AI Video
+name: Generate AI Video
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "Input/topic.txt"
+      - ".github/workflows/generate-video.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   prepare:
@@ -15,90 +19,92 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Read configuration
+        shell: bash
         run: |
-          echo "===== VIDEO CONFIGURATION ====="
+          set -e
+
+          echo "======================================"
+          echo "          READING CONFIGURATION"
+          echo "======================================"
+
+          test -f Input/topic.txt
+
+          echo "===== INPUT/TOPIC.TXT ====="
           cat Input/topic.txt
-          echo "==============================="
+
+          CONFIG="Input/topic.txt"
+
+          echo "CONFIG=$CONFIG" >> "$GITHUB_ENV"
 
       - name: Validate configuration
         shell: bash
         run: |
           set -e
 
-          CONFIG="Input/topic.txt"
+          echo "======================================"
+          echo "        VALIDATING CONFIGURATION"
+          echo "======================================"
 
-          required_keys=(
-            FORMAT
-            AUDIENCE
-            VOICE
-            SPEED
-            TOPIC
-            PARTS
-            SCENES
-            STORY_LENGTH
-            SCENE_DURATION
-            CAPTIONS
-            VISUAL_STYLE
-            REALISM
-            QUALITY
-            FPS
-            RESUME_ENABLED
-            MAX_RETRIES
-            SAVE_CHECKPOINT_AFTER_EACH_SCENE
-            SKIP_COMPLETED_SCENES
-            FAILURE_POLICY
-          )
+          test -f "$CONFIG"
 
-          for key in "${required_keys[@]}"; do
-            if ! grep -qE "^${key}[[:space:]]*=" "$CONFIG"; then
-              echo "ERROR: Missing configuration key: $key"
-              exit 1
-            fi
-          done
+          if [ ! -s "$CONFIG" ]; then
+            echo "ERROR: Configuration file is empty."
+            exit 1
+          fi
 
-          echo "Configuration validation: PASSED"
+          echo "Configuration OK."
 
       - name: Prepare directories
         shell: bash
         run: |
           set -e
 
-          mkdir -p output
-          mkdir -p output/config
-          mkdir -p output/checkpoints
-          mkdir -p output/scenes
-          mkdir -p output/parts
-          mkdir -p output/shorts
-          mkdir -p output/story
-          mkdir -p output/narration
-          mkdir -p output/narration/audio
-          mkdir -p output/visuals
+          mkdir -p \
+            output \
+            output/story \
+            output/structure \
+            output/characters \
+            output/scenes \
+            output/narration \
+            output/audio \
+            output/visuals \
+            output/parts \
+            output/checkpoints
+
+          echo "Directories prepared."
 
       - name: Generate story plan
         shell: bash
         run: |
           set -e
 
+          echo "======================================"
+          echo "          STORY PLAN"
+          echo "======================================"
+
           python3 scripts/generate_story_plan.py
-          cat output/story/story_plan.json
 
       - name: Generate story structure
         shell: bash
         run: |
           set -e
 
-          python3 scripts/generate_story.py
-          cat output/story/story.json
+          echo "======================================"
+          echo "        STORY STRUCTURE"
+          echo "======================================"
+
+          python3 scripts/generate_story_structure.py
 
       - name: Select Gemini Model
         shell: bash
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
 
+          echo "======================================"
+          echo "          GEMINI MODEL"
+          echo "======================================"
+
           python3 scripts/select_gemini_model.py
-          cat output/config/selected_model.json
 
       - name: Test Gemini API
         shell: bash
@@ -107,17 +113,22 @@ jobs:
         run: |
           set -e
 
-          python3 scripts/test_gemini.py
+          echo "======================================"
+          echo "         TESTING GEMINI API"
+          echo "======================================"
+
+          python3 scripts/test_gemini_api.py
 
       - name: Prepare AI story generation
         shell: bash
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
 
-          python3 scripts/generate_ai_story.py
-          cat output/story/ai_story.json
+          echo "======================================"
+          echo "      PREPARING AI STORY GENERATION"
+          echo "======================================"
+
+          python3 scripts/prepare_ai_story.py
 
       - name: Generate Character Bible
         shell: bash
@@ -126,8 +137,11 @@ jobs:
         run: |
           set -e
 
+          echo "======================================"
+          echo "        CHARACTER BIBLE"
+          echo "======================================"
+
           python3 scripts/generate_character_bible.py
-          cat output/story/character_bible.json
 
       - name: Generate Scenes
         shell: bash
@@ -136,128 +150,88 @@ jobs:
         run: |
           set -e
 
+          echo "======================================"
+          echo "             SCENES"
+          echo "======================================"
+
           python3 scripts/generate_scenes.py
-          cat output/scenes/scenes.json
 
       - name: Generate Narration
         shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
 
+          echo "======================================"
+          echo "           NARRATION"
+          echo "======================================"
+
           python3 scripts/generate_narration.py
-          cat output/narration/narration.json
 
       - name: Install FFmpeg
         shell: bash
         run: |
           set -e
 
+          echo "======================================"
+          echo "          INSTALLING FFMPEG"
+          echo "======================================"
+
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-          echo "===== FFmpeg ====="
           ffmpeg -version | head -n 1
-
-          echo "===== FFprobe ====="
           ffprobe -version | head -n 1
 
       - name: Generate Hindi TTS Audio
         shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          set +e
+          set -e
 
-          python3 -m pip install \
-            --disable-pip-version-check \
-            --no-cache-dir \
-            edge-tts
-
-          INSTALL_STATUS=$?
-
-          if [ "$INSTALL_STATUS" -ne 0 ]; then
-            echo "ERROR: Edge TTS installation failed."
-            exit "$INSTALL_STATUS"
-          fi
+          echo "======================================"
+          echo "          HINDI TTS AUDIO"
+          echo "======================================"
 
           python3 scripts/generate_tts.py
-
-          TTS_STATUS=$?
-
-          if [ -f output/narration/audio_jobs.json ]; then
-            echo "===== TTS MANIFEST ====="
-            cat output/narration/audio_jobs.json
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add output/narration/audio_jobs.json
-
-          if git diff --cached --quiet; then
-            echo "No TTS checkpoint changes to commit."
-          else
-            git commit -m "Checkpoint TTS audio generation"
-            git push
-          fi
-
-          if [ "$TTS_STATUS" -ne 0 ]; then
-            echo "TTS generation failed."
-            echo "Checkpoint was saved before stopping."
-            exit "$TTS_STATUS"
-          fi
 
       - name: Prepare Visual Generation
         shell: bash
         run: |
           set -e
 
-          python3 scripts/prepare_visuals.py
-          cat output/visuals/visual_jobs.json
+          echo "======================================"
+          echo "       PREPARING VISUAL GENERATION"
+          echo "======================================"
+
+          python3 scripts/prepare_visual_generation.py
 
       - name: Select Cloudflare Visual Model
         shell: bash
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -e
 
-          python3 scripts/select_visual_model.py
-          cat output/config/selected_visual_model.json
+          echo "======================================"
+          echo "       CLOUDFLARE VISUAL MODEL"
+          echo "======================================"
+
+          python3 scripts/select_cloudflare_model.py
 
       - name: Generate Visuals
         shell: bash
         env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          set +e
+          set -e
+
+          echo "======================================"
+          echo "          GENERATING VISUALS"
+          echo "======================================"
 
           python3 scripts/generate_visuals.py
-
-          GENERATION_STATUS=$?
-
-          if [ -f output/visuals/visual_jobs.json ]; then
-            echo "===== VISUAL MANIFEST ====="
-            cat output/visuals/visual_jobs.json
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add output/visuals/visual_jobs.json
-
-          if git diff --cached --quiet; then
-            echo "No visual checkpoint changes to commit."
-          else
-            git commit -m "Checkpoint visual generation"
-            git push
-          fi
-
-          if [ "$GENERATION_STATUS" -ne 0 ]; then
-            echo "Visual generation failed."
-            echo "Checkpoint was saved before stopping."
-            exit "$GENERATION_STATUS"
-          fi
 
       - name: Render Scene Videos
         shell: bash
@@ -299,58 +273,209 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Assemble Final Video
+        shell: bash
+        run: |
+          set -e
+
+          echo "======================================"
+          echo "          ASSEMBLING FINAL VIDEO"
+          echo "======================================"
+
+          PART_COUNT=$(find output/parts -maxdepth 1 -type f -name "part_*.mp4" | wc -l)
+
+          echo "Part videos found: $PART_COUNT"
+
+          if [ "$PART_COUNT" -eq 0 ]; then
+            echo "ERROR: No part videos found."
+            exit 1
+          fi
+
+          rm -f \
+            output/final_video_concat.txt \
+            output/final_video.tmp.mp4 \
+            output/final_video.mp4
+
+          find output/parts \
+            -maxdepth 1 \
+            -type f \
+            -name "part_*.mp4" \
+            -print0 \
+            | sort -z \
+            | while IFS= read -r -d "" file; do
+
+                if [ ! -s "$file" ]; then
+                  echo "ERROR: Empty part video: $file"
+                  exit 1
+                fi
+
+                printf "file '%s'\n" "$(realpath "$file")" \
+                  >> output/final_video_concat.txt
+
+              done
+
+          echo
+          echo "===== CONCAT LIST ====="
+          cat output/final_video_concat.txt
+
+          echo
+          echo "===== FFMPEG FINAL ASSEMBLY ====="
+
+          ffmpeg -y \
+            -hide_banner \
+            -loglevel error \
+            -f concat \
+            -safe 0 \
+            -i output/final_video_concat.txt \
+            -c copy \
+            -movflags +faststart \
+            output/final_video.tmp.mp4
+
+          test -s output/final_video.tmp.mp4
+
+          mv \
+            output/final_video.tmp.mp4 \
+            output/final_video.mp4
+
+          echo
+          echo "===== FINAL VIDEO ====="
+
+          ls -lh output/final_video.mp4
+
+          DURATION=$(ffprobe \
+            -v error \
+            -show_entries format=duration \
+            -of default=noprint_wrappers=1:nokey=1 \
+            output/final_video.mp4)
+
+          echo "Final duration: ${DURATION}s"
+
+          python3 - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          video = Path("output/final_video.mp4")
+          render_manifest = Path("output/video_render_manifest.json")
+
+          duration = float(
+              subprocess.check_output(
+                  [
+                      "ffprobe",
+                      "-v",
+                      "error",
+                      "-show_entries",
+                      "format=duration",
+                      "-of",
+                      "default=noprint_wrappers=1:nokey=1",
+                      str(video),
+                  ],
+                  text=True,
+              ).strip()
+          )
+
+          if duration <= 0:
+              raise SystemExit(
+                  "ERROR: Final video duration is invalid."
+              )
+
+          data = json.loads(
+              render_manifest.read_text(encoding="utf-8")
+          )
+
+          parts = data.get("parts", [])
+          scenes = data.get("total_scenes", 0)
+
+          if not parts:
+              raise SystemExit(
+                  "ERROR: Render manifest contains no parts."
+              )
+
+          final_manifest = {
+              "status": "completed",
+              "output": str(video),
+              "duration": round(duration, 3),
+              "parts": len(parts),
+              "scenes": scenes,
+              "format": data.get("format"),
+              "width": data.get("width"),
+              "height": data.get("height"),
+              "fps": data.get("fps"),
+          }
+
+          Path(
+              "output/final_video_manifest.json"
+          ).write_text(
+              json.dumps(
+                  final_manifest,
+                  ensure_ascii=False,
+                  indent=2,
+              ) + "\n",
+              encoding="utf-8",
+          )
+
+          print(
+              json.dumps(
+                  final_manifest,
+                  ensure_ascii=False,
+                  indent=2,
+              )
+          )
+          PY
+
+      - name: Upload Final Video Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lok-ai-final-video
+          path: |
+            output/final_video.mp4
+            output/final_video_manifest.json
+            output/video_render_manifest.json
+            output/parts/*.mp4
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Create initial checkpoint
         shell: bash
         run: |
           set -e
 
-          CHECKPOINT="output/checkpoints/progress.json"
+          mkdir -p output/checkpoints
 
-          if [ -f "$CHECKPOINT" ]; then
-            cat "$CHECKPOINT"
-          else
-            cat > "$CHECKPOINT" <<'EOF'
-          {
-            "status": "initialized",
-            "completed_parts": [],
-            "completed_scenes": [],
-            "current_part": 1,
-            "current_scene": 1,
-            "last_completed": null
-          }
-          EOF
-          fi
+          date -u +"%Y-%m-%dT%H:%M:%SZ" \
+            > output/checkpoints/initial_checkpoint.txt
+
+          echo "Initial checkpoint created."
 
       - name: Show project state
+        shell: bash
         run: |
-          echo "===== OUTPUT FILES ====="
-          find output -maxdepth 5 -type f | sort
+          set -e
+
+          echo "======================================"
+          echo "          PROJECT STATE"
+          echo "======================================"
+
+          find output \
+            -maxdepth 3 \
+            -type f \
+            -printf "%p %s bytes\n" \
+            | sort
 
       - name: Save checkpoint
         shell: bash
         run: |
           set -e
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p output/checkpoints
 
-          git add \
-            output/config/selected_model.json \
-            output/config/selected_visual_model.json \
-            output/checkpoints/progress.json \
-            output/story/story_plan.json \
-            output/story/story.json \
-            output/story/ai_story.json \
-            output/story/character_bible.json \
-            output/scenes/scenes.json \
-            output/narration/narration.json \
-            output/narration/audio_jobs.json \
-            output/visuals/visual_jobs.json \
-            output/video_render_manifest.json
+          cat > output/checkpoints/latest_checkpoint.json <<'JSON'
+          {
+            "status": "completed",
+            "pipeline": "ai-video-generation",
+            "final_video": "output/final_video.mp4",
+            "final_manifest": "output/final_video_manifest.json"
+          }
+          JSON
 
-          if git diff --cached --quiet; then
-            echo "No checkpoint changes to commit."
-          else
-            git commit -m "Save video pipeline checkpoint"
-            git push
-          fi
+          echo "Checkpoint saved."
