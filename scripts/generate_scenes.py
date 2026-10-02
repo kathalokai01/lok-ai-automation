@@ -9,40 +9,62 @@ import urllib.request
 from pathlib import Path
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
 CONFIG_FILE = Path("Input/topic.txt")
-
 OUTPUT_DIR = Path("output/scenes")
 SCENES_FILE = OUTPUT_DIR / "scenes.json"
 CHECKPOINT_FILE = Path("output/checkpoints/scenes_progress.json")
 
 MAX_ATTEMPTS = int(os.getenv("SCENE_MAX_ATTEMPTS", "5"))
-
-# 429 backoff:
-# attempt 1 -> 15 sec
-# attempt 2 -> 30 sec
-# attempt 3 -> 60 sec
-# attempt 4 -> 120 sec
-# attempt 5 -> 240 sec
 INITIAL_BACKOFF = int(os.getenv("SCENE_INITIAL_BACKOFF", "15"))
 MAX_BACKOFF = int(os.getenv("SCENE_MAX_BACKOFF", "300"))
-
-# Small delay between normal successful API calls.
 REQUEST_DELAY = float(os.getenv("SCENE_REQUEST_DELAY", "2"))
-
-# Gemini API timeout.
 REQUEST_TIMEOUT = int(os.getenv("SCENE_REQUEST_TIMEOUT", "120"))
 
 
-# ============================================================
-# HELPERS
-# ============================================================
-
 def log(message=""):
     print(message, flush=True)
+
+
+# ============================================================
+# CONFIG PARSER
+# ============================================================
+
+def clean_config_value(value):
+    """
+    Remove inline comments safely.
+
+    Example:
+        4   # number of parts
+    becomes:
+        4
+
+    Quoted strings are preserved.
+    """
+
+    value = value.strip()
+
+    if not value:
+        return ""
+
+    # Remove inline comment.
+    if "#" in value:
+        value = value.split("#", 1)[0].strip()
+
+    # Remove surrounding quotes.
+    if len(value) >= 2:
+        if (
+            value.startswith('"')
+            and value.endswith('"')
+        ):
+            value = value[1:-1]
+
+        elif (
+            value.startswith("'")
+            and value.endswith("'")
+        ):
+            value = value[1:-1]
+
+    return value.strip()
 
 
 def load_config():
@@ -71,26 +93,34 @@ def load_config():
         key, value = line.split("=", 1)
 
         key = key.strip()
-        value = value.strip()
-
-        if (
-            len(value) >= 2
-            and value.startswith('"')
-            and value.endswith('"')
-        ):
-            value = value[1:-1]
-
-        if (
-            len(value) >= 2
-            and value.startswith("'")
-            and value.endswith("'")
-        ):
-            value = value[1:-1]
+        value = clean_config_value(value)
 
         config[key] = value
 
     return config
 
+
+def read_int_config(config, key, default):
+    value = config.get(key, "")
+
+    try:
+        number = int(str(value).strip())
+
+        if number < 1:
+            raise ValueError
+
+        return number
+
+    except Exception:
+        raise ValueError(
+            f"Invalid {key} value: {value!r}. "
+            f"Expected a positive integer."
+        )
+
+
+# ============================================================
+# JSON
+# ============================================================
 
 def read_json(path):
     if not path.exists():
@@ -128,6 +158,14 @@ def write_json(path, data):
     )
 
     temp_path.replace(path)
+
+
+# ============================================================
+# CHECKPOINT
+# ============================================================
+
+def scene_key(part_number, scene_number):
+    return f"{part_number}:{scene_number}"
 
 
 def save_checkpoint(
@@ -179,17 +217,22 @@ def load_checkpoint():
     result = set()
 
     for item in completed:
+
+        if isinstance(item, str) and ":" in item:
+            result.add(item)
+            continue
+
         try:
-            result.add(int(item))
+            result.add(str(int(item)))
         except Exception:
             pass
 
     return result
 
 
-def scene_key(part_number, scene_number):
-    return f"{part_number}:{scene_number}"
-
+# ============================================================
+# EXISTING SCENES
+# ============================================================
 
 def scene_already_saved(
     existing_scenes,
@@ -202,22 +245,28 @@ def scene_already_saved(
     )
 
     for scene in existing_scenes:
+
         if not isinstance(scene, dict):
             continue
 
-        part = scene.get("part")
-        number = scene.get("scene")
-
         try:
+            part = int(
+                scene.get("part", -1)
+            )
+
+            number = int(
+                scene.get("scene", -1)
+            )
+
             if (
-                int(part) == part_number
-                and int(number) == scene_number
+                part == part_number
+                and number == scene_number
             ):
                 return True
-        except Exception:
-            continue
 
-        # Also support alternative IDs.
+        except Exception:
+            pass
+
         scene_id = str(
             scene.get("id", "")
         ).strip()
@@ -232,66 +281,12 @@ def scene_already_saved(
     return False
 
 
-def extract_retry_after(error):
-    """
-    Try to extract Retry-After from an HTTP 429 response.
-    """
-
-    if not error:
-        return None
-
-    try:
-        value = error.headers.get(
-            "Retry-After"
-        )
-
-        if value:
-            seconds = float(value)
-
-            if seconds >= 0:
-                return seconds
-    except Exception:
-        pass
-
-    return None
-
-
-def calculate_backoff(attempt):
-    """
-    Exponential backoff with small jitter.
-
-    attempt 1 -> 15 sec
-    attempt 2 -> 30 sec
-    attempt 3 -> 60 sec
-    attempt 4 -> 120 sec
-    attempt 5 -> 240 sec
-    """
-
-    base = INITIAL_BACKOFF * (
-        2 ** max(0, attempt - 1)
-    )
-
-    base = min(
-        base,
-        MAX_BACKOFF
-    )
-
-    jitter = random.uniform(
-        0,
-        min(5, base * 0.10)
-    )
-
-    return round(
-        base + jitter,
-        2
-    )
-
-
 # ============================================================
-# GEMINI API
+# GEMINI
 # ============================================================
 
 def get_model():
+
     selected_model_file = Path(
         "output/config/selected_model.json"
     )
@@ -301,21 +296,23 @@ def get_model():
     )
 
     if isinstance(data, dict):
+
         for key in (
             "model",
             "selected_model",
             "name",
         ):
+
             value = data.get(key)
 
             if value:
                 return str(value).strip()
 
-    # Fallback to known model.
     return "gemini-3.5-flash-lite"
 
 
 def get_api_key():
+
     key = os.getenv(
         "GEMINI_API_KEY",
         ""
@@ -334,17 +331,6 @@ def call_gemini(
     model,
     prompt,
 ):
-    """
-    Single Gemini API request.
-
-    Returns:
-        generated text
-
-    Raises:
-        urllib.error.HTTPError
-        urllib.error.URLError
-        RuntimeError
-    """
 
     url = (
         "https://generativelanguage.googleapis.com/"
@@ -384,6 +370,7 @@ def call_gemini(
     )
 
     try:
+
         with urllib.request.urlopen(
             request,
             timeout=REQUEST_TIMEOUT
@@ -397,7 +384,6 @@ def call_gemini(
 
     except urllib.error.HTTPError as exc:
 
-        # Preserve 429 so retry logic can handle it.
         if exc.code == 429:
             raise
 
@@ -415,6 +401,7 @@ def call_gemini(
         ) from exc
 
     except urllib.error.URLError as exc:
+
         raise RuntimeError(
             f"Gemini network error: {exc}"
         ) from exc
@@ -458,54 +445,45 @@ def call_gemini(
 
 
 # ============================================================
-# JSON EXTRACTION
+# JSON RESPONSE
 # ============================================================
 
 def parse_json_response(text):
+
     text = text.strip()
 
-    # Direct JSON.
     try:
         return json.loads(text)
     except Exception:
         pass
 
-    # Remove markdown fences.
     if text.startswith("```"):
+
         lines = text.splitlines()
 
         if lines:
             lines = lines[1:]
 
-        if lines and lines[-1].strip() == "```":
+        if (
+            lines
+            and lines[-1].strip() == "```"
+        ):
             lines = lines[:-1]
 
-        cleaned = "\n".join(lines).strip()
+        cleaned = "\n".join(
+            lines
+        ).strip()
 
         try:
             return json.loads(cleaned)
         except Exception:
             pass
 
-    # Find first JSON object.
     start = text.find("{")
     end = text.rfind("}")
 
     if start >= 0 and end > start:
-        candidate = text[
-            start:end + 1
-        ]
 
-        try:
-            return json.loads(candidate)
-        except Exception:
-            pass
-
-    # Find first JSON array.
-    start = text.find("[")
-    end = text.rfind("]")
-
-    if start >= 0 and end > start:
         candidate = text[
             start:end + 1
         ]
@@ -530,6 +508,7 @@ def build_prompt(
     part_number,
     scene_number,
 ):
+
     story_text = json.dumps(
         story,
         ensure_ascii=False,
@@ -569,7 +548,7 @@ Scene: {scene_number}
 Create a detailed scene suitable for downstream
 visual generation.
 
-The scene must contain:
+Return exactly this structure:
 
 {{
   "part": {part_number},
@@ -582,19 +561,71 @@ The scene must contain:
   "transition": "appropriate transition"
 }}
 
-Important:
+Rules:
 - Keep continuity with the story.
 - Keep characters visually consistent.
 - Do not invent unrelated characters.
-- The narration must be in Hindi.
-- The visual prompt should be detailed and production-ready.
+- Narration must be Hindi.
+- Visual prompt must be detailed.
 - Return JSON only.
 """.strip()
 
 
 # ============================================================
-# RETRY LOGIC
+# RETRY
 # ============================================================
+
+def extract_retry_after(error):
+
+    if not error:
+        return None
+
+    try:
+
+        value = error.headers.get(
+            "Retry-After"
+        )
+
+        if value:
+
+            seconds = float(value)
+
+            if seconds >= 0:
+                return seconds
+
+    except Exception:
+        pass
+
+    return None
+
+
+def calculate_backoff(attempt):
+
+    base = INITIAL_BACKOFF * (
+        2 ** max(
+            0,
+            attempt - 1
+        )
+    )
+
+    base = min(
+        base,
+        MAX_BACKOFF
+    )
+
+    jitter = random.uniform(
+        0,
+        min(
+            5,
+            base * 0.10
+        )
+    )
+
+    return round(
+        base + jitter,
+        2
+    )
+
 
 def generate_scene_with_retry(
     api_key,
@@ -603,12 +634,14 @@ def generate_scene_with_retry(
     part_number,
     scene_number,
 ):
+
     last_error = None
 
     for attempt in range(
         1,
         MAX_ATTEMPTS + 1
     ):
+
         log(
             f"Generating Part {part_number} "
             f"Scene {scene_number} "
@@ -617,6 +650,7 @@ def generate_scene_with_retry(
         )
 
         try:
+
             response = call_gemini(
                 api_key,
                 model,
@@ -635,15 +669,8 @@ def generate_scene_with_retry(
                     "Scene response must be a JSON object."
                 )
 
-            # Force canonical identifiers.
             scene["part"] = part_number
             scene["scene"] = scene_number
-
-            log(
-                f"Part {part_number} "
-                f"Scene {scene_number} "
-                f"completed and saved."
-            )
 
             return scene
 
@@ -660,25 +687,21 @@ def generate_scene_with_retry(
                     exc
                 )
 
-                if retry_after is not None:
-                    wait_seconds = max(
+                wait_seconds = (
+                    max(
                         retry_after,
                         calculate_backoff(attempt)
                     )
-                else:
-                    wait_seconds = calculate_backoff(
-                        attempt
-                    )
-
-                log(
-                    "Scene generation failed: "
-                    "HTTP Error 429: Too Many Requests"
+                    if retry_after is not None
+                    else calculate_backoff(attempt)
                 )
 
                 log(
-                    f"Rate limit detected. "
-                    f"Waiting {wait_seconds:.1f}s "
-                    f"before retry..."
+                    "HTTP 429 rate limit."
+                )
+
+                log(
+                    f"Waiting {wait_seconds:.1f}s..."
                 )
 
                 time.sleep(
@@ -688,8 +711,7 @@ def generate_scene_with_retry(
                 continue
 
             log(
-                f"Scene generation failed: "
-                f"HTTP Error {exc.code}"
+                f"Gemini HTTP Error {exc.code}"
             )
 
         except Exception as exc:
@@ -707,8 +729,7 @@ def generate_scene_with_retry(
             )
 
             log(
-                f"Waiting {wait_seconds:.1f}s "
-                f"before retry..."
+                f"Waiting {wait_seconds:.1f}s..."
             )
 
             time.sleep(
@@ -735,14 +756,39 @@ def main():
 
     config = load_config()
 
-    api_key = get_api_key()
+    # --------------------------------------------------------
+    # IMPORTANT: Parse numeric config safely.
+    # --------------------------------------------------------
 
-    model = get_model()
+    parts = read_int_config(
+        config,
+        "PARTS",
+        1
+    )
+
+    scenes_per_part = read_int_config(
+        config,
+        "SCENES",
+        10
+    )
+
+    total_scenes = (
+        parts * scenes_per_part
+    )
 
     log()
-    log("===== GEMINI MODEL =====")
-    log(f"Selected model: {model}")
-    log("========================")
+    log("===== CONFIGURATION =====")
+    log(f"PARTS            : {parts}")
+    log(f"SCENES PER PART  : {scenes_per_part}")
+    log(f"TOTAL SCENES     : {total_scenes}")
+    log("=========================")
+
+    api_key = get_api_key()
+    model = get_model()
+
+    log(
+        f"Selected model: {model}"
+    )
 
     OUTPUT_DIR.mkdir(
         parents=True,
@@ -755,17 +801,15 @@ def main():
     )
 
     # --------------------------------------------------------
-    # Load story
+    # Story
     # --------------------------------------------------------
-
-    story_candidates = [
-        Path("output/story/ai_story.json"),
-        Path("output/story/story.json"),
-    ]
 
     story = None
 
-    for path in story_candidates:
+    for path in [
+        Path("output/story/ai_story.json"),
+        Path("output/story/story.json"),
+    ]:
 
         candidate = read_json(path)
 
@@ -774,47 +818,13 @@ def main():
             break
 
     if story is None:
+
         raise FileNotFoundError(
-            "No story file found. "
-            "Expected output/story/ai_story.json "
-            "or output/story/story.json"
+            "No story file found."
         )
 
     # --------------------------------------------------------
-    # Determine parts/scenes
-    # --------------------------------------------------------
-
-    try:
-        parts = int(
-            config.get("PARTS", "1")
-        )
-    except Exception:
-        parts = 1
-
-    try:
-        scenes_per_part = int(
-            config.get("SCENES", "10")
-        )
-    except Exception:
-        scenes_per_part = 10
-
-    total_scenes = (
-        parts * scenes_per_part
-    )
-
-    log()
-    log(
-        f"Total parts: {parts}"
-    )
-    log(
-        f"Scenes per part: {scenes_per_part}"
-    )
-    log(
-        f"Total scenes: {total_scenes}"
-    )
-
-    # --------------------------------------------------------
-    # Load existing scenes
+    # Existing scenes
     # --------------------------------------------------------
 
     existing_data = read_json(
@@ -825,43 +835,44 @@ def main():
         existing_data,
         dict
     ):
-        existing_scenes = existing_data.get(
-            "scenes",
-            []
+
+        existing_scenes = (
+            existing_data.get(
+                "scenes",
+                []
+            )
         )
 
     elif isinstance(
         existing_data,
         list
     ):
+
         existing_scenes = existing_data
 
     else:
+
         existing_scenes = []
 
     if not isinstance(
         existing_scenes,
         list
     ):
+
         existing_scenes = []
 
     # --------------------------------------------------------
-    # Load checkpoint
+    # Checkpoint
     # --------------------------------------------------------
 
-    checkpoint_completed = (
-        load_checkpoint()
-    )
+    completed = load_checkpoint()
 
-    # Build completed set from actual scene file too.
-    completed = set(
-        checkpoint_completed
-    )
-
+    # Add scenes that physically exist in scenes.json.
     for part_number in range(
         1,
         parts + 1
     ):
+
         for scene_number in range(
             1,
             scenes_per_part + 1
@@ -877,24 +888,49 @@ def main():
                 part_number,
                 scene_number
             ):
-                completed.add(
-                    key
+
+                completed.add(key)
+
+    # IMPORTANT:
+    # Remove invalid/out-of-range checkpoint entries.
+    valid_completed = set()
+
+    for item in completed:
+
+        if ":" not in item:
+            continue
+
+        try:
+
+            p, s = item.split(
+                ":",
+                1
+            )
+
+            p = int(p)
+            s = int(s)
+
+            if (
+                1 <= p <= parts
+                and 1 <= s <= scenes_per_part
+            ):
+                valid_completed.add(
+                    scene_key(p, s)
                 )
 
-    log()
-    log(
-        f"Checkpoint completed scenes: "
-        f"{len(checkpoint_completed)}"
-    )
+        except Exception:
+            pass
+
+    completed = valid_completed
 
     log(
         f"Existing completed scenes: "
-        f"{len(completed)}"
+        f"{len(completed)}/{total_scenes}"
     )
 
     save_checkpoint(
         total_scenes,
-        completed,
+        completed
     )
 
     # --------------------------------------------------------
@@ -916,17 +952,12 @@ def main():
                 scene_number
             )
 
-            # ------------------------------------------------
-            # RESUME
-            # ------------------------------------------------
-
             if key in completed:
 
                 log(
                     f"Part {part_number} "
                     f"Scene {scene_number} "
-                    f"already completed. "
-                    f"Skipping."
+                    f"already completed. Skipping."
                 )
 
                 continue
@@ -937,10 +968,6 @@ def main():
                 part_number,
                 scene_number
             )
-
-            # ------------------------------------------------
-            # GENERATE WITH RETRY
-            # ------------------------------------------------
 
             try:
 
@@ -954,24 +981,19 @@ def main():
 
             except Exception as exc:
 
-                # Save checkpoint BEFORE failing.
                 save_checkpoint(
                     total_scenes,
                     completed,
                     failed_scene=key
                 )
 
-                log()
                 log(
                     f"ERROR: {exc}"
                 )
 
                 raise
 
-            # ------------------------------------------------
-            # Replace existing duplicate if necessary
-            # ------------------------------------------------
-
+            # Replace existing scene.
             replaced = False
 
             for index, old_scene in enumerate(
@@ -985,6 +1007,7 @@ def main():
                     continue
 
                 try:
+
                     old_part = int(
                         old_scene.get(
                             "part",
@@ -992,7 +1015,7 @@ def main():
                         )
                     )
 
-                    old_scene_number = int(
+                    old_number = int(
                         old_scene.get(
                             "scene",
                             -1
@@ -1000,12 +1023,12 @@ def main():
                     )
 
                 except Exception:
+
                     continue
 
                 if (
                     old_part == part_number
-                    and old_scene_number
-                    == scene_number
+                    and old_number == scene_number
                 ):
 
                     existing_scenes[index] = scene
@@ -1013,16 +1036,15 @@ def main():
                     break
 
             if not replaced:
+
                 existing_scenes.append(
                     scene
                 )
 
-            # ------------------------------------------------
-            # Stable ordering
-            # ------------------------------------------------
-
             def sort_key(item):
+
                 try:
+
                     return (
                         int(
                             item.get(
@@ -1037,7 +1059,9 @@ def main():
                             )
                         ),
                     )
+
                 except Exception:
+
                     return (
                         999999,
                         999999
@@ -1047,64 +1071,82 @@ def main():
                 key=sort_key
             )
 
-            # ------------------------------------------------
-            # Save scene file immediately
-            # ------------------------------------------------
-
-            output_data = {
-                "status": "in_progress",
-                "model": model,
-                "total_scenes": total_scenes,
-                "completed_scenes": len(
-                    completed
-                ),
-                "scenes": existing_scenes,
-            }
+            completed.add(key)
 
             write_json(
                 SCENES_FILE,
-                output_data
-            )
-
-            # ------------------------------------------------
-            # Update checkpoint immediately
-            # ------------------------------------------------
-
-            completed.add(
-                key
+                {
+                    "status": "in_progress",
+                    "model": model,
+                    "total_scenes": total_scenes,
+                    "completed_scenes": len(completed),
+                    "scenes": existing_scenes,
+                }
             )
 
             save_checkpoint(
                 total_scenes,
-                completed,
+                completed
             )
 
             log(
-                f"Checkpoint saved after "
-                f"Part {part_number} "
-                f"Scene {scene_number}."
+                f"Saved Part {part_number} "
+                f"Scene {scene_number} "
+                f"({len(completed)}/{total_scenes})"
             )
 
-            # ------------------------------------------------
-            # Small pacing delay
-            # ------------------------------------------------
-
             if len(completed) < total_scenes:
+
                 time.sleep(
                     REQUEST_DELAY
                 )
 
     # --------------------------------------------------------
-    # FINALIZE
+    # Final validation
     # --------------------------------------------------------
+
+    expected_keys = {
+        scene_key(p, s)
+        for p in range(1, parts + 1)
+        for s in range(1, scenes_per_part + 1)
+    }
+
+    actual_keys = set()
+
+    for scene in existing_scenes:
+
+        if not isinstance(scene, dict):
+            continue
+
+        try:
+
+            p = int(scene["part"])
+            s = int(scene["scene"])
+
+            actual_keys.add(
+                scene_key(p, s)
+            )
+
+        except Exception:
+            pass
+
+    missing = sorted(
+        expected_keys - actual_keys
+    )
+
+    if missing:
+
+        raise RuntimeError(
+            f"Scene generation incomplete. "
+            f"Missing {len(missing)} scenes: "
+            f"{', '.join(missing[:20])}"
+        )
 
     final_data = {
         "status": "completed",
         "model": model,
         "total_scenes": total_scenes,
-        "completed_scenes": len(
-            completed
-        ),
+        "completed_scenes": len(actual_keys),
         "scenes": existing_scenes,
     }
 
@@ -1115,7 +1157,7 @@ def main():
 
     save_checkpoint(
         total_scenes,
-        completed,
+        actual_keys,
         failed_scene=None
     )
 
@@ -1125,13 +1167,7 @@ def main():
     log("======================================")
     log(
         f"Completed scenes: "
-        f"{len(completed)}/{total_scenes}"
-    )
-    log(
-        f"Scenes file: {SCENES_FILE}"
-    )
-    log(
-        f"Checkpoint: {CHECKPOINT_FILE}"
+        f"{len(actual_keys)}/{total_scenes}"
     )
 
 
