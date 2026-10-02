@@ -1,6 +1,8 @@
 import os
 import json
 import base64
+import time
+import random
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
@@ -13,7 +15,13 @@ VISUAL_JOBS_FILE = "output/visuals/visual_jobs.json"
 SELECTED_MODEL_FILE = "output/config/selected_visual_model.json"
 TOPIC_FILE = "Input/topic.txt"
 
-MAX_RETRIES = 3
+MAX_RETRIES = 6
+
+INITIAL_BACKOFF = 20
+MAX_BACKOFF = 300
+
+REQUEST_TIMEOUT = 180
+
 BASE_URL = "https://api.cloudflare.com/client/v4/accounts"
 
 
@@ -23,6 +31,11 @@ def load_json(path):
 
 
 def save_json(path, data):
+    os.makedirs(
+        os.path.dirname(path),
+        exist_ok=True,
+    )
+
     temp = f"{path}.tmp"
 
     with open(temp, "w", encoding="utf-8") as f:
@@ -63,7 +76,9 @@ def get_topic():
             )
 
             values[key.strip()] = (
-                value.strip().strip('"').strip("'")
+                value.strip()
+                .strip('"')
+                .strip("'")
             )
 
     return values.get("TOPIC", "")
@@ -89,7 +104,7 @@ def api_request(model, payload):
 
     with urllib.request.urlopen(
         request,
-        timeout=180,
+        timeout=REQUEST_TIMEOUT,
     ) as response:
         return response.read()
 
@@ -98,11 +113,9 @@ def extract_image(response_bytes):
     if not response_bytes:
         return None
 
-    # PNG
     if response_bytes.startswith(b"\x89PNG"):
         return response_bytes
 
-    # JPEG
     if response_bytes.startswith(b"\xff\xd8"):
         return response_bytes
 
@@ -160,19 +173,19 @@ def build_prompt(job, topic):
 
     if job.get("visual_prompt"):
         parts.append(
-            f"Visual scene: "
+            "Visual scene: "
             f"{job['visual_prompt']}"
         )
 
     if job.get("camera_prompt"):
         parts.append(
-            f"Camera: "
+            "Camera: "
             f"{job['camera_prompt']}"
         )
 
     if job.get("lighting_prompt"):
         parts.append(
-            f"Lighting: "
+            "Lighting: "
             f"{job['lighting_prompt']}"
         )
 
@@ -218,6 +231,11 @@ def generate_image(model, job, topic):
         build_negative_prompt(job)
     )
 
+    seed = (
+        int(job["part"]) * 10000
+        + int(job["scene"])
+    )
+
     if "stable-diffusion-xl-lightning" in model:
         payload = {
             "prompt": prompt,
@@ -226,10 +244,7 @@ def generate_image(model, job, topic):
             "height": 432,
             "num_steps": 4,
             "guidance": 7.5,
-            "seed": (
-                int(job["part"]) * 10000
-                + int(job["scene"])
-            ),
+            "seed": seed,
         }
 
     elif "flux-1-schnell" in model:
@@ -240,10 +255,7 @@ def generate_image(model, job, topic):
                 f"{negative_prompt}"
             ),
             "steps": 4,
-            "seed": (
-                int(job["part"]) * 10000
-                + int(job["scene"])
-            ),
+            "seed": seed,
         }
 
     else:
@@ -262,10 +274,116 @@ def generate_image(model, job, topic):
 
     if not image:
         raise RuntimeError(
-            "Cloudflare API returned no valid image"
+            "Cloudflare API returned "
+            "no valid image"
         )
 
     return image
+
+
+def get_output_file(part, scene):
+    return (
+        f"output/visuals/"
+        f"part_{part:02d}/"
+        f"scene_{scene:02d}.png"
+    )
+
+
+def is_valid_image(path):
+    if not os.path.exists(path):
+        return False
+
+    if os.path.getsize(path) <= 0:
+        return False
+
+    try:
+        with open(
+            path,
+            "rb",
+        ) as f:
+            header = f.read(8)
+
+        return (
+            header.startswith(b"\x89PNG")
+            or header.startswith(b"\xff\xd8")
+        )
+
+    except Exception:
+        return False
+
+
+def save_job_checkpoint(
+    data,
+    job,
+    provider,
+    model,
+    output_file,
+    status,
+    error=None,
+):
+    job["status"] = status
+    job["provider"] = provider
+    job["model"] = model
+    job["asset_path"] = (
+        output_file
+        if status == "completed"
+        else None
+    )
+    job["error"] = error
+
+    if status == "completed":
+        job["completed_at"] = (
+            datetime.now(
+                timezone.utc
+            ).isoformat()
+        )
+
+    data["updated_at"] = (
+        datetime.now(
+            timezone.utc
+        ).isoformat()
+    )
+
+    data["provider"] = provider
+    data["model"] = model
+
+    jobs = data.get(
+        "jobs",
+        [],
+    )
+
+    data["total_jobs"] = len(jobs)
+
+    data["completed_jobs"] = sum(
+        1
+        for item in jobs
+        if item.get("status")
+        == "completed"
+        and is_valid_image(
+            get_output_file(
+                int(item["part"]),
+                int(item["scene"]),
+            )
+        )
+    )
+
+    data["failed_jobs"] = sum(
+        1
+        for item in jobs
+        if item.get("status")
+        == "failed"
+    )
+
+    data["pending_jobs"] = (
+        data["total_jobs"]
+        - data["completed_jobs"]
+        - data["failed_jobs"]
+    )
+
+    save_json(
+        VISUAL_JOBS_FILE,
+        data,
+    )
 
 
 def validate_jobs(data):
@@ -273,10 +391,16 @@ def validate_jobs(data):
 
     if not isinstance(jobs, list):
         raise RuntimeError(
-            "visual_jobs.json does not contain a valid jobs list"
+            "visual_jobs.json does not contain "
+            "a valid jobs list"
         )
 
-    expected = 1
+    if not jobs:
+        raise RuntimeError(
+            "visual_jobs.json contains zero jobs"
+        )
+
+    seen = set()
 
     for job in jobs:
         if "part" not in job:
@@ -289,27 +413,71 @@ def validate_jobs(data):
                 "Visual job missing scene"
             )
 
-        if int(job["scene"]) <= 0:
+        part = int(job["part"])
+        scene = int(job["scene"])
+
+        if part <= 0 or scene <= 0:
             raise RuntimeError(
-                "Invalid scene number"
+                "Invalid part/scene number"
             )
 
-        expected += 1
+        key = (
+            part,
+            scene,
+        )
+
+        if key in seen:
+            raise RuntimeError(
+                "Duplicate visual job: "
+                f"Part {part} Scene {scene}"
+            )
+
+        seen.add(key)
+
+    return jobs
+
+
+def validate_all_visuals(jobs):
+    missing = []
+
+    for job in jobs:
+        part = int(job["part"])
+        scene = int(job["scene"])
+
+        path = get_output_file(
+            part,
+            scene,
+        )
+
+        if not is_valid_image(path):
+            missing.append(
+                f"Part {part} Scene {scene}"
+            )
+
+    return missing
 
 
 def main():
     print(
-        "===== VISUAL GENERATION ====="
+        "======================================"
+    )
+    print(
+        "       LOK AI VISUAL GENERATOR"
+    )
+    print(
+        "======================================"
     )
 
     if not ACCOUNT_ID:
         raise SystemExit(
-            "ERROR: CLOUDFLARE_ACCOUNT_ID is not set"
+            "ERROR: CLOUDFLARE_ACCOUNT_ID "
+            "is not set"
         )
 
     if not API_TOKEN:
         raise SystemExit(
-            "ERROR: CLOUDFLARE_API_TOKEN is not set"
+            "ERROR: CLOUDFLARE_API_TOKEN "
+            "is not set"
         )
 
     if not os.path.exists(
@@ -323,7 +491,8 @@ def main():
         SELECTED_MODEL_FILE
     ):
         raise SystemExit(
-            "ERROR: selected_visual_model.json not found"
+            "ERROR: selected_visual_model.json "
+            "not found"
         )
 
     data = load_json(
@@ -334,7 +503,7 @@ def main():
         SELECTED_MODEL_FILE
     )
 
-    validate_jobs(data)
+    jobs = validate_jobs(data)
 
     model = selected.get(
         "model"
@@ -357,12 +526,7 @@ def main():
 
     topic = get_topic()
 
-    jobs = data["jobs"]
-
     total = len(jobs)
-    completed = 0
-    skipped = 0
-    failed = 0
 
     print(
         f"Provider: {provider}"
@@ -373,8 +537,44 @@ def main():
     )
 
     print(
-        f"Total visual jobs: {total}"
+        f"Expected visual jobs: {total}"
     )
+
+    restored_completed = 0
+
+    # First normalize existing jobs.
+    for job in jobs:
+        part = int(job["part"])
+        scene = int(job["scene"])
+
+        output_file = get_output_file(
+            part,
+            scene,
+        )
+
+        if is_valid_image(
+            output_file
+        ):
+            job["status"] = "completed"
+            job["asset_path"] = output_file
+            job["provider"] = provider
+            job["model"] = model
+            job["error"] = None
+
+            restored_completed += 1
+
+    save_json(
+        VISUAL_JOBS_FILE,
+        data,
+    )
+
+    print(
+        f"Existing valid visuals: "
+        f"{restored_completed}/{total}"
+    )
+
+    generated_this_run = 0
+    skipped = restored_completed
 
     for index, job in enumerate(
         jobs,
@@ -383,39 +583,30 @@ def main():
         part = int(job["part"])
         scene = int(job["scene"])
 
-        output_dir = (
-            f"output/visuals/"
-            f"part_{part:02d}"
-        )
-
-        output_file = (
-            f"{output_dir}/"
-            f"scene_{scene:02d}.png"
+        output_file = get_output_file(
+            part,
+            scene,
         )
 
         os.makedirs(
-            output_dir,
+            os.path.dirname(output_file),
             exist_ok=True,
         )
 
-        # Resume support
-        if (
-            job.get("status") == "completed"
-            and os.path.exists(output_file)
-            and os.path.getsize(output_file) > 0
+        # Never regenerate a valid existing image.
+        if is_valid_image(
+            output_file
         ):
-            skipped += 1
-
             print(
                 f"[{index}/{total}] "
                 f"Part {part} Scene {scene} "
-                f"already completed — SKIP"
+                f"VALID — SKIP"
             )
-
             continue
 
+        print()
         print(
-            f"\n[{index}/{total}] "
+            f"[{index}/{total}] "
             f"Generating Part {part} "
             f"Scene {scene}"
         )
@@ -439,6 +630,11 @@ def main():
                     topic,
                 )
 
+                if not image:
+                    raise RuntimeError(
+                        "Empty image response"
+                    )
+
                 temp_file = (
                     f"{output_file}.tmp"
                 )
@@ -449,36 +645,41 @@ def main():
                 ) as f:
                     f.write(image)
 
+                if not is_valid_image(
+                    temp_file
+                ):
+                    try:
+                        os.remove(
+                            temp_file
+                        )
+                    except OSError:
+                        pass
+
+                    raise RuntimeError(
+                        "Generated file is not "
+                        "a valid PNG/JPEG"
+                    )
+
                 os.replace(
                     temp_file,
                     output_file,
                 )
 
-                job["status"] = (
-                    "completed"
-                )
-                job["provider"] = provider
-                job["model"] = model
-                job["asset_path"] = (
-                    output_file
-                )
-                job["error"] = None
-                job["completed_at"] = (
-                    datetime.now(
-                        timezone.utc
-                    ).isoformat()
-                )
-
-                save_json(
-                    VISUAL_JOBS_FILE,
+                save_job_checkpoint(
                     data,
+                    job,
+                    provider,
+                    model,
+                    output_file,
+                    "completed",
+                    None,
                 )
 
-                completed += 1
+                generated_this_run += 1
                 success = True
 
                 print(
-                    f"SUCCESS: "
+                    "SUCCESS: "
                     f"{output_file}"
                 )
 
@@ -493,77 +694,217 @@ def main():
                 except Exception:
                     body = ""
 
+                retry_after = None
+
+                try:
+                    retry_after = e.headers.get(
+                        "Retry-After"
+                    )
+                except Exception:
+                    pass
+
                 last_error = (
                     f"HTTP {e.code}: "
-                    f"{e.reason}. "
-                    f"{body[:500]}"
+                    f"{e.reason}"
                 )
 
+                if body:
+                    last_error += (
+                        f" | {body[:500]}"
+                    )
+
                 print(
-                    f"FAILED attempt "
-                    f"{attempt}: "
+                    f"FAILED attempt {attempt}: "
                     f"{last_error}"
                 )
+
+                retryable = (
+                    e.code == 429
+                    or e.code >= 500
+                )
+
+                if not retryable:
+                    break
+
+                if attempt < MAX_RETRIES:
+                    if retry_after:
+                        try:
+                            delay = min(
+                                int(
+                                    float(
+                                        retry_after
+                                    )
+                                ),
+                                MAX_BACKOFF,
+                            )
+                        except Exception:
+                            delay = (
+                                INITIAL_BACKOFF
+                                * (
+                                    2
+                                    ** (
+                                        attempt
+                                        - 1
+                                    )
+                                )
+                            )
+                    else:
+                        delay = min(
+                            INITIAL_BACKOFF
+                            * (
+                                2
+                                ** (
+                                    attempt
+                                    - 1
+                                )
+                            ),
+                            MAX_BACKOFF,
+                        )
+
+                    jitter = random.randint(
+                        0,
+                        10,
+                    )
+
+                    delay = min(
+                        delay + jitter,
+                        MAX_BACKOFF,
+                    )
+
+                    print(
+                        f"Retrying after "
+                        f"{delay}s..."
+                    )
+
+                    time.sleep(delay)
 
             except Exception as e:
                 last_error = str(e)
 
                 print(
-                    f"FAILED attempt "
-                    f"{attempt}: "
+                    f"FAILED attempt {attempt}: "
                     f"{last_error}"
                 )
 
-        if not success:
-            job["status"] = "failed"
-            job["provider"] = provider
-            job["model"] = model
-            job["error"] = last_error
+                if attempt < MAX_RETRIES:
+                    delay = min(
+                        INITIAL_BACKOFF
+                        * (
+                            2
+                            ** (
+                                attempt
+                                - 1
+                            )
+                        ),
+                        MAX_BACKOFF,
+                    )
 
-            save_json(
-                VISUAL_JOBS_FILE,
+                    jitter = random.randint(
+                        0,
+                        10,
+                    )
+
+                    delay = min(
+                        delay + jitter,
+                        MAX_BACKOFF,
+                    )
+
+                    print(
+                        f"Retrying after "
+                        f"{delay}s..."
+                    )
+
+                    time.sleep(delay)
+
+        if not success:
+            save_job_checkpoint(
                 data,
+                job,
+                provider,
+                model,
+                output_file,
+                "failed",
+                last_error,
             )
 
-            failed += 1
-
+            print()
             print(
-                f"FAILED: Part {part} "
+                "======================================"
+            )
+            print(
+                "VISUAL GENERATION STOPPED"
+            )
+            print(
+                f"Failed: Part {part} "
                 f"Scene {scene}"
             )
-
-            # Failure policy:
-            # checkpoint immediately and stop.
-            raise SystemExit(
-                f"Visual generation stopped at "
-                f"Part {part} Scene {scene}. "
-                f"Checkpoint saved."
+            print(
+                "Checkpoint saved."
+            )
+            print(
+                "======================================"
             )
 
+            raise SystemExit(1)
+
+    # Final hard validation.
+    missing = validate_all_visuals(
+        jobs
+    )
+
+    completed = (
+        total - len(missing)
+    )
+
+    print()
+    print(
+        "===== FINAL VISUAL VALIDATION ====="
+    )
+
+    print(
+        f"Expected: {total}"
+    )
+
+    print(
+        f"Valid:    {completed}"
+    )
+
+    print(
+        f"Missing:  {len(missing)}"
+    )
+
+    if missing:
+        print(
+            "Missing visuals:"
+        )
+
+        for item in missing:
+            print(
+                f" - {item}"
+            )
+
+        data["status"] = "incomplete"
+        save_json(
+            VISUAL_JOBS_FILE,
+            data,
+        )
+
+        raise SystemExit(
+            "ERROR: Visual generation "
+            "is incomplete."
+        )
+
+    data["status"] = "completed"
+    data["provider"] = provider
+    data["model"] = model
+    data["total_jobs"] = total
+    data["completed_jobs"] = total
+    data["pending_jobs"] = 0
+    data["failed_jobs"] = 0
     data["updated_at"] = (
         datetime.now(
             timezone.utc
         ).isoformat()
-    )
-
-    data["provider"] = provider
-    data["model"] = model
-    data["total_jobs"] = total
-    data["completed_jobs"] = (
-        sum(
-            1
-            for job in jobs
-            if job.get("status")
-            == "completed"
-        )
-    )
-    data["failed_jobs"] = (
-        sum(
-            1
-            for job in jobs
-            if job.get("status")
-            == "failed"
-        )
     )
 
     save_json(
@@ -571,32 +912,37 @@ def main():
         data,
     )
 
+    print()
     print(
-        "\n===== VISUAL GENERATION SUMMARY ====="
+        "===== VISUAL GENERATION SUMMARY ====="
     )
 
     print(
-        f"Total: {total}"
+        f"Total:              {total}"
     )
 
     print(
-        f"Generated this run: {completed}"
+        f"Generated this run: {generated_this_run}"
     )
 
     print(
-        f"Skipped/resumed: {skipped}"
+        f"Skipped/resumed:    {skipped}"
     )
 
     print(
-        f"Failed: {failed}"
+        "Missing:             0"
     )
 
     print(
-        f"Provider: {provider}"
+        f"Provider:            {provider}"
     )
 
     print(
-        f"Model: {model}"
+        f"Model:               {model}"
+    )
+
+    print(
+        "STATUS:              COMPLETED"
     )
 
     print(
