@@ -14,6 +14,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
     steps:
 
@@ -114,7 +116,42 @@ jobs:
 
 
       # ======================================================
-      # 4. RESTORE ONLY SUCCESSFUL CHECKPOINT
+      # 4. VALIDATE REQUIRED SECRETS
+      # ======================================================
+
+      - name: Validate API secrets
+        shell: bash
+        run: |
+          set -e
+
+          echo "=============================================="
+          echo "             API SECRET CHECK"
+          echo "=============================================="
+
+          if [ -z "${GEMINI_API_KEY:-}" ]; then
+            echo "ERROR: GEMINI_API_KEY is not set"
+            exit 1
+          fi
+
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "ERROR: CLOUDFLARE_ACCOUNT_ID is not set"
+            exit 1
+          fi
+
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "ERROR: CLOUDFLARE_API_TOKEN is not set"
+            exit 1
+          fi
+
+          echo "GEMINI_API_KEY : SET"
+          echo "CLOUDFLARE_ACCOUNT_ID : SET"
+          echo "CLOUDFLARE_API_TOKEN : SET"
+
+          echo "API SECRET CHECK: PASS"
+
+
+      # ======================================================
+      # 5. RESTORE ONLY SUCCESSFUL CHECKPOINT
       # ======================================================
 
       - name: Restore previous successful checkpoint
@@ -166,7 +203,7 @@ jobs:
 
 
       # ======================================================
-      # 5. GENERATE STORY PLAN
+      # 6. GENERATE STORY PLAN
       # ======================================================
 
       - name: Generate story plan
@@ -177,7 +214,7 @@ jobs:
 
 
       # ======================================================
-      # 6. GENERATE STORY
+      # 7. GENERATE STORY
       # ======================================================
 
       - name: Generate story
@@ -188,7 +225,7 @@ jobs:
 
 
       # ======================================================
-      # 7. SELECT GEMINI MODEL
+      # 8. SELECT GEMINI MODEL
       # ======================================================
 
       - name: Select Gemini model
@@ -199,7 +236,7 @@ jobs:
 
 
       # ======================================================
-      # 8. TEST GEMINI
+      # 9. TEST GEMINI
       # ======================================================
 
       - name: Test Gemini
@@ -210,7 +247,7 @@ jobs:
 
 
       # ======================================================
-      # 9. GENERATE AI STORY
+      # 10. GENERATE AI STORY
       # ======================================================
 
       - name: Generate AI story
@@ -221,7 +258,7 @@ jobs:
 
 
       # ======================================================
-      # 10. CHARACTER BIBLE
+      # 11. CHARACTER BIBLE
       # ======================================================
 
       - name: Generate character bible
@@ -232,7 +269,7 @@ jobs:
 
 
       # ======================================================
-      # 11. GENERATE SCENES
+      # 12. GENERATE SCENES
       # ======================================================
 
       - name: Generate scenes
@@ -289,7 +326,7 @@ jobs:
 
 
       # ======================================================
-      # 12. NARRATION
+      # 13. NARRATION
       # ======================================================
 
       - name: Generate narration
@@ -300,7 +337,7 @@ jobs:
 
 
       # ======================================================
-      # 13. FFMPEG
+      # 14. FFMPEG
       # ======================================================
 
       - name: Install FFmpeg
@@ -313,7 +350,7 @@ jobs:
 
 
       # ======================================================
-      # 14. TTS
+      # 15. TTS
       # ======================================================
 
       - name: Generate Hindi TTS
@@ -328,7 +365,7 @@ jobs:
 
 
       # ======================================================
-      # 15. PREPARE VISUALS
+      # 16. PREPARE VISUALS
       # ======================================================
 
       - name: Prepare visual generation
@@ -339,29 +376,39 @@ jobs:
 
 
       # ======================================================
-      # 16. SELECT VISUAL MODEL
+      # 17. SELECT VISUAL MODEL
       # ======================================================
 
       - name: Select Cloudflare visual model
         shell: bash
         run: |
           set -e
+
+          echo "=============================================="
+          echo "     CLOUDFLARE VISUAL MODEL SELECTION"
+          echo "=============================================="
+
           python3 scripts/select_visual_model.py
 
 
       # ======================================================
-      # 17. GENERATE VISUALS
+      # 18. GENERATE VISUALS
       # ======================================================
 
       - name: Generate visuals
         shell: bash
         run: |
           set -e
+
+          echo "=============================================="
+          echo "          GENERATING VISUALS"
+          echo "=============================================="
+
           python3 scripts/generate_visuals.py
 
 
       # ======================================================
-      # 18. FINAL PIPELINE INTEGRITY
+      # 19. FINAL PIPELINE INTEGRITY
       # ======================================================
 
       - name: Validate all assets before render
@@ -564,13 +611,14 @@ jobs:
 
 
       # ======================================================
-      # 19. THUMBNAILS
+      # 20. THUMBNAILS
       # ======================================================
 
       - name: Install thumbnail dependencies
         shell: bash
         run: |
           set -e
+
           python3 -m pip install pillow
 
 
@@ -578,11 +626,12 @@ jobs:
         shell: bash
         run: |
           set -e
+
           python3 scripts/generate_thumbnail.py
 
 
       # ======================================================
-      # 20. YOUTUBE PACKAGE
+      # 21. YOUTUBE PACKAGE
       # ======================================================
 
       - name: Generate YouTube upload package
@@ -598,7 +647,7 @@ jobs:
 
 
       # ======================================================
-      # 21. RENDER
+      # 22. RENDER
       # ======================================================
 
       - name: Render scene videos
@@ -614,7 +663,7 @@ jobs:
 
 
       # ======================================================
-      # 22. UPLOAD RENDERED PARTS
+      # 23. UPLOAD RENDERED PARTS
       # ======================================================
 
       - name: Upload rendered videos
@@ -627,7 +676,7 @@ jobs:
 
 
       # ======================================================
-      # 23. ASSEMBLE FINAL VIDEO
+      # 24. ASSEMBLE FINAL VIDEO
       # ======================================================
 
       - name: Assemble final video
@@ -714,7 +763,7 @@ jobs:
 
 
       # ======================================================
-      # 24. VALIDATE FINAL VIDEO
+      # 25. VALIDATE FINAL VIDEO
       # ======================================================
 
       - name: Validate final video
@@ -735,7 +784,7 @@ jobs:
 
 
       # ======================================================
-      # 25. UPLOAD FINAL VIDEO
+      # 26. UPLOAD FINAL VIDEO
       # ======================================================
 
       - name: Upload final video
@@ -748,7 +797,7 @@ jobs:
 
 
       # ======================================================
-      # 26. PREPARE SUCCESS CHECKPOINT
+      # 27. PREPARE SUCCESS CHECKPOINT
       # ======================================================
 
       - name: Prepare successful checkpoint
@@ -769,11 +818,14 @@ jobs:
             visuals
           do
             if [ -d "output/$dir" ]; then
-              mkdir -p "/tmp/lok-ai-checkpoint/output/$dir"
+
+              mkdir -p \
+                "/tmp/lok-ai-checkpoint/output/$dir"
 
               cp -a \
                 "output/$dir/." \
                 "/tmp/lok-ai-checkpoint/output/$dir/"
+
             fi
           done
 
@@ -781,7 +833,7 @@ jobs:
 
 
       # ======================================================
-      # 27. UPLOAD SUCCESS CHECKPOINT
+      # 28. UPLOAD SUCCESS CHECKPOINT
       # ======================================================
 
       - name: Upload successful checkpoint
