@@ -2,211 +2,355 @@
 
 import json
 import os
+import random
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 
-AI_STORY = Path("output/story/ai_story.json")
-CHARACTER_BIBLE = Path("output/story/character_bible.json")
-OUTPUT = Path("output/scenes/scenes.json")
-MODEL_FILE = Path("output/config/selected_model.json")
+# ============================================================
+# CONFIGURATION
+# ============================================================
 
-MAX_RETRIES = 3
+CONFIG_FILE = Path("Input/topic.txt")
+
+OUTPUT_DIR = Path("output/scenes")
+SCENES_FILE = OUTPUT_DIR / "scenes.json"
+CHECKPOINT_FILE = Path("output/checkpoints/scenes_progress.json")
+
+MAX_ATTEMPTS = int(os.getenv("SCENE_MAX_ATTEMPTS", "5"))
+
+# 429 backoff:
+# attempt 1 -> 15 sec
+# attempt 2 -> 30 sec
+# attempt 3 -> 60 sec
+# attempt 4 -> 120 sec
+# attempt 5 -> 240 sec
+INITIAL_BACKOFF = int(os.getenv("SCENE_INITIAL_BACKOFF", "15"))
+MAX_BACKOFF = int(os.getenv("SCENE_MAX_BACKOFF", "300"))
+
+# Small delay between normal successful API calls.
+REQUEST_DELAY = float(os.getenv("SCENE_REQUEST_DELAY", "2"))
+
+# Gemini API timeout.
+REQUEST_TIMEOUT = int(os.getenv("SCENE_REQUEST_TIMEOUT", "120"))
 
 
-def load_json(path):
+# ============================================================
+# HELPERS
+# ============================================================
+
+def log(message=""):
+    print(message, flush=True)
+
+
+def load_config():
+    if not CONFIG_FILE.exists():
+        raise FileNotFoundError(
+            f"Configuration file not found: {CONFIG_FILE}"
+        )
+
+    config = {}
+
+    for raw_line in CONFIG_FILE.read_text(
+        encoding="utf-8"
+    ).splitlines():
+
+        line = raw_line.strip()
+
+        if not line:
+            continue
+
+        if line.startswith("#"):
+            continue
+
+        if "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+
+        key = key.strip()
+        value = value.strip()
+
+        if (
+            len(value) >= 2
+            and value.startswith('"')
+            and value.endswith('"')
+        ):
+            value = value[1:-1]
+
+        if (
+            len(value) >= 2
+            and value.startswith("'")
+            and value.endswith("'")
+        ):
+            value = value[1:-1]
+
+        config[key] = value
+
+    return config
+
+
+def read_json(path):
     if not path.exists():
-        raise SystemExit(f"ERROR: File not found: {path}")
+        return None
 
     try:
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        raise SystemExit(
-            f"ERROR: Could not read JSON file {path}: {e}"
+        return json.loads(
+            path.read_text(encoding="utf-8")
         )
-
-
-def load_selected_model():
-    config = load_json(MODEL_FILE)
-
-    if config.get("status") != "selected":
-        raise SystemExit(
-            "ERROR: Gemini model selection is not in selected state"
+    except Exception as exc:
+        log(
+            f"WARNING: Could not read JSON "
+            f"{path}: {exc}"
         )
-
-    model = config.get("model")
-
-    if not model:
-        raise SystemExit(
-            "ERROR: No selected Gemini model found"
-        )
-
-    return model
+        return None
 
 
-def save_json(data):
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+def write_json(path, data):
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    temp = OUTPUT.with_suffix(".tmp")
+    temp_path = path.with_suffix(
+        path.suffix + ".tmp"
+    )
 
-    with temp.open("w", encoding="utf-8") as f:
-        json.dump(
+    temp_path.write_text(
+        json.dumps(
             data,
-            f,
             ensure_ascii=False,
             indent=2
-        )
-        f.write("\n")
+        ) + "\n",
+        encoding="utf-8"
+    )
 
-    temp.replace(OUTPUT)
+    temp_path.replace(path)
 
 
-def build_scene_schema():
-    return {
-        "type": "object",
-        "properties": {
-            "part": {
-                "type": "integer"
-            },
-            "scene": {
-                "type": "integer"
-            },
-            "narration": {
-                "type": "string"
-            },
-            "dialogue": {
-                "type": "string"
-            },
-            "visual_prompt": {
-                "type": "string"
-            },
-            "negative_prompt": {
-                "type": "string"
-            },
-            "camera_prompt": {
-                "type": "string"
-            },
-            "lighting_prompt": {
-                "type": "string"
-            },
-            "sfx_prompt": {
-                "type": "string"
-            },
-            "music_prompt": {
-                "type": "string"
-            },
-            "duration": {
-                "type": "number"
-            }
-        },
-        "required": [
-            "part",
-            "scene",
-            "narration",
-            "dialogue",
-            "visual_prompt",
-            "negative_prompt",
-            "camera_prompt",
-            "lighting_prompt",
-            "sfx_prompt",
-            "music_prompt",
-            "duration"
-        ]
+def save_checkpoint(
+    total_scenes,
+    completed_scenes,
+    failed_scene=None,
+):
+    completed = sorted(
+        list(completed_scenes)
+    )
+
+    checkpoint = {
+        "status": (
+            "completed"
+            if len(completed) >= total_scenes
+            else "in_progress"
+        ),
+        "total_scenes": total_scenes,
+        "completed_scenes": completed,
+        "completed_count": len(completed),
+        "remaining_scenes": max(
+            0,
+            total_scenes - len(completed)
+        ),
+        "failed_scene": failed_scene,
+        "updated_at": int(time.time()),
     }
 
+    write_json(
+        CHECKPOINT_FILE,
+        checkpoint
+    )
 
-def generate_scene(
+
+def load_checkpoint():
+    data = read_json(CHECKPOINT_FILE)
+
+    if not isinstance(data, dict):
+        return set()
+
+    completed = data.get(
+        "completed_scenes",
+        []
+    )
+
+    if not isinstance(completed, list):
+        return set()
+
+    result = set()
+
+    for item in completed:
+        try:
+            result.add(int(item))
+        except Exception:
+            pass
+
+    return result
+
+
+def scene_key(part_number, scene_number):
+    return f"{part_number}:{scene_number}"
+
+
+def scene_already_saved(
+    existing_scenes,
+    part_number,
+    scene_number,
+):
+    key = scene_key(
+        part_number,
+        scene_number
+    )
+
+    for scene in existing_scenes:
+        if not isinstance(scene, dict):
+            continue
+
+        part = scene.get("part")
+        number = scene.get("scene")
+
+        try:
+            if (
+                int(part) == part_number
+                and int(number) == scene_number
+            ):
+                return True
+        except Exception:
+            continue
+
+        # Also support alternative IDs.
+        scene_id = str(
+            scene.get("id", "")
+        ).strip()
+
+        if scene_id in {
+            key,
+            f"scene_{part_number}_{scene_number}",
+            f"part_{part_number}_scene_{scene_number}",
+        }:
+            return True
+
+    return False
+
+
+def extract_retry_after(error):
+    """
+    Try to extract Retry-After from an HTTP 429 response.
+    """
+
+    if not error:
+        return None
+
+    try:
+        value = error.headers.get(
+            "Retry-After"
+        )
+
+        if value:
+            seconds = float(value)
+
+            if seconds >= 0:
+                return seconds
+    except Exception:
+        pass
+
+    return None
+
+
+def calculate_backoff(attempt):
+    """
+    Exponential backoff with small jitter.
+
+    attempt 1 -> 15 sec
+    attempt 2 -> 30 sec
+    attempt 3 -> 60 sec
+    attempt 4 -> 120 sec
+    attempt 5 -> 240 sec
+    """
+
+    base = INITIAL_BACKOFF * (
+        2 ** max(0, attempt - 1)
+    )
+
+    base = min(
+        base,
+        MAX_BACKOFF
+    )
+
+    jitter = random.uniform(
+        0,
+        min(5, base * 0.10)
+    )
+
+    return round(
+        base + jitter,
+        2
+    )
+
+
+# ============================================================
+# GEMINI API
+# ============================================================
+
+def get_model():
+    selected_model_file = Path(
+        "output/config/selected_model.json"
+    )
+
+    data = read_json(
+        selected_model_file
+    )
+
+    if isinstance(data, dict):
+        for key in (
+            "model",
+            "selected_model",
+            "name",
+        ):
+            value = data.get(key)
+
+            if value:
+                return str(value).strip()
+
+    # Fallback to known model.
+    return "gemini-3.5-flash-lite"
+
+
+def get_api_key():
+    key = os.getenv(
+        "GEMINI_API_KEY",
+        ""
+    ).strip()
+
+    if not key:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not configured."
+        )
+
+    return key
+
+
+def call_gemini(
     api_key,
     model,
-    topic,
-    part,
-    scene,
-    character_bible,
-    previous_scene
+    prompt,
 ):
-    schema = {
-        "type": "object",
-        "properties": {
-            "scene": build_scene_schema()
-        },
-        "required": [
-            "scene"
-        ]
-    }
+    """
+    Single Gemini API request.
 
-    prompt = f"""
-You are the scene-generation AI for an automated Hindi cinematic
-storytelling pipeline.
+    Returns:
+        generated text
 
-Generate the complete production-ready content for ONE scene.
+    Raises:
+        urllib.error.HTTPError
+        urllib.error.URLError
+        RuntimeError
+    """
 
-STORY TOPIC:
-{topic}
-
-PART:
-{part.get("part")}
-
-SCENE:
-{scene.get("scene")}
-
-SCENE ROLE:
-{scene.get("role", "")}
-
-CURRENT SCENE NARRATION:
-{scene.get("narration", "")}
-
-CURRENT SCENE DIALOGUE:
-{scene.get("dialogue", "")}
-
-CURRENT VISUAL PROMPT:
-{scene.get("visual_prompt", "")}
-
-CURRENT NEGATIVE PROMPT:
-{scene.get("negative_prompt", "")}
-
-CURRENT CAMERA PROMPT:
-{scene.get("camera_prompt", "")}
-
-CURRENT LIGHTING PROMPT:
-{scene.get("lighting_prompt", "")}
-
-CURRENT SFX PROMPT:
-{scene.get("sfx_prompt", "")}
-
-CURRENT MUSIC PROMPT:
-{scene.get("music_prompt", "")}
-
-CHARACTER BIBLE:
-{json.dumps(character_bible, ensure_ascii=False, indent=2)}
-
-PREVIOUS SCENE CONTEXT:
-{json.dumps(previous_scene, ensure_ascii=False, indent=2)}
-
-IMPORTANT:
-- Preserve the story meaning.
-- Maintain character consistency using the Character Bible.
-- Maintain world and location consistency.
-- Maintain continuity with the previous scene.
-- Keep the same characters visually consistent.
-- Narration must be natural Hindi.
-- Dialogue must be natural Hindi.
-- Visual prompts must be realistic cinematic visual descriptions.
-- Avoid cartoon, anime and artificial-looking visuals.
-- Camera prompts must specify useful cinematic framing or movement.
-- Lighting must remain physically realistic.
-- SFX must match the scene.
-- Music must match the emotional tone.
-- Duration must be a realistic number of seconds.
-- Do not change the part number.
-- Do not change the scene number.
-- Do not introduce unnecessary characters.
-- Do not add watermarks, logos, text overlays or subtitles to visuals.
-- Avoid neon, glitch effects and unrealistic lighting.
-- Preserve natural human motion and realistic anatomy.
-- Return ONLY the requested JSON structure.
-"""
+    url = (
+        "https://generativelanguage.googleapis.com/"
+        f"v1beta/models/{model}:generateContent"
+        f"?key={api_key}"
+    )
 
     payload = {
         "contents": [
@@ -219,290 +363,777 @@ IMPORTANT:
             }
         ],
         "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseSchema": schema
+            "temperature": 0.7,
+            "responseMimeType": "application/json"
         }
     }
 
-    api_url = (
-        "https://generativelanguage.googleapis.com/v1beta/"
-        f"models/{model}:generateContent"
+    body = json.dumps(
+        payload,
+        ensure_ascii=False
+    ).encode("utf-8")
+
+    request = urllib.request.Request(
+        url,
+        data=body,
+        headers={
+            "Content-Type":
+                "application/json"
+        },
+        method="POST",
     )
-
-    last_error = None
-
-    for attempt in range(1, MAX_RETRIES + 1):
-
-        try:
-            print(
-                f"Generating Part {part.get('part')} "
-                f"Scene {scene.get('scene')} "
-                f"(attempt {attempt}/{MAX_RETRIES}) "
-                f"using model {model}..."
-            )
-
-            request = urllib.request.Request(
-                api_url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={
-                    "Content-Type": "application/json",
-                    "x-goog-api-key": api_key
-                },
-                method="POST"
-            )
-
-            with urllib.request.urlopen(
-                request,
-                timeout=120
-            ) as response:
-
-                result = json.loads(
-                    response.read().decode("utf-8")
-                )
-
-            candidates = result.get("candidates", [])
-
-            if not candidates:
-                raise ValueError(
-                    "Gemini returned no candidates"
-                )
-
-            parts = (
-                candidates[0]
-                .get("content", {})
-                .get("parts", [])
-            )
-
-            if not parts:
-                raise ValueError(
-                    "Gemini returned no response parts"
-                )
-
-            text = parts[0].get("text", "").strip()
-
-            if not text:
-                raise ValueError(
-                    "Gemini returned an empty response"
-                )
-
-            generated = json.loads(text)
-
-            result_scene = generated.get("scene")
-
-            if not isinstance(result_scene, dict):
-                raise ValueError(
-                    "Gemini returned an invalid scene object"
-                )
-
-            expected_part = part.get("part")
-            expected_scene = scene.get("scene")
-
-            if result_scene.get("part") != expected_part:
-                raise ValueError(
-                    "Gemini returned incorrect part number"
-                )
-
-            if result_scene.get("scene") != expected_scene:
-                raise ValueError(
-                    "Gemini returned incorrect scene number"
-                )
-
-            return result_scene
-
-        except Exception as e:
-
-            last_error = e
-
-            print(
-                f"Scene generation failed: {e}"
-            )
-
-            if attempt < MAX_RETRIES:
-                time.sleep(3)
-
-    raise SystemExit(
-        f"ERROR: Part {part.get('part')} "
-        f"Scene {scene.get('scene')} failed after "
-        f"{MAX_RETRIES} attempts: {last_error}"
-    )
-
-
-api_key = os.environ.get("GEMINI_API_KEY")
-
-if not api_key:
-    raise SystemExit(
-        "ERROR: GEMINI_API_KEY is not set"
-    )
-
-
-MODEL = load_selected_model()
-
-print("===== GEMINI MODEL =====")
-print(f"Selected model: {MODEL}")
-print("========================")
-
-
-story = load_json(AI_STORY)
-character_bible = load_json(CHARACTER_BIBLE)
-
-if story.get("status") != "completed":
-    raise SystemExit(
-        "ERROR: AI story is not in completed state"
-    )
-
-if not character_bible.get("characters"):
-    raise SystemExit(
-        "ERROR: Character Bible contains no characters"
-    )
-
-
-topic = str(
-    story.get("topic", "")
-).strip()
-
-if not topic:
-    raise SystemExit(
-        "ERROR: Story topic is empty"
-    )
-
-
-scenes_output = {
-    "status": "in_progress",
-    "topic": topic,
-    "model": MODEL,
-    "scenes": []
-}
-
-
-if OUTPUT.exists():
 
     try:
-        existing = load_json(OUTPUT)
+        with urllib.request.urlopen(
+            request,
+            timeout=REQUEST_TIMEOUT
+        ) as response:
 
-        if existing.get("topic") == topic:
-            scenes_output = existing
-            scenes_output["model"] = MODEL
-
-            print(
-                "Existing scenes found. Resuming..."
+            raw = response.read().decode(
+                "utf-8"
             )
 
+            data = json.loads(raw)
+
+    except urllib.error.HTTPError as exc:
+
+        # Preserve 429 so retry logic can handle it.
+        if exc.code == 429:
+            raise
+
+        try:
+            error_body = exc.read().decode(
+                "utf-8",
+                errors="replace"
+            )
+        except Exception:
+            error_body = str(exc)
+
+        raise RuntimeError(
+            f"Gemini HTTP {exc.code}: "
+            f"{error_body[:1000]}"
+        ) from exc
+
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            f"Gemini network error: {exc}"
+        ) from exc
+
+    candidates = data.get(
+        "candidates",
+        []
+    )
+
+    if not candidates:
+        raise RuntimeError(
+            "Gemini returned no candidates."
+        )
+
+    content = candidates[0].get(
+        "content",
+        {}
+    )
+
+    parts = content.get(
+        "parts",
+        []
+    )
+
+    if not parts:
+        raise RuntimeError(
+            "Gemini returned empty content."
+        )
+
+    text = parts[0].get(
+        "text",
+        ""
+    ).strip()
+
+    if not text:
+        raise RuntimeError(
+            "Gemini returned empty text."
+        )
+
+    return text
+
+
+# ============================================================
+# JSON EXTRACTION
+# ============================================================
+
+def parse_json_response(text):
+    text = text.strip()
+
+    # Direct JSON.
+    try:
+        return json.loads(text)
     except Exception:
+        pass
 
-        print(
-            "Existing scenes file is invalid. "
-            "Starting fresh."
-        )
+    # Remove markdown fences.
+    if text.startswith("```"):
+        lines = text.splitlines()
 
+        if lines:
+            lines = lines[1:]
 
-all_parts = story.get("parts", [])
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
 
-completed_map = {
-    (
-        item.get("part"),
-        item.get("scene")
-    ): item
-    for item in scenes_output.get("scenes", [])
-    if item.get("status") == "completed"
-}
+        cleaned = "\n".join(lines).strip()
 
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            pass
 
-previous_scene = None
+    # Find first JSON object.
+    start = text.find("{")
+    end = text.rfind("}")
 
-
-for part in all_parts:
-
-    for scene in part.get("scenes", []):
-
-        part_number = part.get("part")
-        scene_number = scene.get("scene")
-
-        key = (
-            part_number,
-            scene_number
-        )
-
-        if key in completed_map:
-
-            completed = completed_map[key]
-
-            print(
-                f"Part {part_number} "
-                f"Scene {scene_number} "
-                f"already completed. Skipping."
-            )
-
-            previous_scene = completed
-            continue
-
-        generated = generate_scene(
-            api_key=api_key,
-            model=MODEL,
-            topic=topic,
-            part=part,
-            scene=scene,
-            character_bible=character_bible,
-            previous_scene=previous_scene
-        )
-
-        completed_scene = {
-            "part": part_number,
-            "scene": scene_number,
-            "status": "completed",
-            "narration": generated["narration"],
-            "dialogue": generated["dialogue"],
-            "visual_prompt": generated["visual_prompt"],
-            "negative_prompt": generated["negative_prompt"],
-            "camera_prompt": generated["camera_prompt"],
-            "lighting_prompt": generated["lighting_prompt"],
-            "sfx_prompt": generated["sfx_prompt"],
-            "music_prompt": generated["music_prompt"],
-            "duration": generated["duration"]
-        }
-
-        scenes_output["scenes"] = [
-            item
-            for item in scenes_output.get("scenes", [])
-            if not (
-                item.get("part") == part_number
-                and item.get("scene") == scene_number
-            )
+    if start >= 0 and end > start:
+        candidate = text[
+            start:end + 1
         ]
 
-        scenes_output["scenes"].append(
-            completed_scene
+        try:
+            return json.loads(candidate)
+        except Exception:
+            pass
+
+    # Find first JSON array.
+    start = text.find("[")
+    end = text.rfind("]")
+
+    if start >= 0 and end > start:
+        candidate = text[
+            start:end + 1
+        ]
+
+        try:
+            return json.loads(candidate)
+        except Exception:
+            pass
+
+    raise ValueError(
+        "Gemini response was not valid JSON."
+    )
+
+
+# ============================================================
+# PROMPT
+# ============================================================
+
+def build_prompt(
+    config,
+    story,
+    part_number,
+    scene_number,
+):
+    story_text = json.dumps(
+        story,
+        ensure_ascii=False,
+        indent=2
+    )
+
+    style = config.get(
+        "VISUAL_STYLE",
+        "cinematic"
+    )
+
+    realism = config.get(
+        "REALISM",
+        "high"
+    )
+
+    return f"""
+You are generating ONE scene for an AI-generated Hindi
+story video.
+
+Return ONLY valid JSON.
+
+PROJECT:
+{story_text}
+
+VIDEO CONFIGURATION:
+Visual style: {style}
+Realism: {realism}
+Audience: {config.get("AUDIENCE", "")}
+Format: {config.get("FORMAT", "vertical")}
+Scene duration: {config.get("SCENE_DURATION", "")}
+
+CURRENT SCENE:
+Part: {part_number}
+Scene: {scene_number}
+
+Create a detailed scene suitable for downstream
+visual generation.
+
+The scene must contain:
+
+{{
+  "part": {part_number},
+  "scene": {scene_number},
+  "title": "short scene title",
+  "narration": "Hindi narration for this scene",
+  "visual_prompt": "detailed cinematic visual prompt",
+  "negative_prompt": "things that must not appear",
+  "duration": "scene duration",
+  "transition": "appropriate transition"
+}}
+
+Important:
+- Keep continuity with the story.
+- Keep characters visually consistent.
+- Do not invent unrelated characters.
+- The narration must be in Hindi.
+- The visual prompt should be detailed and production-ready.
+- Return JSON only.
+""".strip()
+
+
+# ============================================================
+# RETRY LOGIC
+# ============================================================
+
+def generate_scene_with_retry(
+    api_key,
+    model,
+    prompt,
+    part_number,
+    scene_number,
+):
+    last_error = None
+
+    for attempt in range(
+        1,
+        MAX_ATTEMPTS + 1
+    ):
+        log(
+            f"Generating Part {part_number} "
+            f"Scene {scene_number} "
+            f"(attempt {attempt}/{MAX_ATTEMPTS}) "
+            f"using model {model}..."
         )
 
-        scenes_output["scenes"].sort(
-            key=lambda item: (
-                item.get("part", 0),
-                item.get("scene", 0)
+        try:
+            response = call_gemini(
+                api_key,
+                model,
+                prompt
             )
+
+            scene = parse_json_response(
+                response
+            )
+
+            if not isinstance(
+                scene,
+                dict
+            ):
+                raise ValueError(
+                    "Scene response must be a JSON object."
+                )
+
+            # Force canonical identifiers.
+            scene["part"] = part_number
+            scene["scene"] = scene_number
+
+            log(
+                f"Part {part_number} "
+                f"Scene {scene_number} "
+                f"completed and saved."
+            )
+
+            return scene
+
+        except urllib.error.HTTPError as exc:
+
+            last_error = exc
+
+            if exc.code == 429:
+
+                if attempt >= MAX_ATTEMPTS:
+                    break
+
+                retry_after = extract_retry_after(
+                    exc
+                )
+
+                if retry_after is not None:
+                    wait_seconds = max(
+                        retry_after,
+                        calculate_backoff(attempt)
+                    )
+                else:
+                    wait_seconds = calculate_backoff(
+                        attempt
+                    )
+
+                log(
+                    "Scene generation failed: "
+                    "HTTP Error 429: Too Many Requests"
+                )
+
+                log(
+                    f"Rate limit detected. "
+                    f"Waiting {wait_seconds:.1f}s "
+                    f"before retry..."
+                )
+
+                time.sleep(
+                    wait_seconds
+                )
+
+                continue
+
+            log(
+                f"Scene generation failed: "
+                f"HTTP Error {exc.code}"
+            )
+
+        except Exception as exc:
+
+            last_error = exc
+
+            log(
+                f"Scene generation failed: {exc}"
+            )
+
+        if attempt < MAX_ATTEMPTS:
+
+            wait_seconds = calculate_backoff(
+                attempt
+            )
+
+            log(
+                f"Waiting {wait_seconds:.1f}s "
+                f"before retry..."
+            )
+
+            time.sleep(
+                wait_seconds
+            )
+
+    raise RuntimeError(
+        f"Part {part_number} "
+        f"Scene {scene_number} "
+        f"failed after {MAX_ATTEMPTS} attempts: "
+        f"{last_error}"
+    )
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main():
+
+    log("======================================")
+    log("       GENERATING STORY SCENES")
+    log("======================================")
+
+    config = load_config()
+
+    api_key = get_api_key()
+
+    model = get_model()
+
+    log()
+    log("===== GEMINI MODEL =====")
+    log(f"Selected model: {model}")
+    log("========================")
+
+    OUTPUT_DIR.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    CHECKPOINT_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    # --------------------------------------------------------
+    # Load story
+    # --------------------------------------------------------
+
+    story_candidates = [
+        Path("output/story/ai_story.json"),
+        Path("output/story/story.json"),
+    ]
+
+    story = None
+
+    for path in story_candidates:
+
+        candidate = read_json(path)
+
+        if candidate is not None:
+            story = candidate
+            break
+
+    if story is None:
+        raise FileNotFoundError(
+            "No story file found. "
+            "Expected output/story/ai_story.json "
+            "or output/story/story.json"
         )
 
-        scenes_output["status"] = "in_progress"
-        scenes_output["model"] = MODEL
+    # --------------------------------------------------------
+    # Determine parts/scenes
+    # --------------------------------------------------------
 
-        save_json(scenes_output)
+    try:
+        parts = int(
+            config.get("PARTS", "1")
+        )
+    except Exception:
+        parts = 1
 
-        previous_scene = completed_scene
+    try:
+        scenes_per_part = int(
+            config.get("SCENES", "10")
+        )
+    except Exception:
+        scenes_per_part = 10
 
-        print(
-            f"Part {part_number} "
-            f"Scene {scene_number} completed and saved."
+    total_scenes = (
+        parts * scenes_per_part
+    )
+
+    log()
+    log(
+        f"Total parts: {parts}"
+    )
+    log(
+        f"Scenes per part: {scenes_per_part}"
+    )
+    log(
+        f"Total scenes: {total_scenes}"
+    )
+
+    # --------------------------------------------------------
+    # Load existing scenes
+    # --------------------------------------------------------
+
+    existing_data = read_json(
+        SCENES_FILE
+    )
+
+    if isinstance(
+        existing_data,
+        dict
+    ):
+        existing_scenes = existing_data.get(
+            "scenes",
+            []
         )
 
+    elif isinstance(
+        existing_data,
+        list
+    ):
+        existing_scenes = existing_data
 
-scenes_output["status"] = "completed"
-scenes_output["model"] = MODEL
+    else:
+        existing_scenes = []
 
-save_json(scenes_output)
+    if not isinstance(
+        existing_scenes,
+        list
+    ):
+        existing_scenes = []
+
+    # --------------------------------------------------------
+    # Load checkpoint
+    # --------------------------------------------------------
+
+    checkpoint_completed = (
+        load_checkpoint()
+    )
+
+    # Build completed set from actual scene file too.
+    completed = set(
+        checkpoint_completed
+    )
+
+    for part_number in range(
+        1,
+        parts + 1
+    ):
+        for scene_number in range(
+            1,
+            scenes_per_part + 1
+        ):
+
+            key = scene_key(
+                part_number,
+                scene_number
+            )
+
+            if scene_already_saved(
+                existing_scenes,
+                part_number,
+                scene_number
+            ):
+                completed.add(
+                    key
+                )
+
+    log()
+    log(
+        f"Checkpoint completed scenes: "
+        f"{len(checkpoint_completed)}"
+    )
+
+    log(
+        f"Existing completed scenes: "
+        f"{len(completed)}"
+    )
+
+    save_checkpoint(
+        total_scenes,
+        completed,
+    )
+
+    # --------------------------------------------------------
+    # Generate missing scenes
+    # --------------------------------------------------------
+
+    for part_number in range(
+        1,
+        parts + 1
+    ):
+
+        for scene_number in range(
+            1,
+            scenes_per_part + 1
+        ):
+
+            key = scene_key(
+                part_number,
+                scene_number
+            )
+
+            # ------------------------------------------------
+            # RESUME
+            # ------------------------------------------------
+
+            if key in completed:
+
+                log(
+                    f"Part {part_number} "
+                    f"Scene {scene_number} "
+                    f"already completed. "
+                    f"Skipping."
+                )
+
+                continue
+
+            prompt = build_prompt(
+                config,
+                story,
+                part_number,
+                scene_number
+            )
+
+            # ------------------------------------------------
+            # GENERATE WITH RETRY
+            # ------------------------------------------------
+
+            try:
+
+                scene = generate_scene_with_retry(
+                    api_key,
+                    model,
+                    prompt,
+                    part_number,
+                    scene_number
+                )
+
+            except Exception as exc:
+
+                # Save checkpoint BEFORE failing.
+                save_checkpoint(
+                    total_scenes,
+                    completed,
+                    failed_scene=key
+                )
+
+                log()
+                log(
+                    f"ERROR: {exc}"
+                )
+
+                raise
+
+            # ------------------------------------------------
+            # Replace existing duplicate if necessary
+            # ------------------------------------------------
+
+            replaced = False
+
+            for index, old_scene in enumerate(
+                existing_scenes
+            ):
+
+                if not isinstance(
+                    old_scene,
+                    dict
+                ):
+                    continue
+
+                try:
+                    old_part = int(
+                        old_scene.get(
+                            "part",
+                            -1
+                        )
+                    )
+
+                    old_scene_number = int(
+                        old_scene.get(
+                            "scene",
+                            -1
+                        )
+                    )
+
+                except Exception:
+                    continue
+
+                if (
+                    old_part == part_number
+                    and old_scene_number
+                    == scene_number
+                ):
+
+                    existing_scenes[index] = scene
+                    replaced = True
+                    break
+
+            if not replaced:
+                existing_scenes.append(
+                    scene
+                )
+
+            # ------------------------------------------------
+            # Stable ordering
+            # ------------------------------------------------
+
+            def sort_key(item):
+                try:
+                    return (
+                        int(
+                            item.get(
+                                "part",
+                                999999
+                            )
+                        ),
+                        int(
+                            item.get(
+                                "scene",
+                                999999
+                            )
+                        ),
+                    )
+                except Exception:
+                    return (
+                        999999,
+                        999999
+                    )
+
+            existing_scenes.sort(
+                key=sort_key
+            )
+
+            # ------------------------------------------------
+            # Save scene file immediately
+            # ------------------------------------------------
+
+            output_data = {
+                "status": "in_progress",
+                "model": model,
+                "total_scenes": total_scenes,
+                "completed_scenes": len(
+                    completed
+                ),
+                "scenes": existing_scenes,
+            }
+
+            write_json(
+                SCENES_FILE,
+                output_data
+            )
+
+            # ------------------------------------------------
+            # Update checkpoint immediately
+            # ------------------------------------------------
+
+            completed.add(
+                key
+            )
+
+            save_checkpoint(
+                total_scenes,
+                completed,
+            )
+
+            log(
+                f"Checkpoint saved after "
+                f"Part {part_number} "
+                f"Scene {scene_number}."
+            )
+
+            # ------------------------------------------------
+            # Small pacing delay
+            # ------------------------------------------------
+
+            if len(completed) < total_scenes:
+                time.sleep(
+                    REQUEST_DELAY
+                )
+
+    # --------------------------------------------------------
+    # FINALIZE
+    # --------------------------------------------------------
+
+    final_data = {
+        "status": "completed",
+        "model": model,
+        "total_scenes": total_scenes,
+        "completed_scenes": len(
+            completed
+        ),
+        "scenes": existing_scenes,
+    }
+
+    write_json(
+        SCENES_FILE,
+        final_data
+    )
+
+    save_checkpoint(
+        total_scenes,
+        completed,
+        failed_scene=None
+    )
+
+    log()
+    log("======================================")
+    log("       SCENE GENERATION COMPLETE")
+    log("======================================")
+    log(
+        f"Completed scenes: "
+        f"{len(completed)}/{total_scenes}"
+    )
+    log(
+        f"Scenes file: {SCENES_FILE}"
+    )
+    log(
+        f"Checkpoint: {CHECKPOINT_FILE}"
+    )
 
 
-print("===================================")
-print("SCENE GENERATION COMPLETED")
-print(f"Topic: {topic}")
-print(f"Model: {MODEL}")
-print(f"Scenes: {len(scenes_output['scenes'])}")
-print(f"Output: {OUTPUT}")
-print("===================================")
+if __name__ == "__main__":
+    main()
