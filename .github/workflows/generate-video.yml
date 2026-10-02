@@ -118,30 +118,17 @@ jobs:
           echo
           echo "===== RESUME DIAGNOSTIC ====="
 
-          if [ -s output/narration/audio_jobs.json ]; then
-            echo "TTS MANIFEST: FOUND"
-          else
-            echo "TTS MANIFEST: NOT FOUND"
-          fi
-
           AUDIO_COUNT=$(find output/narration/audio \
             -type f \
             -name '*.mp3' \
             2>/dev/null | wc -l)
 
-          echo "RESTORED AUDIO FILES: $AUDIO_COUNT"
-
-          if [ -s output/visuals/visual_jobs.json ]; then
-            echo "VISUAL MANIFEST: FOUND"
-          else
-            echo "VISUAL MANIFEST: NOT FOUND"
-          fi
-
           VISUAL_COUNT=$(find output/visuals \
             -type f \
-            \( -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.webp' -o -name '*.mp4' \) \
+            \( -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.webp' \) \
             2>/dev/null | wc -l)
 
+          echo "RESTORED AUDIO FILES : $AUDIO_COUNT"
           echo "RESTORED VISUAL FILES: $VISUAL_COUNT"
 
           echo
@@ -423,6 +410,112 @@ jobs:
 
           exit "$GENERATION_STATUS"
 
+      - name: Validate ALL Visual Assets Before Render
+        shell: bash
+        run: |
+          set -e
+
+          echo "=============================================="
+          echo "       FINAL VISUAL ASSET GATE"
+          echo "=============================================="
+
+          EXPECTED_PARTS=$(grep '^PARTS[[:space:]]*=' Input/topic.txt \
+            | head -n 1 \
+            | sed 's/^[^=]*=[[:space:]]*//' \
+            | tr -d '"'\'' ')
+
+          EXPECTED_SCENES=$(grep '^SCENES[[:space:]]*=' Input/topic.txt \
+            | head -n 1 \
+            | sed 's/^[^=]*=[[:space:]]*//' \
+            | tr -d '"'\'' ')
+
+          EXPECTED_TOTAL=$((EXPECTED_PARTS * EXPECTED_SCENES))
+
+          echo "Expected parts  : $EXPECTED_PARTS"
+          echo "Scenes per part : $EXPECTED_SCENES"
+          echo "Expected visuals: $EXPECTED_TOTAL"
+
+          ACTUAL_TOTAL=$(find output/visuals \
+            -type f \
+            \( -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' \) \
+            -size +0c \
+            2>/dev/null | wc -l)
+
+          echo "Actual visuals  : $ACTUAL_TOTAL"
+
+          if [ "$ACTUAL_TOTAL" -ne "$EXPECTED_TOTAL" ]; then
+            echo
+            echo "ERROR: Visual asset count mismatch."
+            echo "Expected: $EXPECTED_TOTAL"
+            echo "Found   : $ACTUAL_TOTAL"
+            echo
+            echo "===== MISSING VISUALS ====="
+
+            MISSING=0
+
+            for part in $(seq 1 "$EXPECTED_PARTS"); do
+              for scene in $(seq 1 "$EXPECTED_SCENES"); do
+
+                FILE="output/visuals/part_$(printf '%02d' "$part")/scene_$(printf '%02d' "$scene").png"
+
+                if [ ! -s "$FILE" ]; then
+                  echo "MISSING: Part $part Scene $scene"
+                  MISSING=$((MISSING + 1))
+                fi
+
+              done
+            done
+
+            echo
+            echo "Total missing: $MISSING"
+            echo
+            echo "Render will NOT start."
+            exit 1
+          fi
+
+          echo
+          echo "===== VALIDATING EVERY EXPECTED VISUAL ====="
+
+          for part in $(seq 1 "$EXPECTED_PARTS"); do
+            for scene in $(seq 1 "$EXPECTED_SCENES"); do
+
+              FILE="output/visuals/part_$(printf '%02d' "$part")/scene_$(printf '%02d' "$scene").png"
+
+              test -s "$FILE" || {
+                echo "ERROR: Missing visual: Part $part Scene $scene"
+                exit 1
+              }
+
+              python3 - "$FILE" <<'PY'
+          import sys
+          from pathlib import Path
+
+          p = Path(sys.argv[1])
+
+          with p.open("rb") as f:
+              header = f.read(8)
+
+          valid = (
+              header.startswith(b"\x89PNG")
+              or header.startswith(b"\xff\xd8")
+          )
+
+          if not valid:
+              raise SystemExit(
+                  f"ERROR: Invalid image file: {p}"
+              )
+          PY
+
+            done
+          done
+
+          echo
+          echo "=============================================="
+          echo "VISUAL GATE PASSED"
+          echo "Valid visuals: $ACTUAL_TOTAL / $EXPECTED_TOTAL"
+          echo "Render is allowed to start."
+          echo "=============================================="
+
       - name: Install Thumbnail Dependencies
         shell: bash
         run: |
@@ -486,6 +579,10 @@ jobs:
         shell: bash
         run: |
           set -e
+
+          echo "=============================================="
+          echo "          STARTING VIDEO RENDER"
+          echo "=============================================="
 
           python3 scripts/render_video.py
 
