@@ -74,6 +74,7 @@ jobs:
           mkdir -p output/narration/audio
           mkdir -p output/visuals
           mkdir -p output/thumbnail
+          mkdir -p output/publish
 
       - name: Generate story plan
         shell: bash
@@ -344,6 +345,57 @@ jobs:
           print("Thumbnail validation: PASSED")
           PY
 
+      - name: Generate YouTube Upload Package
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -e
+
+          echo "======================================"
+          echo "     YOUTUBE UPLOAD PACKAGE"
+          echo "======================================"
+
+          test -f scripts/generate_youtube_metadata.py
+          test -f Input/topic.txt
+          test -f output/story/ai_story.json
+          test -f output/config/selected_model.json
+
+          mkdir -p output/publish
+
+          python3 scripts/generate_youtube_metadata.py
+
+          echo
+          echo "===== VALIDATING PACKAGE ====="
+
+          test -s output/publish/youtube_metadata.json
+          test -s output/publish/youtube_title.txt
+          test -s output/publish/youtube_description.txt
+          test -s output/publish/youtube_tags.txt
+
+          echo
+          echo "===== TITLE ====="
+          cat output/publish/youtube_title.txt
+
+          echo
+          echo "===== TAGS ====="
+          cat output/publish/youtube_tags.txt
+
+          echo
+          echo "===== PACKAGE FILES ====="
+
+          find output/publish \
+            -maxdepth 1 \
+            -type f \
+            -print \
+            | sort
+
+          echo
+          echo "======================================"
+          echo "YouTube upload package generated."
+          echo "No automatic YouTube upload is performed."
+          echo "======================================"
+
       - name: Render Scene Videos
         shell: bash
         run: |
@@ -561,6 +613,10 @@ jobs:
             output/thumbnail/thumbnail_1280x720.jpg
             output/thumbnail/thumbnail_1080x1920.jpg
             output/thumbnail/thumbnail_manifest.json
+            output/publish/youtube_metadata.json
+            output/publish/youtube_title.txt
+            output/publish/youtube_description.txt
+            output/publish/youtube_tags.txt
           if-no-files-found: error
           retention-days: 7
 
