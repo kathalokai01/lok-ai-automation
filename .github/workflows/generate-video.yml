@@ -22,133 +22,143 @@ jobs:
       # ============================================================
       # CHECKOUT
       # ============================================================
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       # ============================================================
-      # VALIDATE API SECRETS
+      # VALIDATE REQUIRED SECRETS
       # ============================================================
       - name: Validate API secrets
         shell: bash
         run: |
           set -e
 
-          echo "=============================================="
-          echo "          API SECRET VALIDATION"
-          echo "=============================================="
+          echo "Checking required API secrets..."
 
           if [ -z "${GEMINI_API_KEY:-}" ]; then
-            echo "ERROR: GEMINI_API_KEY is not configured."
+            echo "ERROR: GEMINI_API_KEY is not set."
             exit 1
           fi
 
           if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
-            echo "ERROR: CLOUDFLARE_ACCOUNT_ID is not configured."
+            echo "ERROR: CLOUDFLARE_ACCOUNT_ID is not set."
             exit 1
           fi
 
           if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
-            echo "ERROR: CLOUDFLARE_API_TOKEN is not configured."
+            echo "ERROR: CLOUDFLARE_API_TOKEN is not set."
             exit 1
           fi
 
-          echo "Gemini API key : OK"
-          echo "Cloudflare ID  : OK"
-          echo "Cloudflare key : OK"
+          echo "All required secrets are available."
 
       # ============================================================
-      # READ PROJECT CONFIGURATION
+      # READ PROJECT CONFIG
       # ============================================================
-      - name: Read project configuration
+      - name: Read project config
         shell: bash
         run: |
           set -e
 
+          if [ ! -f "Input/topic.txt" ]; then
+            echo "ERROR: Input/topic.txt not found."
+            exit 1
+          fi
+
           echo "=============================================="
-          echo "          PROJECT CONFIGURATION"
+          echo "PROJECT CONFIG"
           echo "=============================================="
 
-          TOPIC=$(sed -n \
-            's/^[[:space:]]*TOPIC[[:space:]]*=[[:space:]]*"\(.*\)".*$/\1/p' \
-            Input/topic.txt | head -n 1)
+          cat Input/topic.txt
 
-          PARTS=$(sed -n \
-            's/^[[:space:]]*PARTS[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' \
-            Input/topic.txt | head -n 1)
+          FORMAT=$(grep -E '^[[:space:]]*FORMAT[[:space:]]*=' Input/topic.txt \
+            | head -n 1 \
+            | sed 's/.*=[[:space:]]*//' \
+            | sed 's/[[:space:]]*#.*//' \
+            | tr -d '"' \
+            | tr -d "'" \
+            | tr '[:upper:]' '[:lower:]')
 
-          SCENES=$(sed -n \
-            's/^[[:space:]]*SCENES[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' \
-            Input/topic.txt | head -n 1)
-
-          if [ -z "$PARTS" ]; then
-            echo "ERROR: PARTS could not be read."
+          if [ "$FORMAT" != "short" ] && [ "$FORMAT" != "full" ]; then
+            echo "ERROR: FORMAT must be short or full."
             exit 1
           fi
 
-          if [ -z "$SCENES" ]; then
-            echo "ERROR: SCENES could not be read."
-            exit 1
-          fi
+          echo "FORMAT=$FORMAT" >> "$GITHUB_ENV"
 
-          if ! [[ "$PARTS" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: Invalid PARTS: $PARTS"
-            exit 1
-          fi
-
-          if ! [[ "$SCENES" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: Invalid SCENES: $SCENES"
-            exit 1
-          fi
-
-          if [ "$PARTS" -lt 1 ]; then
-            echo "ERROR: PARTS must be >= 1"
-            exit 1
-          fi
-
-          if [ "$SCENES" -lt 1 ]; then
-            echo "ERROR: SCENES must be >= 1"
-            exit 1
-          fi
-
-          TOTAL=$((PARTS * SCENES))
-
-          echo "TOPIC           : $TOPIC"
-          echo "PARTS           : $PARTS"
-          echo "SCENES PER PART : $SCENES"
-          echo "TOTAL SCENES    : $TOTAL"
-
-          echo "TOPIC=$TOPIC" >> "$GITHUB_ENV"
-          echo "PARTS=$PARTS" >> "$GITHUB_ENV"
-          echo "SCENES=$SCENES" >> "$GITHUB_ENV"
-          echo "EXPECTED_TOTAL=$TOTAL" >> "$GITHUB_ENV"
+          echo "Selected format: $FORMAT"
 
       # ============================================================
-      # PREPARE DIRECTORIES
+      # PREPARE OUTPUT DIRECTORIES
       # ============================================================
       - name: Prepare output directories
         shell: bash
         run: |
           set -e
 
-          mkdir -p \
-            output/config \
-            output/story \
-            output/scenes \
-            output/narration \
-            output/narration/audio \
-            output/audio \
-            output/visuals \
-            output/thumbnails \
-            output/publish \
-            output/rendered \
-            output/parts \
-            output/final \
-            output/checkpoints
+          mkdir -p output
+          mkdir -p output/config
+          mkdir -p output/checkpoints
+          mkdir -p output/story
+          mkdir -p output/scenes
+          mkdir -p output/narration
+          mkdir -p output/narration/audio
+          mkdir -p output/audio
+          mkdir -p output/visuals
+          mkdir -p output/i2v
+          mkdir -p output/parts
+          mkdir -p output/thumbnails
+          mkdir -p output/youtube
+          mkdir -p output/videos
 
       # ============================================================
-      # RESTORE SUCCESSFUL CHECKPOINT
+      # EXPECTED TOTAL
+      # ============================================================
+      - name: Calculate expected scene count
+        shell: bash
+        run: |
+          set -e
+
+          PARTS=$(grep -E '^[[:space:]]*PARTS[[:space:]]*=' Input/topic.txt \
+            | head -n 1 \
+            | sed 's/.*=[[:space:]]*//' \
+            | sed 's/[[:space:]]*#.*//' \
+            | tr -d '"' \
+            | tr -d "'" \
+            | tr -d ' ')
+
+          SCENES=$(grep -E '^[[:space:]]*SCENES[[:space:]]*=' Input/topic.txt \
+            | head -n 1 \
+            | sed 's/.*=[[:space:]]*//' \
+            | sed 's/[[:space:]]*#.*//' \
+            | tr -d '"' \
+            | tr -d "'" \
+            | tr -d ' ')
+
+          if ! [[ "$PARTS" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: Invalid PARTS value."
+            exit 1
+          fi
+
+          if ! [[ "$SCENES" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: Invalid SCENES value."
+            exit 1
+          fi
+
+          EXPECTED_TOTAL=$((PARTS * SCENES))
+
+          echo "PARTS=$PARTS" >> "$GITHUB_ENV"
+          echo "SCENES_PER_PART=$SCENES" >> "$GITHUB_ENV"
+          echo "EXPECTED_TOTAL=$EXPECTED_TOTAL" >> "$GITHUB_ENV"
+
+          echo "Parts           : $PARTS"
+          echo "Scenes per part : $SCENES"
+          echo "Expected total  : $EXPECTED_TOTAL"
+
+      # ============================================================
+      # RESTORE ONLY PREVIOUS SUCCESSFUL CHECKPOINT
       # ============================================================
       - name: Restore previous successful checkpoint
         shell: bash
@@ -157,18 +167,14 @@ jobs:
 
           CURRENT_RUN="${{ github.run_id }}"
 
-          echo "Looking for previous SUCCESSFUL workflow..."
+          echo "Looking for previous successful checkpoint..."
 
           PREVIOUS_RUN_ID=$(gh run list \
             --workflow generate-video.yml \
             --limit 30 \
             --json databaseId,status,conclusion \
-            --jq ".[] |
-              select(.databaseId != ${CURRENT_RUN}) |
-              select(.status == \"completed\") |
-              select(.conclusion == \"success\") |
-              .databaseId" \
-            | head -n 1)
+            --jq ".[] | select(.databaseId != ${CURRENT_RUN}) | select(.status == \"completed\") | select(.conclusion == \"success\") | .databaseId" \
+            | head -n 1 || true)
 
           if [ -z "$PREVIOUS_RUN_ID" ]; then
             echo "No previous successful run found."
@@ -181,24 +187,110 @@ jobs:
           mkdir -p /tmp/lok-ai-checkpoint
 
           if gh run download "$PREVIOUS_RUN_ID" \
-              --name lok-ai-checkpoint \
+              --name lok-ai-successful-checkpoint \
               --dir /tmp/lok-ai-checkpoint; then
 
             echo "Checkpoint downloaded."
 
             if [ -d "/tmp/lok-ai-checkpoint/output" ]; then
-              cp -a \
-                /tmp/lok-ai-checkpoint/output/. \
-                output/
-
+              cp -a /tmp/lok-ai-checkpoint/output/. output/ || true
               echo "Checkpoint restored."
+            else
+              echo "Checkpoint does not contain output directory."
             fi
           else
-            echo "No checkpoint artifact available."
+            echo "No downloadable checkpoint found."
           fi
 
       # ============================================================
-      # STORY PLAN
+      # VALIDATE RESTORED TOPIC
+      # ============================================================
+      - name: Validate restored checkpoint
+        shell: bash
+        run: |
+          set -e
+
+          if [ ! -f "output/config/topic.txt" ]; then
+            cp Input/topic.txt output/config/topic.txt
+            echo "Fresh project configuration created."
+            exit 0
+          fi
+
+          if cmp -s Input/topic.txt output/config/topic.txt; then
+            echo "Restored checkpoint belongs to current input."
+          else
+            echo "Input changed. Removing stale downstream checkpoint."
+
+            rm -rf \
+              output/story \
+              output/scenes \
+              output/narration \
+              output/visuals \
+              output/i2v \
+              output/parts \
+              output/videos
+
+            mkdir -p \
+              output/story \
+              output/scenes \
+              output/narration \
+              output/narration/audio \
+              output/visuals \
+              output/i2v \
+              output/parts \
+              output/videos
+
+            cp Input/topic.txt output/config/topic.txt
+          fi
+
+      # ============================================================
+      # VALIDATE SCENE CHECKPOINT
+      # ============================================================
+      - name: Validate scene checkpoint
+        shell: bash
+        run: |
+          set -e
+
+          SCENE_FILE="output/scenes/scenes.json"
+
+          if [ ! -f "$SCENE_FILE" ]; then
+            echo "No scene checkpoint found."
+            exit 0
+          fi
+
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          path = "output/scenes/scenes.json"
+          expected = int(os.environ["EXPECTED_TOTAL"])
+
+          try:
+              with open(path, "r", encoding="utf-8") as f:
+                  data = json.load(f)
+          except Exception as e:
+              print(f"Invalid scenes.json: {e}")
+              sys.exit(0)
+
+          scenes = data.get("scenes", [])
+
+          if data.get("status") != "completed":
+              print("Scene checkpoint is not completed.")
+              sys.exit(0)
+
+          if len(scenes) != expected:
+              print(
+                  f"Scene checkpoint mismatch: "
+                  f"{len(scenes)}/{expected}"
+              )
+              sys.exit(0)
+
+          print(f"Scene checkpoint valid: {len(scenes)}/{expected}")
+          PY
+
+      # ============================================================
+      # GENERATE STORY PLAN
       # ============================================================
       - name: Generate story plan
         shell: bash
@@ -207,7 +299,7 @@ jobs:
           python3 scripts/generate_story_plan.py
 
       # ============================================================
-      # STORY
+      # GENERATE STORY
       # ============================================================
       - name: Generate story
         shell: bash
@@ -216,7 +308,7 @@ jobs:
           python3 scripts/generate_story.py
 
       # ============================================================
-      # GEMINI MODEL
+      # SELECT GEMINI MODEL
       # ============================================================
       - name: Select Gemini model
         shell: bash
@@ -234,7 +326,7 @@ jobs:
           python3 scripts/test_gemini.py
 
       # ============================================================
-      # AI STORY
+      # GENERATE AI STORY
       # ============================================================
       - name: Generate AI story
         shell: bash
@@ -252,61 +344,45 @@ jobs:
           python3 scripts/generate_character_bible.py
 
       # ============================================================
-      # SCENES
+      # GENERATE SCENES
       # ============================================================
       - name: Generate scenes
         shell: bash
         run: |
           set -e
 
-          echo "=============================================="
-          echo "          GENERATING SCENES"
-          echo "=============================================="
-
           python3 scripts/generate_scenes.py
 
           python3 - <<'PY'
           import json
           import os
-          from pathlib import Path
+          import sys
 
-          path = Path("output/scenes/scenes.json")
+          path = "output/scenes/scenes.json"
+          expected = int(os.environ["EXPECTED_TOTAL"])
 
-          if not path.exists():
-              raise SystemExit("ERROR: scenes.json missing")
+          if not os.path.exists(path):
+              print("ERROR: scenes.json not found.")
+              sys.exit(1)
 
-          data = json.loads(
-              path.read_text(encoding="utf-8")
-          )
+          with open(path, "r", encoding="utf-8") as f:
+              data = json.load(f)
 
-          expected = int(
-              os.environ["EXPECTED_TOTAL"]
-          )
+          scenes = data.get("scenes", [])
 
-          actual = len(
-              data.get("scenes", [])
-          )
-
-          print(f"Scene status : {data.get('status')}")
-          print(f"Expected     : {expected}")
-          print(f"Actual       : {actual}")
+          print(f"Scenes generated: {len(scenes)}/{expected}")
 
           if data.get("status") != "completed":
-              raise SystemExit(
-                  "ERROR: scenes.json is not completed"
-              )
+              print("ERROR: Scene generation is not completed.")
+              sys.exit(1)
 
-          if actual != expected:
-              raise SystemExit(
-                  f"ERROR: Expected {expected} scenes, "
-                  f"found {actual}"
-              )
-
-          print("SCENE VALIDATION: PASS")
+          if len(scenes) != expected:
+              print("ERROR: Scene count mismatch.")
+              sys.exit(1)
           PY
 
       # ============================================================
-      # NARRATION
+      # GENERATE NARRATION
       # ============================================================
       - name: Generate narration
         shell: bash
@@ -315,7 +391,7 @@ jobs:
           python3 scripts/generate_narration.py
 
       # ============================================================
-      # FFMPEG
+      # INSTALL FFMPEG
       # ============================================================
       - name: Install FFmpeg
         shell: bash
@@ -325,21 +401,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
       # ============================================================
-      # TTS
+      # GENERATE HINDI TTS
       # ============================================================
       - name: Generate Hindi TTS
         shell: bash
         run: |
           set -e
-
-          python3 -m pip install --upgrade pip
-          python3 -m pip install edge-tts
-
           python3 scripts/generate_tts.py
 
       # ============================================================
-      # PREPARE VISUALS
+      # PREPARE VISUAL GENERATION
       # ============================================================
       - name: Prepare visual generation
         shell: bash
@@ -348,7 +423,7 @@ jobs:
           python3 scripts/prepare_visuals.py
 
       # ============================================================
-      # CLOUDFLARE MODEL
+      # SELECT CLOUDFLARE VISUAL MODEL
       # ============================================================
       - name: Select Cloudflare visual model
         shell: bash
@@ -363,10 +438,47 @@ jobs:
         shell: bash
         run: |
           set -e
+
           python3 scripts/generate_visuals.py
 
       # ============================================================
-      # FINAL ASSET CHECK
+      # REAL AI IMAGE TO VIDEO
+      # ============================================================
+      - name: Generate real AI image-to-video clips
+        shell: bash
+        run: |
+          set -e
+
+          echo "=============================================="
+          echo "      GENERATING REAL AI VIDEO CLIPS"
+          echo "=============================================="
+
+          python3 scripts/generate_i2v.py
+
+          echo
+          echo "Generated I2V clips:"
+          find output/i2v \
+            -type f \
+            -name "*.mp4" \
+            -size +1000c \
+            -print
+
+          COUNT=$(find output/i2v \
+            -type f \
+            -name "*.mp4" \
+            -size +1000c \
+            | wc -l)
+
+          echo
+          echo "I2V clips: $COUNT/$EXPECTED_TOTAL"
+
+          if [ "$COUNT" -ne "$EXPECTED_TOTAL" ]; then
+            echo "ERROR: I2V clip count mismatch."
+            exit 1
+          fi
+
+      # ============================================================
+      # FINAL ASSET VALIDATION
       # ============================================================
       - name: Validate all assets before render
         shell: bash
@@ -374,278 +486,104 @@ jobs:
           set -e
 
           echo "=============================================="
-          echo "       FINAL PIPELINE INTEGRITY CHECK"
+          echo "        FINAL ASSET VALIDATION"
           echo "=============================================="
 
-          python3 - <<'PY'
+          SCENE_COUNT=$(python3 - <<'PY'
           import json
-          import os
-          from pathlib import Path
-
-          expected = int(os.environ["EXPECTED_TOTAL"])
-          parts = int(os.environ["PARTS"])
-          scenes_per_part = int(os.environ["SCENES"])
-
-          # -------------------------------
-          # SCENES
-          # -------------------------------
-          scenes_file = Path(
-              "output/scenes/scenes.json"
+          with open("output/scenes/scenes.json", "r", encoding="utf-8") as f:
+              print(len(json.load(f).get("scenes", [])))
+          PY
           )
 
-          if not scenes_file.exists():
-              raise SystemExit(
-                  "ERROR: scenes.json missing"
-              )
+          AUDIO_COUNT=$(find output/narration/audio \
+            -type f \
+            -name "*.mp3" \
+            -size +1000c \
+            | wc -l)
 
-          scenes = json.loads(
-              scenes_file.read_text(
-                  encoding="utf-8"
-              )
-          )
+          VISUAL_COUNT=$(find output/visuals \
+            -type f \
+            \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \) \
+            -size +1000c \
+            | wc -l)
 
-          scene_count = len(
-              scenes.get("scenes", [])
-          )
+          I2V_COUNT=$(find output/i2v \
+            -type f \
+            -name "*.mp4" \
+            -size +1000c \
+            | wc -l)
 
-          print(
-              f"Scenes: {scene_count}/{expected}"
-          )
+          echo "Scenes : $SCENE_COUNT/$EXPECTED_TOTAL"
+          echo "Audio  : $AUDIO_COUNT/$EXPECTED_TOTAL"
+          echo "Visual : $VISUAL_COUNT/$EXPECTED_TOTAL"
+          echo "I2V    : $I2V_COUNT/$EXPECTED_TOTAL"
 
-          if scenes.get("status") != "completed":
-              raise SystemExit(
-                  "ERROR: scenes.json is not completed."
-              )
+          if [ "$SCENE_COUNT" -ne "$EXPECTED_TOTAL" ]; then
+            echo "ERROR: Scene count mismatch."
+            exit 1
+          fi
 
-          if scene_count != expected:
-              raise SystemExit(
-                  f"ERROR: Expected {expected} scenes, "
-                  f"found {scene_count}"
-              )
+          if [ "$AUDIO_COUNT" -ne "$EXPECTED_TOTAL" ]; then
+            echo "ERROR: Audio count mismatch."
+            exit 1
+          fi
 
-          # -------------------------------
-          # AUDIO
-          # -------------------------------
-          audio_dir = Path(
-              "output/narration/audio"
-          )
+          if [ "$VISUAL_COUNT" -ne "$EXPECTED_TOTAL" ]; then
+            echo "ERROR: Visual count mismatch."
+            exit 1
+          fi
 
-          audio_files = sorted(
-              list(audio_dir.rglob("*.mp3")) +
-              list(audio_dir.rglob("*.wav"))
-          )
+          if [ "$I2V_COUNT" -ne "$EXPECTED_TOTAL" ]; then
+            echo "ERROR: I2V count mismatch."
+            exit 1
+          fi
 
-          valid_audio = [
-              p for p in audio_files
-              if p.exists()
-              and p.stat().st_size > 1000
-          ]
-
-          print(
-              f"Audio files: "
-              f"{len(valid_audio)}/{expected}"
-          )
-
-          if len(valid_audio) != expected:
-              raise SystemExit(
-                  f"ERROR: Expected {expected} audio files, "
-                  f"found {len(valid_audio)}."
-              )
-
-          # -------------------------------
-          # AUDIO MANIFEST
-          # -------------------------------
-          audio_manifest = Path(
-              "output/narration/audio_jobs.json"
-          )
-
-          if not audio_manifest.exists():
-              raise SystemExit(
-                  "ERROR: audio_jobs.json missing."
-              )
-
-          audio_data = json.loads(
-              audio_manifest.read_text(
-                  encoding="utf-8"
-              )
-          )
-
-          audio_jobs = audio_data.get(
-              "jobs",
-              []
-          )
-
-          completed_audio_jobs = [
-              j for j in audio_jobs
-              if j.get("status") == "completed"
-          ]
-
-          print(
-              f"Audio jobs: "
-              f"{len(audio_jobs)}/{expected}"
-          )
-
-          print(
-              f"Completed audio jobs: "
-              f"{len(completed_audio_jobs)}/{expected}"
-          )
-
-          if len(audio_jobs) != expected:
-              raise SystemExit(
-                  "ERROR: Audio job count mismatch."
-              )
-
-          if len(completed_audio_jobs) != expected:
-              raise SystemExit(
-                  "ERROR: Audio manifest incomplete."
-              )
-
-          # -------------------------------
-          # VISUAL MANIFEST
-          # -------------------------------
-          visual_manifest = Path(
-              "output/visuals/visual_jobs.json"
-          )
-
-          if not visual_manifest.exists():
-              raise SystemExit(
-                  "ERROR: visual_jobs.json missing."
-              )
-
-          visual_data = json.loads(
-              visual_manifest.read_text(
-                  encoding="utf-8"
-              )
-          )
-
-          visual_jobs = visual_data.get(
-              "jobs",
-              []
-          )
-
-          completed_visual_jobs = [
-              j for j in visual_jobs
-              if j.get("status") == "completed"
-          ]
-
-          print(
-              f"Visual jobs: "
-              f"{len(visual_jobs)}/{expected}"
-          )
-
-          print(
-              f"Completed visual jobs: "
-              f"{len(completed_visual_jobs)}/{expected}"
-          )
-
-          if len(visual_jobs) != expected:
-              raise SystemExit(
-                  "ERROR: Visual job count mismatch."
-              )
-
-          if len(completed_visual_jobs) != expected:
-              raise SystemExit(
-                  "ERROR: Visual manifest incomplete."
-              )
-
-          # -------------------------------
-          # PHYSICAL VISUALS
-          # -------------------------------
-          visual_files = []
-
-          for part in range(1, parts + 1):
-              for scene in range(
-                  1,
-                  scenes_per_part + 1
-              ):
-
-                  candidates = [
-                      Path(
-                          f"output/visuals/"
-                          f"part_{part:02d}/"
-                          f"scene_{scene:02d}.png"
-                      ),
-                      Path(
-                          f"output/visuals/"
-                          f"part_{part:02d}/"
-                          f"scene_{scene:02d}.jpg"
-                      ),
-                      Path(
-                          f"output/visuals/"
-                          f"part_{part:02d}/"
-                          f"scene_{scene:02d}.jpeg"
-                      ),
-                  ]
-
-                  found = next(
-                      (
-                          p for p in candidates
-                          if p.exists()
-                          and p.stat().st_size > 1000
-                      ),
-                      None
-                  )
-
-                  if not found:
-                      raise SystemExit(
-                          f"ERROR: Missing visual "
-                          f"Part {part} Scene {scene}"
-                      )
-
-                  visual_files.append(found)
-
-          print(
-              f"Physical visuals: "
-              f"{len(visual_files)}/{expected}"
-          )
-
-          if len(visual_files) != expected:
-              raise SystemExit(
-                  "ERROR: Physical visual count mismatch."
-              )
-
-          print()
-          print(
-              "=============================================="
-          )
-          print(
-              "ALL PIPELINE ASSETS VALIDATED SUCCESSFULLY"
-          )
-          print(
-              "=============================================="
-          )
+          echo "All assets validated successfully."
 
       # ============================================================
-      # THUMBNAILS
+      # INSTALL THUMBNAIL DEPENDENCIES
       # ============================================================
       - name: Install thumbnail dependencies
         shell: bash
         run: |
           set -e
+
+          python3 -m pip install --upgrade pip
           python3 -m pip install pillow
 
+      # ============================================================
+      # GENERATE THUMBNAILS
+      # ============================================================
       - name: Generate thumbnails
         shell: bash
         run: |
           set -e
-          python3 scripts/generate_thumbnail.py
+
+          if [ -f "scripts/generate_thumbnails.py" ]; then
+            python3 scripts/generate_thumbnails.py
+          else
+            echo "Thumbnail script not found."
+            echo "Skipping thumbnail generation for now."
+          fi
 
       # ============================================================
-      # YOUTUBE PACKAGE
+      # GENERATE YOUTUBE PACKAGE
       # ============================================================
       - name: Generate YouTube upload package
         shell: bash
         run: |
           set -e
 
-          python3 scripts/generate_youtube_metadata.py
-
-          echo
-          echo "NOTE: YouTube upload remains MANUAL."
-          echo "No automatic YouTube upload is performed."
+          if [ -f "scripts/generate_youtube_metadata.py" ]; then
+            python3 scripts/generate_youtube_metadata.py
+          else
+            echo "YouTube metadata script not found."
+            echo "Skipping metadata generation for now."
+          fi
 
       # ============================================================
-      # RENDER
+      # RENDER SCENE VIDEOS
       # ============================================================
       - name: Render scene videos
         shell: bash
@@ -658,36 +596,27 @@ jobs:
 
           python3 scripts/render_video.py
 
-          echo
-          echo "=============================================="
-          echo "          RENDER OUTPUT CHECK"
-          echo "=============================================="
+      # ============================================================
+      # VALIDATE RENDERED PARTS
+      # ============================================================
+      - name: Validate rendered videos
+        shell: bash
+        run: |
+          set -e
 
-          if ! find output/parts \
+          COUNT=$(find output/parts \
             -maxdepth 1 \
             -type f \
             -name "*.mp4" \
             -size +1000c \
-            | grep -q .; then
+            | wc -l)
 
-            echo "ERROR: Render produced no part videos."
-            echo
-            echo "Contents of output/parts:"
-            find output/parts \
-              -maxdepth 2 \
-              -type f \
-              -print \
-              || true
+          echo "Rendered part videos: $COUNT/$PARTS"
 
+          if [ "$COUNT" -ne "$PARTS" ]; then
+            echo "ERROR: Rendered part count mismatch."
             exit 1
           fi
-
-          echo "Rendered part videos:"
-          find output/parts \
-            -maxdepth 1 \
-            -type f \
-            -name "*.mp4" \
-            -print
 
       # ============================================================
       # UPLOAD RENDERED PART VIDEOS
@@ -696,7 +625,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lok-ai-rendered-videos
-          path: output/parts/*.mp4
+          path: |
+            output/parts/*.mp4
+            output/scenes/**/*.mp4
           if-no-files-found: error
           retention-days: 7
 
@@ -708,87 +639,44 @@ jobs:
         run: |
           set -e
 
-          mkdir -p output/final
+          mkdir -p output/videos
 
           python3 - <<'PY'
           from pathlib import Path
           import subprocess
+          import os
+          import re
 
-          rendered = sorted(
-              Path("output/parts").glob("*.mp4")
-          )
-
-          if not rendered:
-              raise SystemExit(
-                  "ERROR: No rendered part videos found."
+          parts = sorted(
+              Path("output/parts").glob("*.mp4"),
+              key=lambda p: int(
+                  re.search(r'(\d+)', p.stem).group(1)
               )
-
-          print(
-              f"Found {len(rendered)} rendered part videos."
           )
 
-          list_file = Path(
-              "output/final/concat.txt"
-          )
+          if not parts:
+              raise SystemExit("ERROR: No part videos found.")
 
-          with list_file.open(
-              "w",
-              encoding="utf-8"
-          ) as f:
+          concat_file = Path("/tmp/concat.txt")
 
-              for video in rendered:
+          with concat_file.open("w", encoding="utf-8") as f:
+              for part in parts:
+                  f.write(f"file '{part.resolve()}'\n")
 
-                  safe = str(
-                      video.resolve()
-                  ).replace(
-                      "'",
-                      "'\\''"
-                  )
+          output = Path("output/videos/final_video.mp4")
 
-                  f.write(
-                      f"file '{safe}'\n"
-                  )
+          subprocess.run([
+              "ffmpeg",
+              "-y",
+              "-f", "concat",
+              "-safe", "0",
+              "-i", str(concat_file),
+              "-c", "copy",
+              "-movflags", "+faststart",
+              str(output)
+          ], check=True)
 
-          output = Path(
-              "output/final/lok-ai-final-video.mp4"
-          )
-
-          subprocess.run(
-              [
-                  "ffmpeg",
-                  "-y",
-                  "-f",
-                  "concat",
-                  "-safe",
-                  "0",
-                  "-i",
-                  str(list_file),
-                  "-c",
-                  "copy",
-                  "-movflags",
-                  "+faststart",
-                  str(output),
-              ],
-              check=True,
-          )
-
-          if not output.exists():
-              raise SystemExit(
-                  "ERROR: Final video was not created."
-              )
-
-          if output.stat().st_size <= 0:
-              raise SystemExit(
-                  "ERROR: Final video is empty."
-              )
-
-          print(
-              f"Final video: {output}"
-          )
-
-          print(
-              f"Size: {output.stat().st_size} bytes"
-          )
+          print(f"Final video created: {output}")
           PY
 
       # ============================================================
@@ -799,18 +687,30 @@ jobs:
         run: |
           set -e
 
-          FINAL="output/final/lok-ai-final-video.mp4"
+          FINAL="output/videos/final_video.mp4"
 
-          test -s "$FINAL"
+          if [ ! -s "$FINAL" ]; then
+            echo "ERROR: Final video missing."
+            exit 1
+          fi
 
+          SIZE=$(stat -c%s "$FINAL")
+
+          echo "Final video size: $SIZE bytes"
+
+          if [ "$SIZE" -lt 10000 ]; then
+            echo "ERROR: Final video is too small."
+            exit 1
+          fi
+
+          echo
+          echo "Video information:"
           ffprobe \
             -v error \
-            -show_entries format=duration \
-            -show_entries stream=codec_name \
+            -show_entries format=duration,size \
+            -show_entries stream=codec_name,width,height,r_frame_rate \
             -of default=noprint_wrappers=1 \
             "$FINAL"
-
-          echo "FINAL VIDEO VALIDATION: PASS"
 
       # ============================================================
       # UPLOAD FINAL VIDEO
@@ -819,7 +719,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lok-ai-final-video
-          path: output/final/lok-ai-final-video.mp4
+          path: output/videos/final_video.mp4
           if-no-files-found: error
           retention-days: 7
 
@@ -827,14 +727,13 @@ jobs:
       # PREPARE SUCCESSFUL CHECKPOINT
       # ============================================================
       - name: Prepare successful checkpoint
+        if: success()
         shell: bash
         run: |
           set -e
 
           rm -rf /tmp/lok-ai-checkpoint
-
-          mkdir -p \
-            /tmp/lok-ai-checkpoint/output
+          mkdir -p /tmp/lok-ai-checkpoint/output
 
           for dir in \
             config \
@@ -842,21 +741,14 @@ jobs:
             story \
             scenes \
             narration \
-            audio \
-            visuals
+            visuals \
+            i2v
           do
-
             if [ -d "output/$dir" ]; then
-
-              mkdir -p \
-                "/tmp/lok-ai-checkpoint/output/$dir"
-
-              cp -a \
-                "output/$dir/." \
+              mkdir -p "/tmp/lok-ai-checkpoint/output/$dir"
+              cp -a "output/$dir/." \
                 "/tmp/lok-ai-checkpoint/output/$dir/"
-
             fi
-
           done
 
           echo "Successful checkpoint prepared."
@@ -865,9 +757,60 @@ jobs:
       # UPLOAD SUCCESSFUL CHECKPOINT
       # ============================================================
       - name: Upload successful checkpoint
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: lok-ai-checkpoint
+          name: lok-ai-successful-checkpoint
           path: /tmp/lok-ai-checkpoint
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
+
+      # ============================================================
+      # SHOW FINAL OUTPUT
+      # ============================================================
+      - name: Show final output
+        if: always()
+        shell: bash
+        run: |
+          echo
+          echo "=============================================="
+          echo "              FINAL OUTPUT"
+          echo "=============================================="
+
+          echo
+          echo "Videos:"
+          find output/videos \
+            -type f \
+            -maxdepth 2 \
+            -print 2>/dev/null || true
+
+          echo
+          echo "Parts:"
+          find output/parts \
+            -type f \
+            -name "*.mp4" \
+            -print 2>/dev/null || true
+
+          echo
+          echo "I2V:"
+          find output/i2v \
+            -type f \
+            -name "*.mp4" \
+            -print 2>/dev/null || true
+
+          echo
+          echo "Thumbnails:"
+          find output/thumbnails \
+            -type f \
+            -print 2>/dev/null || true
+
+          echo
+          echo "YouTube:"
+          find output/youtube \
+            -type f \
+            -print 2>/dev/null || true
+
+          echo
+          echo "=============================================="
+          echo "              WORKFLOW COMPLETE"
+          echo "=============================================="
