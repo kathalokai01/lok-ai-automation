@@ -2,64 +2,128 @@
 
 import json
 import os
+import re
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
-INPUT = Path("Input/topic.txt")
-NARRATION = Path("output/narration/audio_jobs.json")
-VISUALS = Path("output/visuals/visual_jobs.json")
+CONFIG_FILE = Path("Input/topic.txt")
+SCENES_FILE = Path("output/scenes/scenes.json")
+
+I2V_DIR = Path("output/i2v")
+AUDIO_DIR = Path("output/narration/audio")
 
 SCENES_OUT = Path("output/scenes")
 PARTS_OUT = Path("output/parts")
+
 MANIFEST_OUT = Path("output/video_render_manifest.json")
 
 
-def load_json(path: Path):
-    if not path.exists():
-        raise SystemExit(f"ERROR: Required file not found: {path}")
+# ============================================================
+# CONFIG
+# ============================================================
 
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"ERROR: Invalid JSON in {path}: {exc}")
+def clean_config_value(value: str) -> str:
+    value = value.strip()
 
-
-def read_config(key: str, default: str = "") -> str:
-    if not INPUT.exists():
-        return default
-
-    for raw in INPUT.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-
-        k, value = line.split("=", 1)
-
-        if k.strip() != key:
-            continue
-
+    if "#" in value:
         value = value.split("#", 1)[0].strip()
 
-        if (
-            len(value) >= 2
-            and value[0] == value[-1]
-            and value[0] in ('"', "'")
-        ):
-            value = value[1:-1]
+    value = value.strip().strip('"').strip("'")
 
-        return value.strip()
-
-    return default
+    return value.strip()
 
 
-def run_command(command):
-    print("RUN:", " ".join(str(x) for x in command))
-    subprocess.run(command, check=True)
+def load_config():
+    config = {}
+
+    if not CONFIG_FILE.exists():
+        raise RuntimeError("Input/topic.txt not found.")
+
+    for raw in CONFIG_FILE.read_text(
+        encoding="utf-8"
+    ).splitlines():
+
+        line = raw.strip()
+
+        if not line:
+            continue
+
+        if line.startswith("#"):
+            continue
+
+        if "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+
+        key = key.strip().upper()
+        value = clean_config_value(value)
+
+        config[key] = value
+
+    return config
+
+
+CONFIG = load_config()
+
+FORMAT = CONFIG.get("FORMAT", "full").lower()
+
+if FORMAT not in {"short", "full"}:
+    raise RuntimeError(
+        f"Invalid FORMAT: {FORMAT}. "
+        f"Expected short or full."
+    )
+
+
+# ============================================================
+# FORMAT
+# ============================================================
+
+def get_output_geometry():
+
+    if FORMAT == "short":
+        return 720, 1280
+
+    return 1920, 1080
+
+
+WIDTH, HEIGHT = get_output_geometry()
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def run(cmd, label):
+
+    print()
+    print("=" * 70)
+    print(label)
+    print("=" * 70)
+
+    print(" ".join(str(x) for x in cmd))
+
+    result = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+    print(result.stdout)
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"{label} failed with exit code "
+            f"{result.returncode}"
+        )
 
 
 def probe_duration(path: Path) -> float:
+
     result = subprocess.run(
         [
             "ffprobe",
@@ -71,254 +135,254 @@ def probe_duration(path: Path) -> float:
             "default=noprint_wrappers=1:nokey=1",
             str(path),
         ],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        check=True,
     )
 
-    value = result.stdout.strip()
-
-    if not value:
-        raise RuntimeError(f"Could not determine duration: {path}")
-
-    return round(float(value), 3)
-
-
-def valid_video(path: Path) -> bool:
-    if not path.exists() or path.stat().st_size < 1000:
-        return False
-
-    try:
-        return probe_duration(path) > 0.01
-    except Exception:
-        return False
-
-
-def get_output_geometry(video_format: str):
-    value = video_format.strip().lower()
-
-    if value in {"short", "shorts", "vertical", "9:16"}:
-        return 720, 1280
-
-    if value in {"square", "1:1"}:
-        return 1080, 1080
-
-    return 1920, 1080
-
-
-def build_video_filter(video_format: str, fps: int):
-    width, height = get_output_geometry(video_format)
-
-    return (
-        f"scale={width}:{height}:"
-        f"force_original_aspect_ratio=increase,"
-        f"crop={width}:{height},"
-        f"fps={fps}"
-    )
-
-
-def job_status_is_complete(job):
-    status = str(job.get("status", "")).strip().lower()
-
-    return status in {
-        "completed",
-        "complete",
-        "success",
-        "generated",
-        "done",
-    }
-
-
-def extract_jobs(manifest):
-    jobs = manifest.get("jobs")
-
-    if isinstance(jobs, list):
-        return jobs
-
-    # Compatibility with manifests using "scenes"
-    scenes = manifest.get("scenes")
-
-    if isinstance(scenes, list):
-        return scenes
-
-    return []
-
-
-def build_job_map(manifest):
-    result = {}
-
-    for job in extract_jobs(manifest):
-        if not isinstance(job, dict):
-            continue
-
-        try:
-            part = int(job.get("part"))
-            scene = int(job.get("scene"))
-        except (TypeError, ValueError):
-            continue
-
-        if job_status_is_complete(job):
-            result[(part, scene)] = job
-
-    return result
-
-
-def resolve_audio(job, part, scene):
-    candidates = [
-        job.get("output"),
-        job.get("output_path"),
-        job.get("audio"),
-        job.get("audio_path"),
-        job.get("file"),
-        job.get("path"),
-        f"output/narration/audio/part_{part:02d}/scene_{scene:02d}.mp3",
-    ]
-
-    for candidate in candidates:
-        if not candidate:
-            continue
-
-        path = Path(str(candidate))
-
-        if path.exists() and path.stat().st_size > 0:
-            return path
-
-    return Path(
-        f"output/narration/audio/part_{part:02d}/scene_{scene:02d}.mp3"
-    )
-
-
-def resolve_visual(job, part, scene):
-    candidates = [
-        job.get("asset_path"),
-        job.get("output"),
-        job.get("output_path"),
-        job.get("visual"),
-        job.get("visual_path"),
-        job.get("file"),
-        job.get("path"),
-        f"output/visuals/part_{part:02d}/scene_{scene:02d}.png",
-    ]
-
-    for candidate in candidates:
-        if not candidate:
-            continue
-
-        path = Path(str(candidate))
-
-        if path.exists() and path.stat().st_size > 0:
-            return path
-
-    return Path(
-        f"output/visuals/part_{part:02d}/scene_{scene:02d}.png"
-    )
-
-
-def render_scene(visual, audio, output, fps, video_format):
-    output.parent.mkdir(parents=True, exist_ok=True)
-
-    temp_output = output.with_suffix(".tmp.mp4")
-
-    if temp_output.exists():
-        temp_output.unlink()
-
-    video_filter = build_video_filter(video_format, fps)
-
-    run_command(
-        [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-
-            "-loop",
-            "1",
-            "-i",
-            str(visual),
-
-            "-i",
-            str(audio),
-
-            "-map",
-            "0:v:0",
-            "-map",
-            "1:a:0",
-
-            "-c:v",
-            "libx264",
-            "-preset",
-            "veryfast",
-            "-crf",
-            "20",
-            "-tune",
-            "stillimage",
-
-            "-pix_fmt",
-            "yuv420p",
-
-            "-vf",
-            video_filter,
-
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-
-            "-shortest",
-            "-movflags",
-            "+faststart",
-
-            str(temp_output),
-        ]
-    )
-
-    if not temp_output.exists() or temp_output.stat().st_size < 1000:
+    if result.returncode != 0:
         raise RuntimeError(
-            f"FFmpeg failed to create valid video: {output}"
+            f"Unable to read duration: {path}"
         )
 
-    os.replace(temp_output, output)
+    try:
+        return float(result.stdout.strip())
+    except Exception:
+        raise RuntimeError(
+            f"Invalid duration returned for: {path}"
+        )
 
 
-def create_part_video(part, scene_records):
-    scene_records = sorted(
-        scene_records,
-        key=lambda item: item["scene"],
+def find_i2v_clip(part: int, scene: int):
+
+    directory = I2V_DIR / f"part_{part:02d}"
+
+    candidates = [
+        directory / f"scene_{scene:02d}.mp4",
+        directory / f"scene_{scene}.mp4",
+    ]
+
+    for path in candidates:
+        if path.exists() and path.stat().st_size > 1000:
+            return path
+
+    return None
+
+
+def find_audio(part: int, scene: int):
+
+    directory = AUDIO_DIR / f"part_{part:02d}"
+
+    candidates = [
+        directory / f"scene_{scene:02d}.mp3",
+        directory / f"scene_{scene}.mp3",
+    ]
+
+    for path in candidates:
+        if path.exists() and path.stat().st_size > 1000:
+            return path
+
+    return None
+
+
+def natural_part_sort(path: Path):
+
+    match = re.search(
+        r"(\d+)",
+        path.stem
     )
 
-    concat_file = PARTS_OUT / f"part_{part:02d}_concat.txt"
-    output = PARTS_OUT / f"part_{part:02d}.mp4"
-    temp_output = output.with_suffix(".tmp.mp4")
+    return int(match.group(1)) if match else 999999
 
-    lines = []
 
-    for record in scene_records:
-        scene_path = Path(record["video"]).resolve()
+# ============================================================
+# VALIDATE SCENES
+# ============================================================
 
-        if not valid_video(scene_path):
-            raise SystemExit(
-                f"ERROR: Invalid scene video: {scene_path}"
+def load_scenes():
+
+    if not SCENES_FILE.exists():
+        raise RuntimeError(
+            "output/scenes/scenes.json not found."
+        )
+
+    data = json.loads(
+        SCENES_FILE.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    if data.get("status") != "completed":
+        raise RuntimeError(
+            "scenes.json is not marked completed."
+        )
+
+    scenes = data.get("scenes", [])
+
+    if not scenes:
+        raise RuntimeError(
+            "No scenes found."
+        )
+
+    return scenes
+
+
+# ============================================================
+# RENDER ONE SCENE
+# ============================================================
+
+def render_scene(
+    part: int,
+    scene: int,
+    i2v_path: Path,
+    audio_path: Path,
+    output_path: Path,
+):
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    audio_duration = probe_duration(
+        audio_path
+    )
+
+    video_duration = probe_duration(
+        i2v_path
+    )
+
+    print()
+    print(
+        f"Part {part} Scene {scene}"
+    )
+    print(
+        f"I2V duration   : {video_duration:.2f}s"
+    )
+    print(
+        f"Audio duration : {audio_duration:.2f}s"
+    )
+
+    # --------------------------------------------------------
+    # If AI video is shorter than narration:
+    # loop the I2V clip naturally until narration finishes.
+    #
+    # If AI video is longer:
+    # trim it to narration length.
+    # --------------------------------------------------------
+
+    filter_complex = (
+        f"[0:v]"
+        f"scale={WIDTH}:{HEIGHT}:"
+        f"force_original_aspect_ratio=increase,"
+        f"crop={WIDTH}:{HEIGHT},"
+        f"setsar=1,"
+        f"format=yuv420p"
+        f"[v]"
+    )
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+
+        # Loop I2V only when needed.
+        "-stream_loop",
+        "-1",
+
+        "-i",
+        str(i2v_path),
+
+        "-i",
+        str(audio_path),
+
+        "-filter_complex",
+        filter_complex,
+
+        "-map",
+        "[v]",
+
+        "-map",
+        "1:a:0",
+
+        "-t",
+        f"{audio_duration:.3f}",
+
+        "-r",
+        "24",
+
+        "-c:v",
+        "libx264",
+
+        "-preset",
+        "medium",
+
+        "-crf",
+        "18",
+
+        "-pix_fmt",
+        "yuv420p",
+
+        "-c:a",
+        "aac",
+
+        "-b:a",
+        "192k",
+
+        "-ar",
+        "48000",
+
+        "-movflags",
+        "+faststart",
+
+        str(output_path),
+    ]
+
+    run(
+        cmd,
+        f"Rendering Part {part} Scene {scene}"
+    )
+
+    if not output_path.exists():
+        raise RuntimeError(
+            f"Scene output missing: {output_path}"
+        )
+
+    if output_path.stat().st_size < 1000:
+        raise RuntimeError(
+            f"Scene output is too small: "
+            f"{output_path}"
+        )
+
+
+# ============================================================
+# CONCAT PART
+# ============================================================
+
+def concat_part(
+    part: int,
+    scene_files,
+    output_path: Path,
+):
+
+    concat_file = Path(
+        f"/tmp/lok_ai_part_{part:02d}.txt"
+    )
+
+    with concat_file.open(
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        for scene_file in scene_files:
+
+            f.write(
+                f"file '{scene_file.resolve()}'\n"
             )
 
-        escaped = str(scene_path).replace("'", "'\\''")
-        lines.append(f"file '{escaped}'")
-
-    concat_file.write_text(
-        "\n".join(lines) + "\n",
-        encoding="utf-8",
-    )
-
-    if temp_output.exists():
-        temp_output.unlink()
-
-    run_command(
+    run(
         [
             "ffmpeg",
             "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
             "-f",
             "concat",
             "-safe",
@@ -329,289 +393,349 @@ def create_part_video(part, scene_records):
             "copy",
             "-movflags",
             "+faststart",
-            str(temp_output),
-        ]
+            str(output_path),
+        ],
+        f"Creating Part {part} video"
     )
 
-    if not temp_output.exists():
+    if not output_path.exists():
         raise RuntimeError(
-            f"Part video was not created: {output}"
+            f"Part video missing: {output_path}"
         )
 
-    os.replace(temp_output, output)
-
-    if not valid_video(output):
+    if output_path.stat().st_size < 10000:
         raise RuntimeError(
-            f"Part video validation failed: {output}"
+            f"Part video is too small: {output_path}"
         )
 
-    duration = probe_duration(output)
 
-    print(
-        f"PART COMPLETE: Part {part} | "
-        f"{output} | {duration}s"
-    )
-
-    return output, duration
-
+# ============================================================
+# MAIN
+# ============================================================
 
 def main():
-    print("==============================================")
-    print("          LOK AI VIDEO RENDERER")
-    print("==============================================")
 
-    video_format = read_config("FORMAT", "short")
-
-    try:
-        fps = int(read_config("FPS", "24"))
-    except ValueError:
-        fps = 24
-
-    if fps <= 0:
-        fps = 24
-
-    width, height = get_output_geometry(video_format)
-
-    print(f"FORMAT : {video_format}")
-    print(f"SIZE   : {width}x{height}")
-    print(f"FPS    : {fps}")
     print()
+    print("=" * 70)
+    print("        REAL AI IMAGE-TO-VIDEO RENDER")
+    print("=" * 70)
 
-    narration = load_json(NARRATION)
-    visuals = load_json(VISUALS)
-
-    # IMPORTANT:
-    # Do NOT require narration["status"] == "completed".
-    # The TTS manifest may use a different top-level schema.
-    audio_jobs = build_job_map(narration)
-    visual_jobs = build_job_map(visuals)
-
-    # If the TTS manifest does not expose completed job status,
-    # discover actual audio files directly from the expected paths.
-    if not audio_jobs:
-        print(
-            "WARNING: No completed audio jobs detected "
-            "from manifest status."
-        )
-
-        for audio_path in sorted(
-            Path("output/narration/audio").glob(
-                "part_*/scene_*.mp3"
-            )
-        ):
-            try:
-                part = int(
-                    audio_path.parent.name.split("_")[1]
-                )
-                scene = int(
-                    audio_path.stem.split("_")[1]
-                )
-            except (IndexError, ValueError):
-                continue
-
-            if audio_path.stat().st_size > 0:
-                audio_jobs[(part, scene)] = {
-                    "part": part,
-                    "scene": scene,
-                    "status": "completed",
-                    "output": str(audio_path),
-                }
-
-    # Same fallback for visuals.
-    if not visual_jobs:
-        print(
-            "WARNING: No completed visual jobs detected "
-            "from manifest status."
-        )
-
-        for visual_path in sorted(
-            Path("output/visuals").glob(
-                "part_*/scene_*.png"
-            )
-        ):
-            try:
-                part = int(
-                    visual_path.parent.name.split("_")[1]
-                )
-                scene = int(
-                    visual_path.stem.split("_")[1]
-                )
-            except (IndexError, ValueError):
-                continue
-
-            if visual_path.stat().st_size > 0:
-                visual_jobs[(part, scene)] = {
-                    "part": part,
-                    "scene": scene,
-                    "status": "completed",
-                    "asset_path": str(visual_path),
-                }
-
-    if not audio_jobs:
-        raise SystemExit(
-            "ERROR: No usable TTS audio files found."
-        )
-
-    if not visual_jobs:
-        raise SystemExit(
-            "ERROR: No usable visual files found."
-        )
-
-    print(f"Audio scenes detected  : {len(audio_jobs)}")
-    print(f"Visual scenes detected : {len(visual_jobs)}")
     print()
+    print(f"FORMAT : {FORMAT}")
+    print(
+        f"OUTPUT : {WIDTH}x{HEIGHT}"
+    )
+
+    print()
+    print(
+        "IMPORTANT: Rendering from I2V clips."
+    )
+    print(
+        "Still images are NOT used as video sources."
+    )
+
+    scenes = load_scenes()
+
+    print()
+    print(
+        f"Total scenes: {len(scenes)}"
+    )
+
+    # --------------------------------------------------------
+    # Prepare directories
+    # --------------------------------------------------------
 
     SCENES_OUT.mkdir(
         parents=True,
-        exist_ok=True,
+        exist_ok=True
     )
 
     PARTS_OUT.mkdir(
         parents=True,
-        exist_ok=True,
+        exist_ok=True
     )
 
-    scene_records = []
+    # Remove stale rendered scene videos.
+    if SCENES_OUT.exists():
 
-    for key in sorted(audio_jobs):
-        part, scene = key
+        for old in SCENES_OUT.glob(
+            "part_*/scene_*.mp4"
+        ):
 
-        if key not in visual_jobs:
-            raise SystemExit(
-                f"ERROR: Missing visual for "
-                f"Part {part} Scene {scene}"
+            try:
+                old.unlink()
+            except Exception:
+                pass
+
+    # Remove stale part videos.
+    for old in PARTS_OUT.glob(
+        "part_*.mp4"
+    ):
+
+        try:
+            old.unlink()
+        except Exception:
+            pass
+
+    # --------------------------------------------------------
+    # Group scenes by part
+    # --------------------------------------------------------
+
+    parts = {}
+
+    for item in scenes:
+
+        part = int(
+            item.get("part", 0)
+        )
+
+        scene = int(
+            item.get("scene", 0)
+        )
+
+        if part <= 0 or scene <= 0:
+            raise RuntimeError(
+                f"Invalid scene reference: {item}"
             )
 
-        audio = resolve_audio(
-            audio_jobs[key],
+        parts.setdefault(
             part,
-            scene,
-        )
-
-        visual = resolve_visual(
-            visual_jobs[key],
-            part,
-            scene,
-        )
-
-        if not audio.exists():
-            raise SystemExit(
-                f"ERROR: Audio missing: {audio}"
-            )
-
-        if not visual.exists():
-            raise SystemExit(
-                f"ERROR: Visual missing: {visual}"
-            )
-
-        output = (
-            SCENES_OUT
-            / f"part_{part:02d}"
-            / f"scene_{scene:02d}.mp4"
-        )
-
-        output.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        print(
-            f"SCENE: Part {part} / Scene {scene}"
-        )
-
-        if valid_video(output):
-            print(
-                f"SKIP existing valid video: {output}"
-            )
-        else:
-            render_scene(
-                visual=visual,
-                audio=audio,
-                output=output,
-                fps=fps,
-                video_format=video_format,
-            )
-
-        duration = probe_duration(output)
-
-        scene_records.append(
-            {
-                "part": part,
-                "scene": scene,
-                "video": str(output),
-                "audio": str(audio),
-                "visual": str(visual),
-                "duration": duration,
-            }
-        )
-
-    parts = sorted(
-        {
-            record["part"]
-            for record in scene_records
-        }
-    )
-
-    part_outputs = []
-
-    for part in parts:
-        records = [
-            record
-            for record in scene_records
-            if record["part"] == part
-        ]
-
-        output, duration = create_part_video(
-            part,
-            records,
-        )
-
-        part_outputs.append(
-            {
-                "part": part,
-                "output": str(output),
-                "duration": duration,
-                "scenes": len(records),
-            }
+            []
+        ).append(
+            scene
         )
 
     manifest = {
-        "status": "completed",
-        "format": video_format,
-        "width": width,
-        "height": height,
-        "fps": fps,
-        "total_scenes": len(scene_records),
-        "total_parts": len(part_outputs),
-        "parts": part_outputs,
-        "scenes": scene_records,
+        "status": "rendering",
+        "format": FORMAT,
+        "width": WIDTH,
+        "height": HEIGHT,
+        "source": "image_to_video",
+        "parts": [],
     }
+
+    # --------------------------------------------------------
+    # Render every scene
+    # --------------------------------------------------------
+
+    for part in sorted(parts):
+
+        print()
+        print(
+            "#" * 70
+        )
+        print(
+            f"# PART {part}"
+        )
+        print(
+            "#" * 70
+        )
+
+        scene_outputs = []
+
+        for scene in sorted(
+            parts[part]
+        ):
+
+            i2v = find_i2v_clip(
+                part,
+                scene
+            )
+
+            if i2v is None:
+                raise RuntimeError(
+                    f"Missing I2V video for "
+                    f"Part {part} Scene {scene}"
+                )
+
+            audio = find_audio(
+                part,
+                scene
+            )
+
+            if audio is None:
+                raise RuntimeError(
+                    f"Missing narration audio for "
+                    f"Part {part} Scene {scene}"
+                )
+
+            scene_output_dir = (
+                SCENES_OUT /
+                f"part_{part:02d}"
+            )
+
+            scene_output = (
+                scene_output_dir /
+                f"scene_{scene:02d}.mp4"
+            )
+
+            render_scene(
+                part=part,
+                scene=scene,
+                i2v_path=i2v,
+                audio_path=audio,
+                output_path=scene_output,
+            )
+
+            scene_outputs.append(
+                scene_output
+            )
+
+        # ----------------------------------------------------
+        # Validate scene count
+        # ----------------------------------------------------
+
+        if len(scene_outputs) != len(
+            parts[part]
+        ):
+
+            raise RuntimeError(
+                f"Part {part} scene count mismatch."
+            )
+
+        # ----------------------------------------------------
+        # Create part video
+        # ----------------------------------------------------
+
+        part_output = (
+            PARTS_OUT /
+            f"part_{part:02d}.mp4"
+        )
+
+        concat_part(
+            part=part,
+            scene_files=scene_outputs,
+            output_path=part_output,
+        )
+
+        manifest["parts"].append(
+            {
+                "part": part,
+                "scenes": len(scene_outputs),
+                "output": str(
+                    part_output
+                ),
+                "duration": probe_duration(
+                    part_output
+                ),
+            }
+        )
+
+    # --------------------------------------------------------
+    # Final validation
+    # --------------------------------------------------------
+
+    expected_parts = len(parts)
+
+    actual_parts = len(
+        list(
+            PARTS_OUT.glob("part_*.mp4")
+        )
+    )
+
+    if actual_parts != expected_parts:
+
+        raise RuntimeError(
+            f"Part video count mismatch: "
+            f"{actual_parts}/{expected_parts}"
+        )
+
+    manifest["status"] = "completed"
 
     MANIFEST_OUT.write_text(
         json.dumps(
             manifest,
             ensure_ascii=False,
-            indent=2,
-        ) + "\n",
-        encoding="utf-8",
+            indent=2
+        ),
+        encoding="utf-8"
+    )
+
+    # --------------------------------------------------------
+    # Summary
+    # --------------------------------------------------------
+
+    print()
+    print("=" * 70)
+    print("              RENDER COMPLETE")
+    print("=" * 70)
+
+    print()
+    print(
+        f"Format          : {FORMAT}"
+    )
+
+    print(
+        f"Resolution      : {WIDTH}x{HEIGHT}"
+    )
+
+    print(
+        f"Parts           : {actual_parts}"
+    )
+
+    print(
+        f"Scenes          : {len(scenes)}"
     )
 
     print()
-    print("==============================================")
     print(
-        f"VIDEO RENDERING COMPLETED"
+        "Source: REAL AI IMAGE-TO-VIDEO clips"
     )
+
     print(
-        f"Scenes : {len(scene_records)}"
+        "Audio: Hindi scene narration"
     )
+
+    print()
+    print("Generated parts:")
+
+    for part_file in sorted(
+        PARTS_OUT.glob("part_*.mp4"),
+        key=natural_part_sort
+    ):
+
+        duration = probe_duration(
+            part_file
+        )
+
+        size_mb = (
+            part_file.stat().st_size /
+            (1024 * 1024)
+        )
+
+        print(
+            f"  {part_file} | "
+            f"{duration:.2f}s | "
+            f"{size_mb:.2f} MB"
+        )
+
+    print()
     print(
-        f"Parts  : {len(part_outputs)}"
+        f"Manifest: {MANIFEST_OUT}"
     )
-    print(
-        f"Output : {MANIFEST_OUT}"
-    )
-    print("==============================================")
+
+    print()
+    print("=" * 70)
 
 
 if __name__ == "__main__":
-    main()
+
+    try:
+        main()
+
+    except KeyboardInterrupt:
+
+        print(
+            "Interrupted."
+        )
+
+        sys.exit(130)
+
+    except Exception as exc:
+
+        print()
+        print(
+            f"ERROR: {exc}"
+        )
+
+        sys.exit(1)
