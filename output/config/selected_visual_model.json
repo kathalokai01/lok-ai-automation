@@ -3,7 +3,7 @@
   "provider": "cloudflare_workers_ai",
   "model": "@cf/bytedance/stable-diffusion-xl-lightning",
   "display_name": "Stable Diffusion XL Lightning",
-  "selected_at": "2026-10-02T03:37:23.189693+00:00",
+  "selected_at": "2026-10-02T03:54:21.178071+00:00",
   "tested_models": [
     {
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
