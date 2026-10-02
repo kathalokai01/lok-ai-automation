@@ -601,6 +601,311 @@ jobs:
           )
           PY
 
+      - name: Validate Final Video & Package
+        shell: bash
+        run: |
+          set -e
+
+          echo "======================================"
+          echo "       FINAL QUALITY VALIDATION"
+          echo "======================================"
+
+          echo
+          echo "===== REQUIRED FILES ====="
+
+          required_files=(
+            "output/final_video.mp4"
+            "output/final_video_manifest.json"
+            "output/video_render_manifest.json"
+            "output/thumbnail/thumbnail_1280x720.jpg"
+            "output/thumbnail/thumbnail_1080x1920.jpg"
+            "output/thumbnail/thumbnail_manifest.json"
+            "output/publish/youtube_metadata.json"
+            "output/publish/youtube_title.txt"
+            "output/publish/youtube_description.txt"
+            "output/publish/youtube_tags.txt"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ ! -s "$file" ]; then
+              echo "ERROR: Missing or empty file: $file"
+              exit 1
+            fi
+
+            echo "OK: $file"
+          done
+
+          echo
+          echo "===== FINAL VIDEO STREAM VALIDATION ====="
+
+          VIDEO_INFO=$(ffprobe \
+            -v error \
+            -show_entries \
+            stream=index,codec_type,codec_name,width,height,r_frame_rate \
+            -show_entries \
+            format=duration,size \
+            -of json \
+            output/final_video.mp4)
+
+          echo "$VIDEO_INFO"
+
+          python3 - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          video = Path("output/final_video.mp4")
+
+          if not video.exists() or video.stat().st_size < 100000:
+              raise SystemExit(
+                  "ERROR: Final video is missing or suspiciously small."
+              )
+
+          probe = subprocess.check_output(
+              [
+                  "ffprobe",
+                  "-v",
+                  "error",
+                  "-show_entries",
+                  "stream=index,codec_type,codec_name,width,height,r_frame_rate",
+                  "-show_entries",
+                  "format=duration,size",
+                  "-of",
+                  "json",
+                  str(video),
+              ],
+              text=True,
+          )
+
+          data = json.loads(probe)
+          streams = data.get("streams", [])
+
+          video_streams = [
+              s for s in streams
+              if s.get("codec_type") == "video"
+          ]
+
+          audio_streams = [
+              s for s in streams
+              if s.get("codec_type") == "audio"
+          ]
+
+          if not video_streams:
+              raise SystemExit(
+                  "ERROR: Final video contains no video stream."
+              )
+
+          if not audio_streams:
+              raise SystemExit(
+                  "ERROR: Final video contains no audio stream."
+              )
+
+          video_stream = video_streams[0]
+
+          width = video_stream.get("width")
+          height = video_stream.get("height")
+
+          if width != 720 or height != 1280:
+              raise SystemExit(
+                  f"ERROR: Unexpected final resolution: "
+                  f"{width}x{height}. Expected 720x1280."
+              )
+
+          duration = float(
+              data.get("format", {}).get("duration", 0)
+          )
+
+          if duration <= 0:
+              raise SystemExit(
+                  "ERROR: Final video duration is invalid."
+              )
+
+          print(f"Video codec: {video_stream.get('codec_name')}")
+          print(f"Audio codec: {audio_streams[0].get('codec_name')}")
+          print(f"Resolution: {width}x{height}")
+          print(f"Duration: {duration:.3f}s")
+          print("Video/audio validation: PASSED")
+          PY
+
+          echo
+          echo "===== FINAL MANIFEST VALIDATION ====="
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(
+              Path("output/final_video_manifest.json")
+              .read_text(encoding="utf-8")
+          )
+
+          if manifest.get("status") != "completed":
+              raise SystemExit(
+                  "ERROR: Final video manifest is not completed."
+              )
+
+          if manifest.get("output") != "output/final_video.mp4":
+              raise SystemExit(
+                  "ERROR: Final manifest points to wrong output."
+              )
+
+          if manifest.get("parts", 0) <= 0:
+              raise SystemExit(
+                  "ERROR: Final manifest has no parts."
+              )
+
+          if manifest.get("scenes", 0) <= 0:
+              raise SystemExit(
+                  "ERROR: Final manifest has no scenes."
+              )
+
+          if manifest.get("duration", 0) <= 0:
+              raise SystemExit(
+                  "ERROR: Final manifest has invalid duration."
+              )
+
+          print(json.dumps(
+              manifest,
+              ensure_ascii=False,
+              indent=2
+          ))
+
+          print("Final manifest validation: PASSED")
+          PY
+
+          echo
+          echo "===== RENDER MANIFEST VALIDATION ====="
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(
+              Path("output/video_render_manifest.json")
+              .read_text(encoding="utf-8")
+          )
+
+          parts = data.get("parts", [])
+          scenes = data.get("total_scenes", 0)
+
+          if not parts:
+              raise SystemExit(
+                  "ERROR: Render manifest contains no parts."
+              )
+
+          if scenes <= 0:
+              raise SystemExit(
+                  "ERROR: Render manifest contains no scenes."
+              )
+
+          print(f"Rendered parts: {len(parts)}")
+          print(f"Rendered scenes: {scenes}")
+
+          print("Render manifest validation: PASSED")
+          PY
+
+          echo
+          echo "===== THUMBNAIL VALIDATION ====="
+
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          files = {
+              "16:9": (
+                  Path("output/thumbnail/thumbnail_1280x720.jpg"),
+                  (1280, 720),
+              ),
+              "9:16": (
+                  Path("output/thumbnail/thumbnail_1080x1920.jpg"),
+                  (1080, 1920),
+              ),
+          }
+
+          for name, (path, expected) in files.items():
+              with Image.open(path) as image:
+                  print(
+                      f"{name}: "
+                      f"{image.size} "
+                      f"{image.format}"
+                  )
+
+                  if image.size != expected:
+                      raise SystemExit(
+                          f"ERROR: Wrong {name} thumbnail size: "
+                          f"{image.size}"
+                      )
+
+          print("Thumbnail validation: PASSED")
+          PY
+
+          echo
+          echo "===== YOUTUBE PACKAGE VALIDATION ====="
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          metadata_path = Path(
+              "output/publish/youtube_metadata.json"
+          )
+
+          metadata = json.loads(
+              metadata_path.read_text(encoding="utf-8")
+          )
+
+          title = str(
+              metadata.get("title", "")
+          ).strip()
+
+          description = str(
+              metadata.get("description", "")
+          ).strip()
+
+          tags = metadata.get("tags", [])
+
+          if not title:
+              raise SystemExit(
+                  "ERROR: YouTube title is empty."
+              )
+
+          if not description:
+              raise SystemExit(
+                  "ERROR: YouTube description is empty."
+              )
+
+          if not isinstance(tags, list) or not tags:
+              raise SystemExit(
+                  "ERROR: YouTube tags are missing."
+              )
+
+          if len(title) > 100:
+              raise SystemExit(
+                  f"ERROR: YouTube title is too long: "
+                  f"{len(title)} characters."
+              )
+
+          print(f"Title length: {len(title)}")
+          print(f"Description length: {len(description)}")
+          print(f"Tag count: {len(tags)}")
+
+          print("YouTube package validation: PASSED")
+          PY
+
+          echo
+          echo "======================================"
+          echo "       FINAL VALIDATION PASSED"
+          echo "======================================"
+          echo "Video:       OK"
+          echo "Audio:       OK"
+          echo "Duration:    OK"
+          echo "Resolution:  OK"
+          echo "Render:      OK"
+          echo "Thumbnails:  OK"
+          echo "Metadata:    OK"
+          echo "Package:     OK"
+          echo "======================================"
+
       - name: Upload Final Video Artifacts
         uses: actions/upload-artifact@v4
         with:
