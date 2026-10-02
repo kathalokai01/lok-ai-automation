@@ -1,620 +1,173 @@
 {
   "status": "completed",
-  "topic": "",
+  "topic": "आत्माराम की कहानी\"        # नया story topic; STORY_TEXT खाली होने पर इसी से कहानी बनेगी",
+  "provider": "cloudflare_workers_ai",
+  "model": "@cf/bytedance/stable-diffusion-xl-lightning",
   "total_scenes": 10,
-  "completed_scenes": 0,
-  "pending_scenes": 10,
+  "completed_scenes": 10,
+  "pending_scenes": 0,
   "failed_scenes": 0,
-  "character_bible_source": "output/story/character_bible.json",
-  "scene_source": "output/scenes/scenes.json",
-  "generated_at": "2026-10-02T13:41:02.764267+00:00",
+  "updated_at": "2026-10-02T14:01:37.700334+00:00",
   "jobs": [
     {
       "part": 1,
       "scene": 1,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Cinematic wide shot of an old dilapidated mansion at midnight, foggy atmosphere, realistic textures, highly detailed architecture",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "An elderly man named Aatmaram walking down a narrow, dimly lit ancient Indian alleyway at night, wearing traditional kurta pajama, realistic cinematic style, highly detailed texture, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting",
       "camera_prompt": "",
       "lighting_prompt": "",
       "duration": "5 seconds",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
       "asset_path": "output/visuals/part_01/scene_01.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:05.792728+00:00"
+      "completed_at": "2026-10-02T14:01:18.220812+00:00"
     },
     {
       "part": 1,
       "scene": 2,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Medium close up of a middle-aged Indian man with a worried expression, standing in a dimly lit antique room, wearing traditional Indian attire, hyper-realistic, 8k resolution, cinematic lighting",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "Inside a dusty vintage watch repair shop filled with hundreds of antique clocks ticking on the walls, Aatmaram unlocking the wooden door, cinematic style, highly detailed texture, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting",
       "camera_prompt": "",
       "lighting_prompt": "",
       "duration": "5 seconds",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
       "asset_path": "output/visuals/part_01/scene_02.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:07.067091+00:00"
+      "completed_at": "2026-10-02T14:01:21.604508+00:00"
     },
     {
       "part": 1,
       "scene": 3,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Macro shot of an old leather-bound diary being pulled out from a dark safe, dust particles floating in the air, cinematic realistic style, highly detailed textures",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "Close-up of an old wooden counter where a mysterious wrapped parcel sits under a shaft of light, Aatmaram looking at it with confusion. Realistic cinematic style, highly detailed texture, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting",
       "camera_prompt": "",
       "lighting_prompt": "",
-      "duration": "auto",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
+      "duration": "5 seconds",
       "asset_path": "output/visuals/part_01/scene_03.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:08.191009+00:00"
+      "completed_at": "2026-10-02T14:01:27.155332+00:00"
     },
     {
       "part": 1,
       "scene": 4,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Over-the-shoulder shot of a middle-aged Indian man with a worried expression looking anxiously towards a dark window pane in a dimly lit antique room, high-end cinematic realism, 8k",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "Aatmaram's trembling hands unwrapping the brown paper to reveal an antique silver pocket watch, close-up shot of his emotional face, cinematic realistic style, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting",
       "camera_prompt": "",
       "lighting_prompt": "",
-      "duration": "5s",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
+      "duration": "auto",
       "asset_path": "output/visuals/part_01/scene_04.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:10.029874+00:00"
+      "completed_at": "2026-10-02T14:01:28.693560+00:00"
     },
     {
       "part": 1,
       "scene": 5,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Close up of an ancient handwritten map laid out on a wooden table, ink stains and mysterious symbols visible, dramatic desk lighting, highly detailed parchment texture, cinematic realism, 8k",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "An elderly Indian man named Aatmaram examining a small handwritten note under a vintage brass magnifying glass on his wooden workbench, surrounded by antique watch parts and tools, highly detailed texture, 8k resolution, cinematic lighting.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting",
       "camera_prompt": "",
       "lighting_prompt": "",
-      "duration": "5s",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
+      "duration": "5 seconds",
       "asset_path": "output/visuals/part_01/scene_05.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:11.911825+00:00"
+      "completed_at": "2026-10-02T14:01:30.173954+00:00"
     },
     {
       "part": 1,
       "scene": 6,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Interior shot of the hallway plunging into total darkness, emergency lantern flickering, middle-aged Indian man standing cautiously, cinematic realism, highly detailed",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "Aatmaram standing up resolutely from his chair inside the antique shop, grabbing his winter coat, background clocks blurred, highly detailed cinematic style, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting",
       "camera_prompt": "",
       "lighting_prompt": "",
-      "duration": "5s",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
+      "duration": "5 seconds",
       "asset_path": "output/visuals/part_01/scene_06.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:14.035459+00:00"
+      "completed_at": "2026-10-02T14:01:31.488491+00:00"
     },
     {
       "part": 1,
       "scene": 7,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Medium shot of an elderly Indian man holding a kerosene lantern, walking cautiously down a dark corridor of an old haveli, chiaroscuro lighting with strong contrast between warm lantern glow and deep black shadows, highly detailed realistic textures, cinematic composition",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "An elderly Indian man named Aatmaram wearing a traditional kurta pajama and a winter coat, holding an old-fashioned handheld lantern, standing in front of an abandoned and dilapidated railway warehouse at midnight. Thick fog swirling around his boots on gravel ground, moody atmosphere, highly detailed textures, realistic cinematic style, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting, modern buildings",
       "camera_prompt": "",
       "lighting_prompt": "",
-      "duration": "6 seconds",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
+      "duration": "5s",
       "asset_path": "output/visuals/part_01/scene_07.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:15.411956+00:00"
+      "completed_at": "2026-10-02T14:01:32.759931+00:00"
     },
     {
       "part": 1,
       "scene": 8,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Close up of a silver locket lying on a dusty floor, reflection of light on the metal, realistic cinematic texture, highly detailed",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "A mysterious hooded figure stepping out of the shadows under a flickering streetlamp, facing Aatmaram near an abandoned railway warehouse at night, realistic cinematic style, highly detailed texture, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting",
       "camera_prompt": "",
       "lighting_prompt": "",
-      "duration": "5s",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
+      "duration": "5 seconds",
       "asset_path": "output/visuals/part_01/scene_08.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:17.689595+00:00"
+      "completed_at": "2026-10-02T14:01:34.545796+00:00"
     },
     {
       "part": 1,
       "scene": 9,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Emotional close up of the protagonist's face, eyes filled with tears and regret, sepia tone grade, realistic cinematic textures, highly detailed facial features",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "Close-up of Aatmaram's face showing deep emotional turmoil, determination overcoming fear in his eyes, traditional kurta pajama, realistic cinematic style, highly detailed texture, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting",
       "camera_prompt": "",
       "lighting_prompt": "",
-      "duration": "5s",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
+      "duration": "5 seconds",
       "asset_path": "output/visuals/part_01/scene_09.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:19.397866+00:00"
+      "completed_at": "2026-10-02T14:01:36.498378+00:00"
     },
     {
       "part": 1,
       "scene": 10,
       "status": "completed",
       "asset_type": "visual",
-      "visual_prompt": "Wide shot of a hidden stone staircase leading down into a dark underground cellar, cobwebs hanging, cinematic realistic style, highly detailed architecture",
-      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch, unrealistic lighting",
+      "visual_prompt": "Aatmaram stepping closer to the hooded figure, holding the pocket watch tightly in his clenched fist, realistic cinematic style, highly detailed texture, 8k resolution.",
+      "negative_prompt": "cartoon, anime, distorted anatomy, extra limbs, text artifacts, watermarks, neon, glitch appearance, unrealistic lighting",
       "camera_prompt": "",
       "lighting_prompt": "",
-      "duration": "5s",
-      "character_bible": [
-        {
-          "character_id": "CHAR_001",
-          "name": "Aatmaram",
-          "role": "Protagonist / Master of the Haunting Haveli",
-          "importance": "Main Character",
-          "age": "Middle-aged to elderly (approx. 55-60 years old)",
-          "gender": "Male",
-          "personality": "Anxious, determined, burdened by family secrets, emotional, and resolute in seeking the truth.",
-          "appearance": "An Indian man with a weathered face, deep thoughtful eyes, showing signs of stress and emotional weight. Dressed in vintage traditional Indian attire suitable for an older house owner.",
-          "face_features": "Weathered facial skin, deep-set thoughtful eyes that often fill with tears or determination, expressive brow lines, prominent nose.",
-          "hair": "Short greying hair, neatly combed back, showing age.",
-          "clothing": "Classic traditional Indian kurta-pajama or a vintage shirt worn under a simple Nehru jacket.",
-          "body_features": "Average build for an older man, upright posture that turns tense or resolute during investigation.",
-          "distinctive_features": "Expressive worried eyes, often seen holding a lantern, a diary, or an old weapon/stick.",
-          "visual_identity": "Middle-aged Indian man with weathered face, deep eyes, greying short hair, traditional vintage clothing, suited for dramatic cinematic lighting.",
-          "consistency_rules": [
-            "Keep age, facial structure, and greying hair strictly consistent across all scenes.",
-            "Ensure eyes consistently convey worry, anxiety, or deep resolve.",
-            "Clothing style must remain traditional and vintage Indian throughout all parts."
-          ]
-        },
-        {
-          "character_id": "CHAR_002",
-          "name": "The Mysterious Intruder / Antagonist",
-          "role": "Shadowy Figure / Family Member / Adversary",
-          "importance": "Supporting / Antagonist",
-          "age": "Adult (approx. 35-50 years old)",
-          "gender": "Male",
-          "personality": "Secretive, threatening, stealthy, and deeply tied to the family secrets.",
-          "appearance": "A mysterious figure often seen in shadows, silhouettes, or wearing dark, concealing clothing.",
-          "face_features": "Partially obscured by shadows or darkness, sharp jawline, intense gaze when revealed.",
-          "hair": "Dark hair, mostly hidden under hoods or cast in shadow.",
-          "clothing": "Dark-colored jacket or traditional dark attire suitable for moving stealthily at night.",
-          "body_features": "Average to tall athletic build, agile and stealthy movements.",
-          "distinctive_features": "Frequently appears as a shadow, silhouette, or hooded figure in dimly lit corridors.",
-          "visual_identity": "Shadowy or hooded male figure, dark clothing, obscure facial features, cinematic low-key lighting.",
-          "consistency_rules": [
-            "Keep the figure shrouded in shadows or dramatic lighting during early appearances.",
-            "Maintain a dark, stealthy clothing style when visible.",
-            "Ensure physical build remains consistent when revealed in later scenes."
-          ]
-        }
-      ],
+      "duration": "auto",
       "asset_path": "output/visuals/part_01/scene_10.png",
       "provider": "cloudflare_workers_ai",
       "model": "@cf/bytedance/stable-diffusion-xl-lightning",
       "error": null,
-      "completed_at": "2026-10-02T13:41:20.665938+00:00"
+      "completed_at": "2026-10-02T14:01:37.699001+00:00"
     }
-  ],
-  "updated_at": "2026-10-02T13:41:20.667435+00:00",
-  "provider": "cloudflare_workers_ai",
-  "model": "@cf/bytedance/stable-diffusion-xl-lightning",
-  "total_jobs": 10,
-  "completed_jobs": 10,
-  "failed_jobs": 0,
-  "pending_jobs": 0
+  ]
 }
