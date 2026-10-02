@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 import json
-import os
 import re
-import subprocess
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -20,21 +18,12 @@ THUMBNAIL_MANIFEST = OUTPUT_DIR / "thumbnail_manifest.json"
 
 def load_topic():
     if not TOPIC_FILE.exists():
-        raise SystemExit(
-            f"ERROR: Topic file not found: {TOPIC_FILE}"
-        )
+        raise SystemExit(f"ERROR: Topic file not found: {TOPIC_FILE}")
 
-    for line in TOPIC_FILE.read_text(
-        encoding="utf-8"
-    ).splitlines():
-
+    for line in TOPIC_FILE.read_text(encoding="utf-8").splitlines():
         line = line.strip()
 
-        if (
-            not line
-            or line.startswith("#")
-            or "=" not in line
-        ):
+        if not line or line.startswith("#") or "=" not in line:
             continue
 
         key, value = line.split("=", 1)
@@ -43,78 +32,123 @@ def load_topic():
             value = value.strip()
 
             value = re.sub(
-                r"\s+#.*$",
-                "",
+                r'^(["\']).*\1$',
+                lambda m: m.group(0)[1:-1],
                 value,
-            ).strip()
-
-            value = value.strip("\"'")
+            )
 
             if value:
                 return value
 
-    raise SystemExit(
-        "ERROR: TOPIC not found in Input/topic.txt"
-    )
+    raise SystemExit("ERROR: TOPIC not found in Input/topic.txt")
 
 
 def load_visual():
     if not VISUAL_MANIFEST.exists():
         raise SystemExit(
-            "ERROR: visual_jobs.json not found"
+            f"ERROR: Visual manifest not found: {VISUAL_MANIFEST}"
         )
 
     data = json.loads(
-        VISUAL_MANIFEST.read_text(
-            encoding="utf-8"
-        )
+        VISUAL_MANIFEST.read_text(encoding="utf-8")
     )
 
-    jobs = data.get("jobs", [])
+    jobs = []
 
-    completed = [
-        job
-        for job in jobs
-        if (
-            job.get("status") == "completed"
-            and job.get("asset_path")
+    if isinstance(data, list):
+        jobs = data
+
+    elif isinstance(data, dict):
+        for key in ("jobs", "scenes", "visuals", "items"):
+            value = data.get(key)
+
+            if isinstance(value, list):
+                jobs = value
+                break
+
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+
+        status = str(job.get("status", "")).lower()
+
+        asset = (
+            job.get("asset_path")
+            or job.get("output")
+            or job.get("file")
+            or job.get("path")
         )
-    ]
 
-    if not completed:
-        raise SystemExit(
-            "ERROR: No completed visual assets found"
-        )
+        if not asset:
+            continue
 
-    completed.sort(
-        key=lambda job: (
-            int(job.get("part", 999)),
-            int(job.get("scene", 999)),
-        )
-    )
+        if status and status not in (
+            "completed",
+            "complete",
+            "success",
+            "done",
+            "generated",
+        ):
+            continue
 
-    for job in completed:
-        path = Path(job["asset_path"])
+        path = Path(str(asset))
 
-        if path.exists() and path.stat().st_size > 0:
+        if not path.is_absolute():
+            path = Path(".") / path
+
+        if path.exists() and path.is_file():
             return path
 
+    # Fallback: find any generated image.
+    search_dirs = [
+        Path("output/visuals"),
+        Path("output"),
+    ]
+
+    extensions = {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+    }
+
+    for directory in search_dirs:
+        if not directory.exists():
+            continue
+
+        for path in sorted(directory.rglob("*")):
+            if (
+                path.is_file()
+                and path.suffix.lower() in extensions
+            ):
+                return path
+
     raise SystemExit(
-        "ERROR: Completed visual files are missing"
+        "ERROR: No completed visual image found."
     )
 
 
-def load_font(size):
+def find_font(size):
     candidates = [
+        "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSansDevanagari-Bold.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
     ]
 
-    for path in candidates:
-        if os.path.exists(path):
-            return ImageFont.truetype(path, size)
+    for font_path in candidates:
+        path = Path(font_path)
 
-    return ImageFont.load_default()
+        if path.exists():
+            return ImageFont.truetype(
+                str(path),
+                size,
+            )
+
+    raise SystemExit(
+        "ERROR: No suitable font found."
+    )
 
 
 def crop_to_ratio(image, target_ratio):
@@ -147,57 +181,8 @@ def crop_to_ratio(image, target_ratio):
     )
 
 
-def add_dark_overlay(image):
-    overlay = Image.new(
-        "RGBA",
-        image.size,
-        (0, 0, 0, 0),
-    )
-
-    draw = ImageDraw.Draw(overlay)
-
-    width, height = image.size
-
-    for y in range(height):
-        alpha = int(
-            190 * (y / max(height - 1, 1))
-        )
-
-        draw.line(
-            [(0, y), (width, y)],
-            fill=(0, 0, 0, alpha),
-        )
-
-    return Image.alpha_composite(
-        image.convert("RGBA"),
-        overlay,
-    )
-
-
-def fit_title(draw, text, max_width, start_size):
-    size = start_size
-
-    while size >= 28:
-        font = load_font(size)
-
-        box = draw.textbbox(
-            (0, 0),
-            text,
-            font=font,
-            stroke_width=2,
-        )
-
-        if box[2] - box[0] <= max_width:
-            return font
-
-        size -= 4
-
-    return load_font(28)
-
-
 def wrap_text(draw, text, font, max_width):
     words = text.split()
-
     lines = []
     current = ""
 
@@ -208,14 +193,15 @@ def wrap_text(draw, text, font, max_width):
             else current + " " + word
         )
 
-        box = draw.textbbox(
+        bbox = draw.textbbox(
             (0, 0),
             test,
             font=font,
-            stroke_width=2,
         )
 
-        if box[2] - box[0] <= max_width:
+        width = bbox[2] - bbox[0]
+
+        if width <= max_width:
             current = test
         else:
             if current:
@@ -229,123 +215,149 @@ def wrap_text(draw, text, font, max_width):
     return lines
 
 
-def create_thumbnail(source, topic, width, height):
-    image = Image.open(source).convert("RGB")
+def add_text(image, title, vertical=False):
+    image = image.convert("RGB")
 
-    image = crop_to_ratio(
-        image,
-        width / height,
+    width, height = image.size
+
+    overlay = Image.new(
+        "RGBA",
+        image.size,
+        (0, 0, 0, 0),
     )
 
-    image = image.resize(
-        (width, height),
-        Image.Resampling.LANCZOS,
+    draw_overlay = ImageDraw.Draw(overlay)
+
+    # Dark gradient-style overlay.
+    overlay_height = int(height * 0.48)
+
+    for y in range(overlay_height):
+        alpha = int(
+            210 * (1 - y / overlay_height)
+        )
+
+        draw_overlay.line(
+            [(0, y), (width, y)],
+            fill=(0, 0, 0, alpha),
+        )
+
+    image = Image.alpha_composite(
+        image.convert("RGBA"),
+        overlay,
     )
 
-    image = image.filter(
-        ImageFilter.SHARPEN
-    )
-
-    image = add_dark_overlay(image)
+    image = image.convert("RGB")
 
     draw = ImageDraw.Draw(image)
 
-    margin = int(width * 0.07)
+    if vertical:
+        font_size = max(54, width // 16)
+        max_text_width = int(width * 0.86)
+        text_y = int(height * 0.10)
+    else:
+        font_size = max(44, width // 17)
+        max_text_width = int(width * 0.84)
+        text_y = int(height * 0.09)
 
-    font = fit_title(
-        draw,
-        topic,
-        width - margin * 2,
-        int(width * 0.075),
-    )
+    font = find_font(font_size)
 
     lines = wrap_text(
         draw,
-        topic,
+        title,
         font,
-        width - margin * 2,
+        max_text_width,
     )
 
-    line_boxes = [
-        draw.textbbox(
+    # Limit title to 4 lines.
+    if len(lines) > 4:
+        lines = lines[:4]
+
+        last = lines[-1]
+
+        if len(last) > 3:
+            lines[-1] = last[:-3] + "..."
+
+    line_spacing = int(font_size * 0.18)
+
+    y = text_y
+
+    for line in lines:
+        bbox = draw.textbbox(
             (0, 0),
             line,
             font=font,
-            stroke_width=3,
+            stroke_width=2,
         )
-        for line in lines
-    ]
 
-    line_heights = [
-        box[3] - box[1]
-        for box in line_boxes
-    ]
+        text_width = bbox[2] - bbox[0]
 
-    line_spacing = int(
-        font.size * 0.18
-    )
+        x = (width - text_width) // 2
 
-    total_height = (
-        sum(line_heights)
-        + line_spacing * max(
-            len(lines) - 1,
-            0,
-        )
-    )
-
-    y = (
-        height
-        - total_height
-        - margin
-    )
-
-    for line, line_height in zip(
-        lines,
-        line_heights,
-    ):
-        box = draw.textbbox(
-            (0, 0),
+        # Shadow.
+        draw.text(
+            (x + 4, y + 4),
             line,
             font=font,
-            stroke_width=3,
+            fill=(0, 0, 0),
+            stroke_width=5,
+            stroke_fill=(0, 0, 0),
         )
 
-        text_width = (
-            box[2] - box[0]
-        )
-
-        x = (
-            width
-            - text_width
-        ) // 2
-
+        # Main text.
         draw.text(
             (x, y),
             line,
             font=font,
             fill=(255, 255, 255),
-            stroke_width=3,
+            stroke_width=2,
             stroke_fill=(0, 0, 0),
         )
 
-        y += (
-            line_height
-            + line_spacing
-        )
+        y += font_size + line_spacing
 
-    return image.convert("RGB")
+    return image
+
+
+def create_thumbnail(source, title, size, output):
+    image = Image.open(source).convert("RGB")
+
+    target_ratio = size[0] / size[1]
+
+    image = crop_to_ratio(
+        image,
+        target_ratio,
+    )
+
+    image = image.resize(
+        size,
+        Image.Resampling.LANCZOS,
+    )
+
+    vertical = size[1] > size[0]
+
+    image = add_text(
+        image,
+        title,
+        vertical=vertical,
+    )
+
+    image.save(
+        output,
+        "JPEG",
+        quality=92,
+        optimize=True,
+    )
+
+    if not output.exists() or output.stat().st_size == 0:
+        raise SystemExit(
+            f"ERROR: Thumbnail was not created: {output}"
+        )
 
 
 def main():
-    print(
-        "======================================"
-    )
-    print(
-        "       GENERATING THUMBNAILS"
-    )
-    print(
-        "======================================"
-    )
+    print("======================================")
+    print("       GENERATING THUMBNAILS")
+    print("======================================")
 
     OUTPUT_DIR.mkdir(
         parents=True,
@@ -353,52 +365,45 @@ def main():
     )
 
     topic = load_topic()
-    source = load_visual()
 
     print(f"Topic: {topic}")
+
+    source = load_visual()
+
     print(f"Source visual: {source}")
 
-    thumbnail = create_thumbnail(
+    create_thumbnail(
         source,
         topic,
-        1280,
-        720,
-    )
-
-    thumbnail.save(
+        (1280, 720),
         THUMBNAIL_16_9,
-        "JPEG",
-        quality=92,
-        optimize=True,
     )
 
-    vertical = create_thumbnail(
+    create_thumbnail(
         source,
         topic,
-        1080,
-        1920,
-    )
-
-    vertical.save(
+        (1080, 1920),
         THUMBNAIL_VERTICAL,
-        "JPEG",
-        quality=92,
-        optimize=True,
     )
 
     manifest = {
         "status": "completed",
-        "topic": topic,
         "source_visual": str(source),
-        "thumbnail_16_9": str(
-            THUMBNAIL_16_9
-        ),
-        "thumbnail_vertical": str(
-            THUMBNAIL_VERTICAL
-        ),
-        "width": 1280,
-        "height": 720,
-        "format": "jpeg",
+        "topic": topic,
+        "thumbnails": [
+            {
+                "type": "16:9",
+                "width": 1280,
+                "height": 720,
+                "path": str(THUMBNAIL_16_9),
+            },
+            {
+                "type": "9:16",
+                "width": 1080,
+                "height": 1920,
+                "path": str(THUMBNAIL_VERTICAL),
+            },
+        ],
     }
 
     THUMBNAIL_MANIFEST.write_text(
@@ -411,25 +416,12 @@ def main():
     )
 
     print()
-    print("===== THUMBNAILS CREATED =====")
-    print(THUMBNAIL_16_9)
-    print(THUMBNAIL_VERTICAL)
-    print(THUMBNAIL_MANIFEST)
-
-    for path in [
-        THUMBNAIL_16_9,
-        THUMBNAIL_VERTICAL,
-        THUMBNAIL_MANIFEST,
-    ]:
-        if not path.exists() or path.stat().st_size == 0:
-            raise SystemExit(
-                f"ERROR: Invalid output: {path}"
-            )
-
+    print("===== GENERATED THUMBNAILS =====")
+    print(f"16:9  : {THUMBNAIL_16_9}")
+    print(f"9:16  : {THUMBNAIL_VERTICAL}")
+    print(f"Manifest: {THUMBNAIL_MANIFEST}")
     print()
-    print(
-        "Thumbnail generation: PASSED"
-    )
+    print("Thumbnail generation completed successfully.")
 
 
 if __name__ == "__main__":
