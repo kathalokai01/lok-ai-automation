@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   prepare:
@@ -20,76 +21,104 @@ jobs:
           cat Input/topic.txt
           echo "==============================="
 
-      - name: Validate configuration
-        shell: bash
-        run: |
-          set -e
-
-          CONFIG="Input/topic.txt"
-
-          required_keys=(
-            FORMAT
-            AUDIENCE
-            VOICE
-            SPEED
-            TOPIC
-            PARTS
-            SCENES
-            STORY_LENGTH
-            SCENE_DURATION
-            CAPTIONS
-            VISUAL_STYLE
-            REALISM
-            QUALITY
-            FPS
-            RESUME_ENABLED
-            MAX_RETRIES
-            SAVE_CHECKPOINT_AFTER_EACH_SCENE
-            SKIP_COMPLETED_SCENES
-            FAILURE_POLICY
-          )
-
-          for key in "${required_keys[@]}"; do
-            if ! grep -qE "^${key}[[:space:]]*=" "$CONFIG"; then
-              echo "ERROR: Missing configuration key: $key"
-              exit 1
-            fi
-          done
-
-          echo "Configuration validation: PASSED"
-
       - name: Prepare directories
         shell: bash
         run: |
           set -e
+          mkdir -p output/{config,checkpoints,scenes,parts,shorts,story,narration/audio,visuals,thumbnail,publish}
 
-          mkdir -p output
-          mkdir -p output/config
-          mkdir -p output/checkpoints
-          mkdir -p output/scenes
-          mkdir -p output/parts
-          mkdir -p output/shorts
-          mkdir -p output/story
-          mkdir -p output/narration
-          mkdir -p output/narration/audio
-          mkdir -p output/visuals
-          mkdir -p output/thumbnail
-          mkdir -p output/publish
+      - name: Restore Previous Checkpoint
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          echo "======================================"
+          echo "      RESTORING PREVIOUS CHECKPOINT"
+          echo "======================================"
+
+          CURRENT_RUN="${{ github.run_id }}"
+          PREVIOUS_RUN_ID=$(gh run list \
+            --workflow generate-video.yml \
+            --limit 20 \
+            --json databaseId,status,conclusion \
+            --jq ".[] | select(.databaseId != ${CURRENT_RUN}) | select(.status == \"completed\") | .databaseId" \
+            | head -n 1)
+
+          if [ -z "$PREVIOUS_RUN_ID" ]; then
+            echo "No previous completed run found. Starting fresh."
+            exit 0
+          fi
+
+          echo "Previous run: $PREVIOUS_RUN_ID"
+          rm -rf /tmp/lok-ai-checkpoint
+          mkdir -p /tmp/lok-ai-checkpoint
+
+          gh run download "$PREVIOUS_RUN_ID" \
+            --name lok-ai-checkpoint \
+            --dir /tmp/lok-ai-checkpoint
+
+          if [ "$?" -ne 0 ] || [ ! -d /tmp/lok-ai-checkpoint/output ]; then
+            echo "No usable checkpoint artifact found. Starting fresh."
+            exit 0
+          fi
+
+          cp -a /tmp/lok-ai-checkpoint/output/. output/
+
+          CURRENT_TOPIC=$(grep '^TOPIC[[:space:]]*=' Input/topic.txt | head -n 1 | sed 's/^[^=]*=[[:space:]]*//' | sed 's/^"//;s/"$//')
+          RESTORED_TOPIC=$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("output/story/story_plan.json")
+          if p.exists():
+              try:
+                  print(str(json.loads(p.read_text(encoding="utf-8")).get("topic", "")))
+              except Exception:
+                  pass
+          PY
+          )
+
+          if [ -n "$RESTORED_TOPIC" ] && [ "$CURRENT_TOPIC" != "$RESTORED_TOPIC" ]; then
+            echo "Checkpoint topic mismatch. Ignoring restored checkpoint."
+            rm -rf output/*
+            mkdir -p output/{config,checkpoints,scenes,parts,shorts,story,narration/audio,visuals,thumbnail,publish}
+            exit 0
+          fi
+
+          echo "Checkpoint restored successfully."
+          find output -maxdepth 5 -type f | sort
+
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -e
+          CONFIG="Input/topic.txt"
+          required_keys=(FORMAT AUDIENCE VOICE SPEED TOPIC PARTS SCENES STORY_LENGTH SCENE_DURATION CAPTIONS VISUAL_STYLE REALISM QUALITY FPS RESUME_ENABLED MAX_RETRIES SAVE_CHECKPOINT_AFTER_EACH_SCENE SKIP_COMPLETED_SCENES FAILURE_POLICY)
+          for key in "${required_keys[@]}"; do
+            grep -qE "^${key}[[:space:]]*=" "$CONFIG" || { echo "ERROR: Missing configuration key: $key"; exit 1; }
+          done
+          echo "Configuration validation: PASSED"
 
       - name: Generate story plan
         shell: bash
         run: |
           set -e
-
-          python3 scripts/generate_story_plan.py
+          if [ -s output/story/story_plan.json ]; then
+            echo "Existing story plan found. Skipping regeneration."
+          else
+            python3 scripts/generate_story_plan.py
+          fi
           cat output/story/story_plan.json
 
       - name: Generate story structure
         shell: bash
         run: |
           set -e
-
-          python3 scripts/generate_story.py
+          if [ -s output/story/story.json ]; then
+            echo "Existing story structure found. Skipping regeneration."
+          else
+            python3 scripts/generate_story.py
+          fi
           cat output/story/story.json
 
       - name: Select Gemini Model
@@ -98,8 +127,11 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
-
-          python3 scripts/select_gemini_model.py
+          if [ -s output/config/selected_model.json ]; then
+            echo "Existing Gemini model selection found. Skipping."
+          else
+            python3 scripts/select_gemini_model.py
+          fi
           cat output/config/selected_model.json
 
       - name: Test Gemini API
@@ -108,8 +140,11 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
-
-          python3 scripts/test_gemini.py
+          if [ -s output/story/ai_story.json ]; then
+            echo "AI story checkpoint exists. Skipping Gemini API test."
+          else
+            python3 scripts/test_gemini.py
+          fi
 
       - name: Prepare AI story generation
         shell: bash
@@ -117,8 +152,22 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
-
-          python3 scripts/generate_ai_story.py
+          if python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('output/story/ai_story.json')
+          ok=False
+          if p.exists():
+              try: ok=json.loads(p.read_text(encoding='utf-8')).get('status')=='completed'
+              except Exception: pass
+          print('1' if ok else '0')
+          raise SystemExit(0 if ok else 1)
+          PY
+          then
+            echo "Existing completed AI story found. Skipping regeneration."
+          else
+            python3 scripts/generate_ai_story.py
+          fi
           cat output/story/ai_story.json
 
       - name: Generate Character Bible
@@ -127,7 +176,6 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
-
           python3 scripts/generate_character_bible.py
           cat output/story/character_bible.json
 
@@ -137,7 +185,6 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -e
-
           python3 scripts/generate_scenes.py
           cat output/scenes/scenes.json
 
@@ -145,7 +192,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/generate_narration.py
           cat output/narration/narration.json
 
@@ -153,65 +199,32 @@ jobs:
         shell: bash
         run: |
           set -e
-
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-
-          echo "===== FFmpeg ====="
           ffmpeg -version | head -n 1
-
-          echo "===== FFprobe ====="
-          ffprobe -version | head -n 1
 
       - name: Generate Hindi TTS Audio
         shell: bash
         run: |
           set +e
-
-          python3 -m pip install \
-            --disable-pip-version-check \
-            --no-cache-dir \
-            edge-tts
-
-          INSTALL_STATUS=$?
-
-          if [ "$INSTALL_STATUS" -ne 0 ]; then
-            echo "ERROR: Edge TTS installation failed."
-            exit "$INSTALL_STATUS"
-          fi
-
+          python3 -m pip install --disable-pip-version-check --no-cache-dir edge-tts
+          [ "$?" -eq 0 ] || exit 1
           python3 scripts/generate_tts.py
-
           TTS_STATUS=$?
-
-          if [ -f output/narration/audio_jobs.json ]; then
-            echo "===== TTS MANIFEST ====="
-            cat output/narration/audio_jobs.json
-          fi
-
+          [ -f output/narration/audio_jobs.json ] && cat output/narration/audio_jobs.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           git add output/narration/audio_jobs.json
-
-          if git diff --cached --quiet; then
-            echo "No TTS checkpoint changes to commit."
-          else
+          if ! git diff --cached --quiet; then
             git commit -m "Checkpoint TTS audio generation"
             git push
           fi
-
-          if [ "$TTS_STATUS" -ne 0 ]; then
-            echo "TTS generation failed."
-            echo "Checkpoint was saved before stopping."
-            exit "$TTS_STATUS"
-          fi
+          exit "$TTS_STATUS"
 
       - name: Prepare Visual Generation
         shell: bash
         run: |
           set -e
-
           python3 scripts/prepare_visuals.py
           cat output/visuals/visual_jobs.json
 
@@ -222,8 +235,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -e
-
-          python3 scripts/select_visual_model.py
+          if [ -s output/config/selected_visual_model.json ]; then
+            echo "Existing visual model selection found. Skipping."
+          else
+            python3 scripts/select_visual_model.py
+          fi
           cat output/config/selected_visual_model.json
 
       - name: Generate Visuals
@@ -233,208 +249,64 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set +e
-
           python3 scripts/generate_visuals.py
-
           GENERATION_STATUS=$?
-
-          if [ -f output/visuals/visual_jobs.json ]; then
-            echo "===== VISUAL MANIFEST ====="
-            cat output/visuals/visual_jobs.json
-          fi
-
+          [ -f output/visuals/visual_jobs.json ] && cat output/visuals/visual_jobs.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           git add output/visuals/visual_jobs.json
-
-          if git diff --cached --quiet; then
-            echo "No visual checkpoint changes to commit."
-          else
+          if ! git diff --cached --quiet; then
             git commit -m "Checkpoint visual generation"
             git push
           fi
-
-          if [ "$GENERATION_STATUS" -ne 0 ]; then
-            echo "Visual generation failed."
-            echo "Checkpoint was saved before stopping."
-            exit "$GENERATION_STATUS"
-          fi
+          exit "$GENERATION_STATUS"
 
       - name: Install Thumbnail Dependencies
         shell: bash
         run: |
           set -e
-
-          echo "===== Installing Pillow ====="
-
-          python3 -m pip install \
-            --disable-pip-version-check \
-            --no-cache-dir \
-            Pillow
-
-          echo "===== Installing Hindi Fonts ====="
-
+          python3 -m pip install --disable-pip-version-check --no-cache-dir Pillow
           sudo apt-get update
           sudo apt-get install -y fonts-noto-core
-
-          echo "===== Verifying Fonts ====="
-
-          fc-list | grep -i "Noto Sans Devanagari" | head -n 5 || true
 
       - name: Generate Thumbnail
         shell: bash
         run: |
           set -e
-
-          echo "======================================"
-          echo "        GENERATING THUMBNAILS"
-          echo "======================================"
-
-          test -f scripts/generate_thumbnail.py
-          test -f output/visuals/visual_jobs.json
-
           python3 scripts/generate_thumbnail.py
-
-          echo
-          echo "===== THUMBNAIL FILES ====="
-
-          find output/thumbnail \
-            -maxdepth 1 \
-            -type f \
-            -print \
-            | sort
-
-          echo
-          echo "===== THUMBNAIL MANIFEST ====="
-
-          test -f output/thumbnail/thumbnail_manifest.json
-          cat output/thumbnail/thumbnail_manifest.json
-
-          echo
-          echo "===== THUMBNAIL VALIDATION ====="
-
           test -s output/thumbnail/thumbnail_1280x720.jpg
           test -s output/thumbnail/thumbnail_1080x1920.jpg
-
           python3 - <<'PY'
           from pathlib import Path
           from PIL import Image
-
-          files = {
-              "16:9": Path("output/thumbnail/thumbnail_1280x720.jpg"),
-              "9:16": Path("output/thumbnail/thumbnail_1080x1920.jpg"),
-          }
-
-          expected = {
-              "16:9": (1280, 720),
-              "9:16": (1080, 1920),
-          }
-
-          for name, path in files.items():
-              with Image.open(path) as image:
-                  print(f"{name}: {path}")
-                  print(f"Size: {image.size}")
-                  print(f"Format: {image.format}")
-
-                  if image.size != expected[name]:
-                      raise SystemExit(
-                          f"ERROR: {name} thumbnail has wrong size: {image.size}"
-                      )
-
-          print("Thumbnail validation: PASSED")
+          expected={'thumbnail_1280x720.jpg':(1280,720),'thumbnail_1080x1920.jpg':(1080,1920)}
+          for name,size in expected.items():
+              with Image.open(Path('output/thumbnail')/name) as im:
+                  if im.size != size: raise SystemExit(f'Wrong thumbnail size: {im.size}')
+          print('Thumbnail validation: PASSED')
           PY
 
       - name: Generate YouTube Upload Package
-        shell: bash
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        shell: bash
         run: |
           set -e
-
-          echo "======================================"
-          echo "     YOUTUBE UPLOAD PACKAGE"
-          echo "======================================"
-
-          test -f scripts/generate_youtube_metadata.py
-          test -f Input/topic.txt
-          test -f output/story/ai_story.json
-          test -f output/config/selected_model.json
-
-          mkdir -p output/publish
-
           python3 scripts/generate_youtube_metadata.py
-
-          echo
-          echo "===== VALIDATING PACKAGE ====="
-
           test -s output/publish/youtube_metadata.json
           test -s output/publish/youtube_title.txt
           test -s output/publish/youtube_description.txt
           test -s output/publish/youtube_tags.txt
-
-          echo
-          echo "===== TITLE ====="
-          cat output/publish/youtube_title.txt
-
-          echo
-          echo "===== TAGS ====="
-          cat output/publish/youtube_tags.txt
-
-          echo
-          echo "===== PACKAGE FILES ====="
-
-          find output/publish \
-            -maxdepth 1 \
-            -type f \
-            -print \
-            | sort
-
-          echo
-          echo "======================================"
-          echo "YouTube upload package generated."
-          echo "No automatic YouTube upload is performed."
-          echo "======================================"
+          echo "YouTube upload package generated. No automatic upload is performed."
 
       - name: Render Scene Videos
         shell: bash
         run: |
           set -e
-
-          echo "======================================"
-          echo "       RENDERING SCENE VIDEOS"
-          echo "======================================"
-
-          test -f scripts/render_video.py
-          test -f output/narration/audio_jobs.json
-          test -f output/visuals/visual_jobs.json
-
           python3 scripts/render_video.py
-
-          echo
-          echo "===== VIDEO RENDER MANIFEST ====="
-
-          test -f output/video_render_manifest.json
-          cat output/video_render_manifest.json
-
-          echo
-          echo "===== GENERATED PART VIDEOS ====="
-
-          find output/parts \
-            -maxdepth 1 \
-            -type f \
-            -name "*.mp4" \
-            -print \
-            | sort
-
-          echo
-          echo "===== GENERATED SCENE VIDEOS ====="
-
-          find output/scenes \
-            -type f \
-            -name "*.mp4" \
-            -print \
-            | sort
+          test -s output/video_render_manifest.json
+          find output/scenes -type f -name '*.mp4' -print | sort
+          find output/parts -maxdepth 1 -type f -name 'part_*.mp4' -print | sort
 
       - name: Upload Rendered Video Artifacts
         uses: actions/upload-artifact@v4
@@ -451,460 +323,55 @@ jobs:
         shell: bash
         run: |
           set -e
-
-          echo "======================================"
-          echo "          ASSEMBLING FINAL VIDEO"
-          echo "======================================"
-
-          PART_COUNT=$(find output/parts \
-            -maxdepth 1 \
-            -type f \
-            -name "part_*.mp4" \
-            | wc -l)
-
-          echo "Part videos found: $PART_COUNT"
-
-          if [ "$PART_COUNT" -eq 0 ]; then
-            echo "ERROR: No part videos found."
-            exit 1
-          fi
-
-          rm -f \
-            output/final_video_concat.txt \
-            output/final_video.tmp.mp4 \
-            output/final_video.mp4
-
-          find output/parts \
-            -maxdepth 1 \
-            -type f \
-            -name "part_*.mp4" \
-            -print0 \
-            | sort -z \
-            | while IFS= read -r -d "" file; do
-
-                if [ ! -s "$file" ]; then
-                  echo "ERROR: Empty part video: $file"
-                  exit 1
-                fi
-
-                printf "file '%s'\n" "$(realpath "$file")" \
-                  >> output/final_video_concat.txt
-
-              done
-
-          echo
-          echo "===== CONCAT LIST ====="
-          cat output/final_video_concat.txt
-
-          echo
-          echo "===== FFMPEG FINAL ASSEMBLY ====="
-
-          ffmpeg -y \
-            -hide_banner \
-            -loglevel error \
-            -f concat \
-            -safe 0 \
-            -i output/final_video_concat.txt \
-            -c copy \
-            -movflags +faststart \
-            output/final_video.tmp.mp4
-
+          rm -f output/final_video_concat.txt output/final_video.tmp.mp4 output/final_video.mp4
+          find output/parts -maxdepth 1 -type f -name 'part_*.mp4' -print0 | sort -z | while IFS= read -r -d '' file; do
+            [ -s "$file" ] || { echo "ERROR: Empty part video: $file"; exit 1; }
+            printf "file '%s'\n" "$(realpath "$file")" >> output/final_video_concat.txt
+          done
+          test -s output/final_video_concat.txt
+          ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i output/final_video_concat.txt -c copy -movflags +faststart output/final_video.tmp.mp4
           test -s output/final_video.tmp.mp4
-
-          mv \
-            output/final_video.tmp.mp4 \
-            output/final_video.mp4
-
-          echo
-          echo "===== FINAL VIDEO ====="
-
-          ls -lh output/final_video.mp4
-
-          DURATION=$(ffprobe \
-            -v error \
-            -show_entries format=duration \
-            -of default=noprint_wrappers=1:nokey=1 \
-            output/final_video.mp4)
-
-          echo "Final duration: ${DURATION}s"
-
+          mv output/final_video.tmp.mp4 output/final_video.mp4
           python3 - <<'PY'
-          import json
-          import subprocess
+          import json,subprocess
           from pathlib import Path
-
-          video = Path("output/final_video.mp4")
-          render_manifest = Path("output/video_render_manifest.json")
-
-          duration = float(
-              subprocess.check_output(
-                  [
-                      "ffprobe",
-                      "-v",
-                      "error",
-                      "-show_entries",
-                      "format=duration",
-                      "-of",
-                      "default=noprint_wrappers=1:nokey=1",
-                      str(video),
-                  ],
-                  text=True,
-              ).strip()
-          )
-
-          if duration <= 0:
-              raise SystemExit(
-                  "ERROR: Final video duration is invalid."
-              )
-
-          data = json.loads(
-              render_manifest.read_text(encoding="utf-8")
-          )
-
-          parts = data.get("parts", [])
-          scenes = data.get("total_scenes", 0)
-
-          if not parts:
-              raise SystemExit(
-                  "ERROR: Render manifest contains no parts."
-              )
-
-          final_manifest = {
-              "status": "completed",
-              "output": str(video),
-              "duration": round(duration, 3),
-              "parts": len(parts),
-              "scenes": scenes,
-              "format": data.get("format"),
-              "width": data.get("width"),
-              "height": data.get("height"),
-              "fps": data.get("fps"),
-          }
-
-          Path(
-              "output/final_video_manifest.json"
-          ).write_text(
-              json.dumps(
-                  final_manifest,
-                  ensure_ascii=False,
-                  indent=2,
-              ) + "\n",
-              encoding="utf-8",
-          )
-
-          print(
-              json.dumps(
-                  final_manifest,
-                  ensure_ascii=False,
-                  indent=2,
-              )
-          )
+          v=Path('output/final_video.mp4')
+          d=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',str(v)],text=True).strip())
+          m=json.loads(Path('output/video_render_manifest.json').read_text(encoding='utf-8'))
+          if d<=0 or not m.get('parts') or not m.get('total_scenes'): raise SystemExit('ERROR: Invalid final video/render manifest')
+          final={'status':'completed','output':'output/final_video.mp4','duration':round(d,3),'parts':len(m['parts']),'scenes':m['total_scenes'],'format':m.get('format'),'width':m.get('width'),'height':m.get('height'),'fps':m.get('fps')}
+          Path('output/final_video_manifest.json').write_text(json.dumps(final,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(final,ensure_ascii=False,indent=2))
           PY
 
       - name: Validate Final Video & Package
         shell: bash
         run: |
           set -e
-
-          echo "======================================"
-          echo "       FINAL QUALITY VALIDATION"
-          echo "======================================"
-
-          echo
-          echo "===== REQUIRED FILES ====="
-
-          required_files=(
-            "output/final_video.mp4"
-            "output/final_video_manifest.json"
-            "output/video_render_manifest.json"
-            "output/thumbnail/thumbnail_1280x720.jpg"
-            "output/thumbnail/thumbnail_1080x1920.jpg"
-            "output/thumbnail/thumbnail_manifest.json"
-            "output/publish/youtube_metadata.json"
-            "output/publish/youtube_title.txt"
-            "output/publish/youtube_description.txt"
-            "output/publish/youtube_tags.txt"
-          )
-
-          for file in "${required_files[@]}"; do
-            if [ ! -s "$file" ]; then
-              echo "ERROR: Missing or empty file: $file"
-              exit 1
-            fi
-
-            echo "OK: $file"
-          done
-
-          echo
-          echo "===== FINAL VIDEO STREAM VALIDATION ====="
-
-          VIDEO_INFO=$(ffprobe \
-            -v error \
-            -show_entries \
-            stream=index,codec_type,codec_name,width,height,r_frame_rate \
-            -show_entries \
-            format=duration,size \
-            -of json \
-            output/final_video.mp4)
-
-          echo "$VIDEO_INFO"
-
+          required=(output/final_video.mp4 output/final_video_manifest.json output/video_render_manifest.json output/thumbnail/thumbnail_1280x720.jpg output/thumbnail/thumbnail_1080x1920.jpg output/thumbnail/thumbnail_manifest.json output/publish/youtube_metadata.json output/publish/youtube_title.txt output/publish/youtube_description.txt output/publish/youtube_tags.txt)
+          for file in "${required[@]}"; do test -s "$file" || { echo "ERROR: Missing or empty file: $file"; exit 1; }; done
           python3 - <<'PY'
-          import json
-          import subprocess
+          import json,subprocess
           from pathlib import Path
-
-          video = Path("output/final_video.mp4")
-
-          if not video.exists() or video.stat().st_size < 100000:
-              raise SystemExit(
-                  "ERROR: Final video is missing or suspiciously small."
-              )
-
-          probe = subprocess.check_output(
-              [
-                  "ffprobe",
-                  "-v",
-                  "error",
-                  "-show_entries",
-                  "stream=index,codec_type,codec_name,width,height,r_frame_rate",
-                  "-show_entries",
-                  "format=duration,size",
-                  "-of",
-                  "json",
-                  str(video),
-              ],
-              text=True,
-          )
-
-          data = json.loads(probe)
-          streams = data.get("streams", [])
-
-          video_streams = [
-              s for s in streams
-              if s.get("codec_type") == "video"
-          ]
-
-          audio_streams = [
-              s for s in streams
-              if s.get("codec_type") == "audio"
-          ]
-
-          if not video_streams:
-              raise SystemExit(
-                  "ERROR: Final video contains no video stream."
-              )
-
-          if not audio_streams:
-              raise SystemExit(
-                  "ERROR: Final video contains no audio stream."
-              )
-
-          video_stream = video_streams[0]
-
-          width = video_stream.get("width")
-          height = video_stream.get("height")
-
-          if width != 720 or height != 1280:
-              raise SystemExit(
-                  f"ERROR: Unexpected final resolution: "
-                  f"{width}x{height}. Expected 720x1280."
-              )
-
-          duration = float(
-              data.get("format", {}).get("duration", 0)
-          )
-
-          if duration <= 0:
-              raise SystemExit(
-                  "ERROR: Final video duration is invalid."
-              )
-
-          print(f"Video codec: {video_stream.get('codec_name')}")
-          print(f"Audio codec: {audio_streams[0].get('codec_name')}")
-          print(f"Resolution: {width}x{height}")
-          print(f"Duration: {duration:.3f}s")
-          print("Video/audio validation: PASSED")
+          v=Path('output/final_video.mp4')
+          if v.stat().st_size < 100000: raise SystemExit('ERROR: Final video is suspiciously small')
+          data=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','stream=index,codec_type,codec_name,width,height,r_frame_rate','-show_entries','format=duration,size','-of','json',str(v)],text=True))
+          streams=data.get('streams',[])
+          vs=[s for s in streams if s.get('codec_type')=='video']
+          aud=[s for s in streams if s.get('codec_type')=='audio']
+          if not vs or not aud: raise SystemExit('ERROR: Final video must contain video and audio streams')
+          if (vs[0].get('width'),vs[0].get('height')) != (720,1280): raise SystemExit(f"ERROR: Unexpected resolution: {vs[0].get('width')}x{vs[0].get('height')}")
+          if float(data.get('format',{}).get('duration',0)) <= 0: raise SystemExit('ERROR: Invalid duration')
+          manifest=json.loads(Path('output/final_video_manifest.json').read_text(encoding='utf-8'))
+          if manifest.get('status')!='completed' or manifest.get('parts',0)<=0 or manifest.get('scenes',0)<=0: raise SystemExit('ERROR: Invalid final manifest')
+          meta=json.loads(Path('output/publish/youtube_metadata.json').read_text(encoding='utf-8'))
+          if not str(meta.get('title','')).strip() or len(str(meta.get('title',''))) > 100: raise SystemExit('ERROR: Invalid YouTube title')
+          if not str(meta.get('description','')).strip() or not isinstance(meta.get('tags'),list) or not meta.get('tags'): raise SystemExit('ERROR: Invalid YouTube metadata')
+          print('FINAL VALIDATION PASSED')
+          print(f"Duration: {data['format']['duration']}s")
+          print('Resolution: 720x1280')
+          print(f"Audio: {aud[0].get('codec_name')}")
           PY
-
-          echo
-          echo "===== FINAL MANIFEST VALIDATION ====="
-
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          manifest = json.loads(
-              Path("output/final_video_manifest.json")
-              .read_text(encoding="utf-8")
-          )
-
-          if manifest.get("status") != "completed":
-              raise SystemExit(
-                  "ERROR: Final video manifest is not completed."
-              )
-
-          if manifest.get("output") != "output/final_video.mp4":
-              raise SystemExit(
-                  "ERROR: Final manifest points to wrong output."
-              )
-
-          if manifest.get("parts", 0) <= 0:
-              raise SystemExit(
-                  "ERROR: Final manifest has no parts."
-              )
-
-          if manifest.get("scenes", 0) <= 0:
-              raise SystemExit(
-                  "ERROR: Final manifest has no scenes."
-              )
-
-          if manifest.get("duration", 0) <= 0:
-              raise SystemExit(
-                  "ERROR: Final manifest has invalid duration."
-              )
-
-          print(json.dumps(
-              manifest,
-              ensure_ascii=False,
-              indent=2
-          ))
-
-          print("Final manifest validation: PASSED")
-          PY
-
-          echo
-          echo "===== RENDER MANIFEST VALIDATION ====="
-
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          data = json.loads(
-              Path("output/video_render_manifest.json")
-              .read_text(encoding="utf-8")
-          )
-
-          parts = data.get("parts", [])
-          scenes = data.get("total_scenes", 0)
-
-          if not parts:
-              raise SystemExit(
-                  "ERROR: Render manifest contains no parts."
-              )
-
-          if scenes <= 0:
-              raise SystemExit(
-                  "ERROR: Render manifest contains no scenes."
-              )
-
-          print(f"Rendered parts: {len(parts)}")
-          print(f"Rendered scenes: {scenes}")
-
-          print("Render manifest validation: PASSED")
-          PY
-
-          echo
-          echo "===== THUMBNAIL VALIDATION ====="
-
-          python3 - <<'PY'
-          from pathlib import Path
-          from PIL import Image
-
-          files = {
-              "16:9": (
-                  Path("output/thumbnail/thumbnail_1280x720.jpg"),
-                  (1280, 720),
-              ),
-              "9:16": (
-                  Path("output/thumbnail/thumbnail_1080x1920.jpg"),
-                  (1080, 1920),
-              ),
-          }
-
-          for name, (path, expected) in files.items():
-              with Image.open(path) as image:
-                  print(
-                      f"{name}: "
-                      f"{image.size} "
-                      f"{image.format}"
-                  )
-
-                  if image.size != expected:
-                      raise SystemExit(
-                          f"ERROR: Wrong {name} thumbnail size: "
-                          f"{image.size}"
-                      )
-
-          print("Thumbnail validation: PASSED")
-          PY
-
-          echo
-          echo "===== YOUTUBE PACKAGE VALIDATION ====="
-
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          metadata_path = Path(
-              "output/publish/youtube_metadata.json"
-          )
-
-          metadata = json.loads(
-              metadata_path.read_text(encoding="utf-8")
-          )
-
-          title = str(
-              metadata.get("title", "")
-          ).strip()
-
-          description = str(
-              metadata.get("description", "")
-          ).strip()
-
-          tags = metadata.get("tags", [])
-
-          if not title:
-              raise SystemExit(
-                  "ERROR: YouTube title is empty."
-              )
-
-          if not description:
-              raise SystemExit(
-                  "ERROR: YouTube description is empty."
-              )
-
-          if not isinstance(tags, list) or not tags:
-              raise SystemExit(
-                  "ERROR: YouTube tags are missing."
-              )
-
-          if len(title) > 100:
-              raise SystemExit(
-                  f"ERROR: YouTube title is too long: "
-                  f"{len(title)} characters."
-              )
-
-          print(f"Title length: {len(title)}")
-          print(f"Description length: {len(description)}")
-          print(f"Tag count: {len(tags)}")
-
-          print("YouTube package validation: PASSED")
-          PY
-
-          echo
-          echo "======================================"
-          echo "       FINAL VALIDATION PASSED"
-          echo "======================================"
-          echo "Video:       OK"
-          echo "Audio:       OK"
-          echo "Duration:    OK"
-          echo "Resolution:  OK"
-          echo "Render:      OK"
-          echo "Thumbnails:  OK"
-          echo "Metadata:    OK"
-          echo "Package:     OK"
-          echo "======================================"
 
       - name: Upload Final Video Artifacts
         uses: actions/upload-artifact@v4
@@ -929,9 +396,7 @@ jobs:
         shell: bash
         run: |
           set -e
-
-          CHECKPOINT="output/checkpoints/progress.json"
-
+          CHECKPOINT=output/checkpoints/progress.json
           if [ -f "$CHECKPOINT" ]; then
             cat "$CHECKPOINT"
           else
@@ -948,35 +413,31 @@ jobs:
           fi
 
       - name: Show project state
+        if: always()
         run: |
           echo "===== OUTPUT FILES ====="
-          find output -maxdepth 5 -type f | sort
+          find output -maxdepth 5 -type f | sort || true
 
       - name: Save checkpoint
+        if: always()
         shell: bash
         run: |
-          set -e
-
+          set +e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add \
-            output/config/selected_model.json \
-            output/config/selected_visual_model.json \
-            output/checkpoints/progress.json \
-            output/story/story_plan.json \
-            output/story/story.json \
-            output/story/ai_story.json \
-            output/story/character_bible.json \
-            output/scenes/scenes.json \
-            output/narration/narration.json \
-            output/narration/audio_jobs.json \
-            output/visuals/visual_jobs.json \
-            output/video_render_manifest.json
-
-          if git diff --cached --quiet; then
-            echo "No checkpoint changes to commit."
-          else
+          git add output/config/selected_model.json output/config/selected_visual_model.json output/checkpoints/progress.json output/story/story_plan.json output/story/story.json output/story/ai_story.json output/story/character_bible.json output/scenes/scenes.json output/narration/narration.json output/narration/audio_jobs.json output/visuals/visual_jobs.json output/video_render_manifest.json 2>/dev/null
+          if ! git diff --cached --quiet; then
             git commit -m "Save video pipeline checkpoint"
             git push
+          else
+            echo "No checkpoint changes to commit."
           fi
+
+      - name: Upload Workflow Checkpoint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lok-ai-checkpoint
+          path: output
+          if-no-files-found: warn
+          retention-days: 7
