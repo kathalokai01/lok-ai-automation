@@ -13,9 +13,16 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
+
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      CLOUDFLARE_R2_BUCKET: ${{ secrets.CLOUDFLARE_R2_BUCKET }}
+      CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+      CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+      CLOUDFLARE_R2_PUBLIC_URL: ${{ secrets.CLOUDFLARE_R2_PUBLIC_URL }}
 
     steps:
 
@@ -49,6 +56,26 @@ jobs:
 
           if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
             echo "ERROR: CLOUDFLARE_API_TOKEN is not set."
+            exit 1
+          fi
+
+          if [ -z "${CLOUDFLARE_R2_BUCKET:-}" ]; then
+            echo "ERROR: CLOUDFLARE_R2_BUCKET is not set."
+            exit 1
+          fi
+
+          if [ -z "${CLOUDFLARE_R2_ACCESS_KEY_ID:-}" ]; then
+            echo "ERROR: CLOUDFLARE_R2_ACCESS_KEY_ID is not set."
+            exit 1
+          fi
+
+          if [ -z "${CLOUDFLARE_R2_SECRET_ACCESS_KEY:-}" ]; then
+            echo "ERROR: CLOUDFLARE_R2_SECRET_ACCESS_KEY is not set."
+            exit 1
+          fi
+
+          if [ -z "${CLOUDFLARE_R2_PUBLIC_URL:-}" ]; then
+            echo "ERROR: CLOUDFLARE_R2_PUBLIC_URL is not set."
             exit 1
           fi
 
@@ -390,7 +417,6 @@ jobs:
           set -e
           python3 scripts/generate_narration.py
 
-
       # ============================================================
       # INSTALL FFMPEG + R2 UPLOAD SDK
       # ============================================================
@@ -427,8 +453,6 @@ jobs:
 
           echo
           echo "FFmpeg and R2 SDK ready."
-
-
 
       # ============================================================
       # GENERATE HINDI TTS
@@ -670,7 +694,6 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import subprocess
-          import os
           import re
 
           parts = sorted(
