@@ -1,461 +1,375 @@
+#!/usr/bin/env python3
+
 import json
-import os
-from datetime import datetime, timezone
+import sys
 from pathlib import Path
 
-
-SCENES_FILE = Path("output/scenes/scenes.json")
-CHARACTER_BIBLE_FILE = Path(
-    "output/story/character_bible.json"
+from input_config import (
+    load_input_config,
+    cfg_bool,
+    cfg_int,
+    normalize_format,
+    print_config_summary,
 )
-OUTPUT_FILE = Path(
-    "output/visuals/visual_jobs.json"
-)
 
 
-def load_json(path):
+BASE = Path("output")
+
+SCENES_FILE = BASE / "scenes" / "scenes.json"
+CHARACTER_BIBLE_FILE = BASE / "character_bible" / "character_bible.json"
+
+VISUALS_DIR = BASE / "visuals"
+JOBS_FILE = VISUALS_DIR / "visual_jobs.json"
+
+
+def load_json(path: Path, default=None):
     if not path.exists():
-        raise SystemExit(
-            f"ERROR: Required file not found: {path}"
-        )
+        return default
 
     try:
-        with path.open(
-            "r",
-            encoding="utf-8",
-        ) as file:
-            return json.load(file)
-
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception as e:
-        raise SystemExit(
-            f"ERROR: Could not read {path}: {e}"
-        )
+        print(f"WARNING: Failed to read {path}: {e}")
+        return default
 
 
-def save_json_atomic(path, data):
-    path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+def save_json(path: Path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
 
-    temp_file = path.with_suffix(
-        path.suffix + ".tmp"
-    )
+    tmp = path.with_suffix(path.suffix + ".tmp")
 
-    with temp_file.open(
-        "w",
-        encoding="utf-8",
-    ) as file:
+    with tmp.open("w", encoding="utf-8") as f:
         json.dump(
             data,
-            file,
+            f,
             ensure_ascii=False,
             indent=2,
         )
-        file.write("\n")
 
-    os.replace(
-        temp_file,
-        path,
-    )
+    tmp.replace(path)
 
 
-def visual_path(part, scene):
-    return Path(
-        f"output/visuals/"
-        f"part_{int(part):02d}/"
-        f"scene_{int(scene):02d}.png"
-    )
-
-
-def is_valid_visual(path):
+def valid_visual(path: Path) -> bool:
     if not path.exists():
         return False
 
-    if path.stat().st_size <= 0:
+    if not path.is_file():
         return False
 
     try:
-        with path.open("rb") as file:
-            header = file.read(8)
-
-        return (
-            header.startswith(b"\x89PNG")
-            or header.startswith(b"\xff\xd8")
-        )
-
+        return path.stat().st_size > 1000
     except Exception:
         return False
 
 
-def make_job(scene, character_bible):
-    part = scene.get("part")
-    scene_number = scene.get("scene")
-
-    visual_prompt = str(
-        scene.get(
-            "visual_prompt",
-            "",
-        )
-    ).strip()
-
-    if not visual_prompt:
-        raise ValueError(
-            f"Empty visual prompt for "
-            f"Part {part} Scene {scene_number}"
-        )
-
-    return {
-        "part": part,
-        "scene": scene_number,
-        "status": "pending",
-        "asset_type": "visual",
-        "visual_prompt": visual_prompt,
-        "negative_prompt": str(
-            scene.get(
-                "negative_prompt",
-                "",
-            )
-        ).strip(),
-        "camera_prompt": str(
-            scene.get(
-                "camera_prompt",
-                "",
-            )
-        ).strip(),
-        "lighting_prompt": str(
-            scene.get(
-                "lighting_prompt",
-                "",
-            )
-        ).strip(),
-        "duration": scene.get(
-            "duration",
-            "auto",
-        ),
-        "character_bible": character_bible,
-        "asset_path": None,
-        "provider": None,
-        "model": None,
-        "error": None,
-    }
+def scene_key(part: int, scene: int) -> str:
+    return f"part_{part:02d}/scene_{scene:02d}"
 
 
 def main():
-    print(
-        "======================================"
-    )
-    print(
-        "     PREPARE VISUAL GENERATION"
-    )
-    print(
-        "======================================"
+    print("=" * 60)
+    print("          PREPARING VISUAL GENERATION")
+    print("=" * 60)
+
+    # ---------------------------------------------------------
+    # INPUT CONFIG
+    # ---------------------------------------------------------
+
+    try:
+        config = load_input_config()
+    except Exception as e:
+        print(f"ERROR: Failed to load Input configuration: {e}")
+        return 1
+
+    print_config_summary(config)
+
+    format_name = normalize_format(config)
+
+    parts = cfg_int(config, "PARTS", 1)
+    scenes_per_part = cfg_int(config, "SCENES", 1)
+
+    character_bible_enabled = cfg_bool(
+        config,
+        "CHARACTER_BIBLE",
+        True,
     )
 
-    scenes_data = load_json(
-        SCENES_FILE
+    resume_enabled = cfg_bool(
+        config,
+        "RESUME_ENABLED",
+        True,
     )
 
-    character_data = load_json(
-        CHARACTER_BIBLE_FILE
+    skip_completed = cfg_bool(
+        config,
+        "SKIP_COMPLETED_SCENES",
+        True,
     )
 
-    if scenes_data.get("status") != "completed":
-        raise SystemExit(
-            "ERROR: Scene generation is not completed"
+    save_checkpoint = cfg_bool(
+        config,
+        "SAVE_CHECKPOINT_AFTER_EACH_SCENE",
+        True,
+    )
+
+    print()
+    print(f"FORMAT                : {format_name}")
+    print(f"PARTS                 : {parts}")
+    print(f"SCENES PER PART       : {scenes_per_part}")
+    print(f"CHARACTER_BIBLE       : {character_bible_enabled}")
+    print(f"RESUME_ENABLED        : {resume_enabled}")
+    print(f"SKIP_COMPLETED_SCENES : {skip_completed}")
+    print(f"SAVE_CHECKPOINT       : {save_checkpoint}")
+
+    # ---------------------------------------------------------
+    # REQUIRED SCENES
+    # ---------------------------------------------------------
+
+    if not SCENES_FILE.exists():
+        print()
+        print(f"ERROR: Missing scenes file: {SCENES_FILE}")
+        return 1
+
+    scenes_data = load_json(SCENES_FILE)
+
+    if not isinstance(scenes_data, dict):
+        print("ERROR: scenes.json is not a JSON object.")
+        return 1
+
+    scenes = scenes_data.get("scenes", [])
+
+    if not isinstance(scenes, list):
+        print("ERROR: scenes.json 'scenes' must be a list.")
+        return 1
+
+    expected_total = parts * scenes_per_part
+
+    print()
+    print(f"Expected scenes : {expected_total}")
+    print(f"Loaded scenes   : {len(scenes)}")
+
+    if len(scenes) != expected_total:
+        print(
+            "ERROR: Scene count mismatch. "
+            f"Expected {expected_total}, got {len(scenes)}."
+        )
+        return 1
+
+    # ---------------------------------------------------------
+    # CHARACTER BIBLE
+    # ---------------------------------------------------------
+
+    character_bible = {}
+
+    if character_bible_enabled:
+        if not CHARACTER_BIBLE_FILE.exists():
+            print()
+            print(
+                "ERROR: CHARACTER_BIBLE=true but Character Bible "
+                f"is missing:\n{CHARACTER_BIBLE_FILE}"
+            )
+            return 1
+
+        character_bible = load_json(
+            CHARACTER_BIBLE_FILE,
+            {},
         )
 
-    characters = character_data.get(
-        "characters",
-        [],
-    )
+        if not isinstance(character_bible, dict):
+            print(
+                "ERROR: character_bible.json is not a valid JSON object."
+            )
+            return 1
 
-    if not characters:
-        raise SystemExit(
-            "ERROR: Character Bible contains no characters"
+        print()
+        print(
+            "Character Bible loaded from:"
+            f" {CHARACTER_BIBLE_FILE}"
         )
 
-    source_scenes = scenes_data.get(
-        "scenes",
-        [],
-    )
+    else:
+        print()
+        print("Character Bible disabled by Input.")
 
-    if not source_scenes:
-        raise SystemExit(
-            "ERROR: No generated scenes found"
-        )
-
-    topic = scenes_data.get(
-        "topic",
-        "",
-    )
+    # ---------------------------------------------------------
+    # EXISTING JOB MANIFEST
+    # ---------------------------------------------------------
 
     existing_jobs = {}
 
-    if OUTPUT_FILE.exists():
-        try:
-            existing_data = load_json(
-                OUTPUT_FILE
-            )
-
-            for job in existing_data.get(
-                "jobs",
-                [],
-            ):
-                key = (
-                    job.get("part"),
-                    job.get("scene"),
-                )
-
-                existing_jobs[key] = job
-
-            print(
-                "Existing visual jobs found: "
-                f"{len(existing_jobs)}"
-            )
-
-        except Exception as e:
-            print(
-                "WARNING: Existing visual "
-                f"manifest ignored: {e}"
-            )
-
-    jobs = []
-
-    for scene in source_scenes:
-        part = scene.get("part")
-        scene_number = scene.get("scene")
-
-        key = (
-            part,
-            scene_number,
+    if resume_enabled and JOBS_FILE.exists():
+        old_manifest = load_json(
+            JOBS_FILE,
+            {},
         )
 
-        output_path = visual_path(
-            part,
-            scene_number,
-        )
+        if isinstance(old_manifest, dict):
+            old_jobs = old_manifest.get("jobs", {})
 
-        existing_job = existing_jobs.get(
-            key
-        )
+            if isinstance(old_jobs, dict):
+                existing_jobs = old_jobs
 
-        # IMPORTANT:
-        # completed status is trusted ONLY
-        # when the actual visual file exists.
-        if (
-            existing_job
-            and is_valid_visual(output_path)
-        ):
-            existing_job["status"] = "completed"
-            existing_job["asset_path"] = str(
-                output_path
-            )
-            existing_job["error"] = None
-
-            jobs.append(existing_job)
-
-            print(
-                "VALID — keeping visual: "
-                f"Part {part} Scene {scene_number}"
-            )
-
-            continue
-
-        try:
-            job = make_job(
-                scene,
-                characters,
-            )
-
-            jobs.append(job)
-
-            if existing_job:
-                print(
-                    "MISSING — resetting to pending: "
-                    f"Part {part} Scene {scene_number}"
-                )
-            else:
-                print(
-                    "Prepared: "
-                    f"Part {part} Scene {scene_number}"
-                )
-
-        except Exception as e:
-            jobs.append(
-                {
-                    "part": part,
-                    "scene": scene_number,
-                    "status": "failed",
-                    "asset_type": "visual",
-                    "visual_prompt": "",
-                    "negative_prompt": "",
-                    "camera_prompt": "",
-                    "lighting_prompt": "",
-                    "duration": scene.get(
-                        "duration",
-                        "auto",
-                    ),
-                    "character_bible": characters,
-                    "asset_path": None,
-                    "provider": None,
-                    "model": None,
-                    "error": str(e),
-                }
-            )
-
-            print(
-                "FAILED: Part "
-                f"{part} Scene {scene_number}: {e}"
-            )
-
-    jobs.sort(
-        key=lambda item: (
-            int(item.get("part", 0)),
-            int(item.get("scene", 0)),
-        )
+    VISUALS_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
     )
 
-    expected_keys = {
-        (
-            scene.get("part"),
-            scene.get("scene"),
-        )
-        for scene in source_scenes
-    }
+    # ---------------------------------------------------------
+    # BUILD JOBS
+    # ---------------------------------------------------------
 
-    actual_keys = {
-        (
-            job.get("part"),
-            job.get("scene"),
-        )
-        for job in jobs
-    }
+    jobs = {}
 
-    missing = expected_keys - actual_keys
+    completed_count = 0
+    pending_count = 0
 
-    if missing:
-        raise SystemExit(
-            "ERROR: Missing visual jobs: "
-            f"{sorted(missing)}"
-        )
+    for index, scene in enumerate(scenes, start=1):
 
-    if len(jobs) != len(actual_keys):
-        raise SystemExit(
-            "ERROR: Duplicate visual jobs detected"
+        if not isinstance(scene, dict):
+            print(
+                f"ERROR: Scene {index} is not a JSON object."
+            )
+            return 1
+
+        part = int(
+            scene.get(
+                "part",
+                ((index - 1) // scenes_per_part) + 1,
+            )
         )
 
-    completed_jobs = []
-    pending_jobs = []
-    failed_jobs = []
+        scene_number = int(
+            scene.get(
+                "scene",
+                ((index - 1) % scenes_per_part) + 1,
+            )
+        )
 
-    for job in jobs:
-        part = int(job["part"])
-        scene = int(job["scene"])
-
-        path = visual_path(
+        key = scene_key(
             part,
-            scene,
+            scene_number,
         )
 
-        if is_valid_visual(path):
-            job["status"] = "completed"
-            job["asset_path"] = str(path)
-            job["error"] = None
-            completed_jobs.append(job)
+        visual_path = (
+            VISUALS_DIR
+            / f"part_{part:02d}"
+            / f"scene_{scene_number:02d}.png"
+        )
 
-        elif job.get("status") == "failed":
-            failed_jobs.append(job)
+        old_job = existing_jobs.get(
+            key,
+            {},
+        )
+
+        # -----------------------------------------------------
+        # PHYSICAL FILE IS THE SOURCE OF TRUTH
+        # -----------------------------------------------------
+
+        physical_exists = valid_visual(
+            visual_path
+        )
+
+        old_status = (
+            old_job.get("status")
+            if isinstance(old_job, dict)
+            else None
+        )
+
+        if (
+            skip_completed
+            and physical_exists
+            and old_status == "completed"
+        ):
+            status = "completed"
+            completed_count += 1
+
+        elif (
+            skip_completed
+            and physical_exists
+            and not old_job
+        ):
+            # Existing valid image without an old manifest entry.
+            # Treat it as completed instead of regenerating it.
+            status = "completed"
+            completed_count += 1
 
         else:
-            job["status"] = "pending"
-            job["asset_path"] = None
-            pending_jobs.append(job)
+            status = "pending"
+            pending_count += 1
 
-    output = {
+        jobs[key] = {
+            "part": part,
+            "scene": scene_number,
+            "status": status,
+            "visual_path": str(
+                visual_path
+            ),
+            "scene_index": index,
+        }
+
+    # ---------------------------------------------------------
+    # MANIFEST
+    # ---------------------------------------------------------
+
+    manifest = {
         "status": (
             "completed"
-            if len(completed_jobs) == len(jobs)
-            else "ready"
+            if pending_count == 0
+            else "pending"
         ),
-        "topic": topic,
-        "total_scenes": len(jobs),
-        "completed_scenes": len(
-            completed_jobs
+        "format": format_name,
+        "parts": parts,
+        "scenes_per_part": scenes_per_part,
+        "expected_total": expected_total,
+        "completed": completed_count,
+        "pending": pending_count,
+        "character_bible_enabled": character_bible_enabled,
+        "character_bible_path": (
+            str(CHARACTER_BIBLE_FILE)
+            if character_bible_enabled
+            else None
         ),
-        "pending_scenes": len(
-            pending_jobs
-        ),
-        "failed_scenes": len(
-            failed_jobs
-        ),
-        "character_bible_source": str(
-            CHARACTER_BIBLE_FILE
-        ),
-        "scene_source": str(
-            SCENES_FILE
-        ),
-        "generated_at": datetime.now(
-            timezone.utc
-        ).isoformat(),
         "jobs": jobs,
     }
 
-    save_json_atomic(
-        OUTPUT_FILE,
-        output,
+    save_json(
+        JOBS_FILE,
+        manifest,
     )
+
+    # ---------------------------------------------------------
+    # SUMMARY
+    # ---------------------------------------------------------
 
     print()
-    print(
-        "===== VISUAL JOB MANIFEST ====="
-    )
-    print(
-        f"Total scenes : {len(jobs)}"
-    )
-    print(
-        f"Completed    : {len(completed_jobs)}"
-    )
-    print(
-        f"Pending      : {len(pending_jobs)}"
-    )
-    print(
-        f"Failed       : {len(failed_jobs)}"
-    )
+    print("=" * 60)
+    print("          VISUAL PREPARATION COMPLETE")
+    print("=" * 60)
 
-    if pending_jobs:
+    print(f"Expected visuals : {expected_total}")
+    print(f"Completed        : {completed_count}")
+    print(f"Pending          : {pending_count}")
+    print(f"Manifest         : {JOBS_FILE}")
+
+    if pending_count:
         print()
         print(
-            "===== MISSING VISUALS ====="
+            "Visual generation is pending for "
+            f"{pending_count} scene(s)."
         )
-
-        for job in pending_jobs:
-            print(
-                f" - Part {job['part']} "
-                f"Scene {job['scene']}"
-            )
-
-    if failed_jobs:
-        print()
         print(
-            "===== FAILED VISUAL JOBS ====="
+            "generate_visuals.py will generate only "
+            "the missing visuals."
         )
+    else:
+        print()
+        print("All visual files are already available.")
 
-        for job in failed_jobs:
-            print(
-                f" - Part {job['part']} "
-                f"Scene {job['scene']}: "
-                f"{job.get('error', '')}"
-            )
+    print("=" * 60)
 
-    print()
-    print(
-        "Visual manifest preparation: PASSED"
-    )
-
-    # Do NOT fail merely because visuals are pending.
-    # generate_visuals.py must receive them and generate them.
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
