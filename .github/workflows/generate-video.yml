@@ -238,7 +238,7 @@ jobs:
           echo "Expected total  : $EXPECTED_TOTAL"
 
       # ============================================================
-      # RESTORE ONLY PREVIOUS SUCCESSFUL CHECKPOINT
+      # RESTORE PREVIOUS SUCCESSFUL CHECKPOINT
       # ============================================================
       - name: Restore previous successful checkpoint
         shell: bash
@@ -472,41 +472,93 @@ jobs:
           python3 scripts/generate_narration.py
 
       # ============================================================
-      # INSTALL FFMPEG + R2 UPLOAD SDK
+      # INSTALL ALL RUNTIME DEPENDENCIES
       # ============================================================
-      - name: Install FFmpeg and R2 upload SDK
+      - name: Install FFmpeg, TTS, Python and R2 dependencies
         shell: bash
         run: |
           set -e
 
           echo "=============================================="
-          echo "      INSTALLING FFMPEG + R2 SDK"
+          echo "     INSTALLING PIPELINE DEPENDENCIES"
           echo "=============================================="
 
+          echo
+          echo "Updating apt..."
           sudo apt-get update
+
+          echo
+          echo "Installing FFmpeg..."
           sudo apt-get install -y ffmpeg
 
           echo
-          echo "FFmpeg:"
+          echo "Checking FFmpeg..."
           ffmpeg -version | head -n 1
 
           echo
-          echo "FFprobe:"
+          echo "Checking FFprobe..."
           ffprobe -version | head -n 1
 
           echo
-          echo "Installing boto3..."
-          python3 -m pip install --upgrade boto3
+          echo "Updating pip..."
+          python3 -m pip install --upgrade pip
 
           echo
-          echo "Testing boto3..."
+          echo "Installing Python dependencies..."
+
+          python3 -m pip install --upgrade \
+            requests \
+            boto3 \
+            edge-tts \
+            pillow
+
+          echo
+          echo "Testing requests..."
+
           python3 - <<'PY'
-          import boto3
-          print("boto3:", boto3.__version__)
+          import requests
+          print("requests:", requests.__version__)
           PY
 
           echo
-          echo "FFmpeg and R2 SDK ready."
+          echo "Testing boto3..."
+
+          python3 - <<'PY'
+          import boto3
+          import botocore
+
+          print("boto3:", boto3.__version__)
+          print("botocore:", botocore.__version__)
+          PY
+
+          echo
+          echo "Testing edge-tts..."
+
+          edge-tts --help >/dev/null
+
+          echo "edge-tts: READY"
+
+          echo
+          echo "Testing Pillow..."
+
+          python3 - <<'PY'
+          from PIL import Image
+          print("Pillow: READY")
+          PY
+
+          echo
+          echo "=============================================="
+          echo "       DEPENDENCY VERIFICATION"
+          echo "=============================================="
+
+          command -v ffmpeg
+          command -v ffprobe
+          command -v edge-tts
+
+          echo
+          echo "=============================================="
+          echo "     ALL DEPENDENCIES READY"
+          echo "=============================================="
 
       # ============================================================
       # GENERATE HINDI TTS
