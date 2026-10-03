@@ -12,9 +12,6 @@ import requests
 
 from input_config import (
     load_input_config,
-    cfg_bool,
-    cfg_int,
-    cfg_text,
     normalize_format,
 )
 
@@ -54,6 +51,45 @@ API_BASE = (
 )
 
 REQUEST_TIMEOUT = 180
+
+
+# ============================================================
+# INPUT CONFIG COMPATIBILITY HELPERS
+# ============================================================
+
+def cfg_text(config, key, default=""):
+    value = config.get(key, default)
+
+    if value is None:
+        return str(default)
+
+    return str(value).strip()
+
+
+def cfg_bool(config, key, default=False):
+    value = config.get(key, default)
+
+    if isinstance(value, bool):
+        return value
+
+    text = str(value).strip().lower()
+
+    if text in {"true", "yes", "on", "1"}:
+        return True
+
+    if text in {"false", "no", "off", "0"}:
+        return False
+
+    return bool(default)
+
+
+def cfg_int(config, key, default=0):
+    value = config.get(key, default)
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return int(default)
 
 
 # ============================================================
@@ -711,10 +747,6 @@ def decode_image_string(value):
     if not value:
         return None
 
-    # --------------------------------------------------------
-    # HTTPS / HTTP IMAGE URL
-    # --------------------------------------------------------
-
     if (
         value.startswith("http://")
         or value.startswith("https://")
@@ -723,10 +755,6 @@ def decode_image_string(value):
         return download_image_url(
             value
         )
-
-    # --------------------------------------------------------
-    # DATA URI
-    # --------------------------------------------------------
 
     if value.startswith(
         "data:image"
@@ -748,10 +776,6 @@ def decode_image_string(value):
 
         except Exception:
             return None
-
-    # --------------------------------------------------------
-    # RAW BASE64
-    # --------------------------------------------------------
 
     try:
 
@@ -800,10 +824,6 @@ def extract_image_bytes(data):
 
     for item in candidates:
 
-        # ----------------------------------------------------
-        # STRING RESPONSE
-        # ----------------------------------------------------
-
         if isinstance(
             item,
             str
@@ -816,12 +836,7 @@ def extract_image_bytes(data):
             )
 
             if image_bytes:
-
                 return image_bytes
-
-        # ----------------------------------------------------
-        # NESTED OBJECT
-        # ----------------------------------------------------
 
         if isinstance(
             item,
@@ -850,7 +865,6 @@ def extract_image_bytes(data):
                 )
 
                 if image_bytes:
-
                     return image_bytes
 
     return None
@@ -974,7 +988,6 @@ def generate_image(
             )
 
             if image_bytes:
-
                 return image_bytes
 
             print(
