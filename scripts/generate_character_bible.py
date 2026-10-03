@@ -9,12 +9,10 @@ from pathlib import Path
 
 from input_config import (
     load_input_config,
-    cfg_bool,
-    cfg_text,
-    get_max_retries,
     normalize_format,
-    resolve_story_text,
-    resolve_topic,
+    get_max_retries,
+    get_topic,
+    get_story_text,
 )
 
 
@@ -23,42 +21,99 @@ OUTPUT = Path("output/story/character_bible.json")
 MODEL_FILE = Path("output/config/selected_model.json")
 
 
+# ============================================================
+# LOCAL CONFIG HELPERS
+# ============================================================
+
+def cfg_text(config, key, default=""):
+    value = config.get(key, default)
+
+    if value is None:
+        return default
+
+    return str(value).strip()
+
+
+def cfg_bool(config, key, default=False):
+    value = config.get(key, default)
+
+    if isinstance(value, bool):
+        return value
+
+    text = str(value).strip().lower()
+
+    if text in ("true", "1", "yes", "on"):
+        return True
+
+    if text in ("false", "0", "no", "off"):
+        return False
+
+    return default
+
+
+# ============================================================
+# JSON HELPERS
+# ============================================================
+
 def load_json(path):
     if not path.exists():
-        raise SystemExit(f"ERROR: File not found: {path}")
+        raise SystemExit(
+            f"ERROR: File not found: {path}"
+        )
 
     try:
-        with path.open("r", encoding="utf-8") as f:
+        with path.open(
+            "r",
+            encoding="utf-8"
+        ) as f:
             return json.load(f)
+
     except Exception as e:
         raise SystemExit(
-            f"ERROR: Could not read JSON file {path}: {e}"
+            f"ERROR: Could not read JSON file "
+            f"{path}: {e}"
         )
 
 
 def save_json(data):
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     temp = OUTPUT.with_suffix(".tmp")
 
-    with temp.open("w", encoding="utf-8") as f:
+    with temp.open(
+        "w",
+        encoding="utf-8"
+    ) as f:
+
         json.dump(
             data,
             f,
             ensure_ascii=False,
             indent=2
         )
+
         f.write("\n")
 
     temp.replace(OUTPUT)
 
 
+# ============================================================
+# MODEL
+# ============================================================
+
 def load_selected_model():
-    config = load_json(MODEL_FILE)
+
+    config = load_json(
+        MODEL_FILE
+    )
 
     if config.get("status") != "selected":
         raise SystemExit(
-            "ERROR: Gemini model selection is not in selected state"
+            "ERROR: Gemini model selection "
+            "is not in selected state"
         )
 
     model = config.get("model")
@@ -71,12 +126,18 @@ def load_selected_model():
     return model
 
 
+# ============================================================
+# INPUT CONFIG
+# ============================================================
+
 def build_config():
 
     config = load_input_config()
 
     return {
-        "format": normalize_format(config),
+        "format": normalize_format(
+            config
+        ),
 
         "audience": cfg_text(
             config,
@@ -186,32 +247,57 @@ def build_config():
             True
         ),
 
-        "max_retries": get_max_retries(config),
+        "max_retries": get_max_retries(
+            config
+        ),
     }
 
+
+# ============================================================
+# STORY CONTEXT
+# ============================================================
 
 def build_story_context(story):
 
     context = []
 
-    for part in story.get("parts", []):
+    for part in story.get(
+        "parts",
+        []
+    ):
 
-        part_number = part.get("part")
+        part_number = part.get(
+            "part"
+        )
 
-        for scene in part.get("scenes", []):
+        for scene in part.get(
+            "scenes",
+            []
+        ):
 
             context.append({
+
                 "part": part_number,
-                "scene": scene.get("scene"),
-                "role": scene.get("role", ""),
+
+                "scene": scene.get(
+                    "scene"
+                ),
+
+                "role": scene.get(
+                    "role",
+                    ""
+                ),
+
                 "narration": scene.get(
                     "narration",
                     ""
                 ),
+
                 "dialogue": scene.get(
                     "dialogue",
                     ""
                 ),
+
                 "visual_prompt": scene.get(
                     "visual_prompt",
                     ""
@@ -221,15 +307,25 @@ def build_story_context(story):
     return context
 
 
+# ============================================================
+# STRUCTURED OUTPUT SCHEMA
+# ============================================================
+
 def character_schema():
 
     return {
         "type": "object",
+
         "properties": {
+
             "characters": {
+
                 "type": "array",
+
                 "items": {
+
                     "type": "object",
+
                     "properties": {
 
                         "character_id": {
@@ -332,29 +428,39 @@ def character_schema():
             },
 
             "world": {
+
                 "type": "object",
+
                 "properties": {
+
                     "setting": {
                         "type": "string"
                     },
+
                     "time_period": {
                         "type": "string"
                     },
+
                     "geography": {
                         "type": "string"
                     },
+
                     "architecture": {
                         "type": "string"
                     },
+
                     "environment": {
                         "type": "string"
                     },
+
                     "weather_style": {
                         "type": "string"
                     },
+
                     "color_and_lighting": {
                         "type": "string"
                     },
+
                     "continuity_rules": {
                         "type": "array",
                         "items": {
@@ -383,6 +489,10 @@ def character_schema():
     }
 
 
+# ============================================================
+# GEMINI CHARACTER BIBLE GENERATION
+# ============================================================
+
 def generate_character_bible(
     api_key,
     model,
@@ -392,7 +502,9 @@ def generate_character_bible(
     pipeline_config
 ):
 
-    story_context = build_story_context(story)
+    story_context = build_story_context(
+        story
+    )
 
     prompt = f"""
 You are the CHARACTER AND WORLD CONSISTENCY AI
@@ -664,6 +776,7 @@ IMPORTANT
                 ]
             }
         ],
+
         "generationConfig": {
             "responseMimeType": "application/json",
             "responseSchema": character_schema()
@@ -676,9 +789,15 @@ IMPORTANT
     )
 
     last_error = None
-    max_retries = pipeline_config["max_retries"]
 
-    for attempt in range(1, max_retries + 1):
+    max_retries = pipeline_config[
+        "max_retries"
+    ]
+
+    for attempt in range(
+        1,
+        max_retries + 1
+    ):
 
         try:
 
@@ -689,11 +808,15 @@ IMPORTANT
 
             request = urllib.request.Request(
                 api_url,
-                data=json.dumps(payload).encode("utf-8"),
+                data=json.dumps(
+                    payload
+                ).encode("utf-8"),
+
                 headers={
                     "Content-Type": "application/json",
                     "x-goog-api-key": api_key
                 },
+
                 method="POST"
             )
 
@@ -703,7 +826,9 @@ IMPORTANT
             ) as response:
 
                 result = json.loads(
-                    response.read().decode("utf-8")
+                    response.read().decode(
+                        "utf-8"
+                    )
                 )
 
             candidates = result.get(
@@ -712,6 +837,7 @@ IMPORTANT
             )
 
             if not candidates:
+
                 raise ValueError(
                     "Gemini returned no candidates"
                 )
@@ -723,6 +849,7 @@ IMPORTANT
             )
 
             if not parts:
+
                 raise ValueError(
                     "Gemini returned no response parts"
                 )
@@ -733,11 +860,14 @@ IMPORTANT
             ).strip()
 
             if not text:
+
                 raise ValueError(
                     "Gemini returned empty response"
                 )
 
-            generated = json.loads(text)
+            generated = json.loads(
+                text
+            )
 
             characters = generated.get(
                 "characters"
@@ -751,6 +881,7 @@ IMPORTANT
                 characters,
                 list
             ):
+
                 raise ValueError(
                     "Invalid characters array"
                 )
@@ -759,40 +890,43 @@ IMPORTANT
                 world,
                 dict
             ):
+
                 raise ValueError(
                     "Invalid world object"
                 )
 
             seen_ids = set()
 
+            required_fields = [
+                "character_id",
+                "name",
+                "role",
+                "importance",
+                "age",
+                "gender",
+                "personality",
+                "appearance",
+                "face_features",
+                "skin_tone",
+                "hair",
+                "eyes",
+                "body_features",
+                "clothing",
+                "distinctive_features",
+                "visual_identity",
+                "continuity_notes",
+                "consistency_rules"
+            ]
+
             for character in characters:
 
-                required = [
-                    "character_id",
-                    "name",
-                    "role",
-                    "importance",
-                    "age",
-                    "gender",
-                    "personality",
-                    "appearance",
-                    "face_features",
-                    "skin_tone",
-                    "hair",
-                    "eyes",
-                    "body_features",
-                    "clothing",
-                    "distinctive_features",
-                    "visual_identity",
-                    "continuity_notes",
-                    "consistency_rules"
-                ]
-
-                for field in required:
+                for field in required_fields:
 
                     if field not in character:
+
                         raise ValueError(
-                            f"Character missing field: {field}"
+                            "Character missing field: "
+                            f"{field}"
                         )
 
                 char_id = str(
@@ -800,23 +934,31 @@ IMPORTANT
                 ).strip()
 
                 if not char_id:
+
                     raise ValueError(
                         "Empty character_id"
                     )
 
                 if char_id in seen_ids:
+
                     raise ValueError(
-                        f"Duplicate character_id: {char_id}"
+                        "Duplicate character_id: "
+                        f"{char_id}"
                     )
 
-                seen_ids.add(char_id)
+                seen_ids.add(
+                    char_id
+                )
 
                 if not isinstance(
-                    character["consistency_rules"],
+                    character[
+                        "consistency_rules"
+                    ],
                     list
                 ):
+
                     raise ValueError(
-                        f"Invalid consistency_rules "
+                        "Invalid consistency_rules "
                         f"for {char_id}"
                     )
 
@@ -834,14 +976,17 @@ IMPORTANT
             for field in world_required:
 
                 if field not in world:
+
                     raise ValueError(
-                        f"World missing field: {field}"
+                        "World missing field: "
+                        f"{field}"
                     )
 
             if not isinstance(
                 world["continuity_rules"],
                 list
             ):
+
                 raise ValueError(
                     "Invalid world continuity_rules"
                 )
@@ -851,11 +996,14 @@ IMPORTANT
         except urllib.error.HTTPError as e:
 
             try:
+
                 body = e.read().decode(
                     "utf-8",
                     errors="replace"
                 )
+
             except Exception:
+
                 body = ""
 
             last_error = (
@@ -874,20 +1022,27 @@ IMPORTANT
                 503,
                 504
             ):
+
                 break
 
             if attempt < max_retries:
 
                 delay = min(
                     30,
-                    3 * (2 ** (attempt - 1))
+                    3 * (
+                        2 ** (
+                            attempt - 1
+                        )
+                    )
                 )
 
                 print(
                     f"Retrying in {delay} seconds..."
                 )
 
-                time.sleep(delay)
+                time.sleep(
+                    delay
+                )
 
         except Exception as e:
 
@@ -902,20 +1057,31 @@ IMPORTANT
 
                 delay = min(
                     30,
-                    3 * (2 ** (attempt - 1))
+                    3 * (
+                        2 ** (
+                            attempt - 1
+                        )
+                    )
                 )
 
                 print(
                     f"Retrying in {delay} seconds..."
                 )
 
-                time.sleep(delay)
+                time.sleep(
+                    delay
+                )
 
     raise SystemExit(
         "ERROR: Character Bible generation failed "
-        f"after {max_retries} attempts: {last_error}"
+        f"after {max_retries} attempts: "
+        f"{last_error}"
     )
 
+
+# ============================================================
+# MAIN
+# ============================================================
 
 def main():
 
@@ -924,6 +1090,7 @@ def main():
     )
 
     if not api_key:
+
         raise SystemExit(
             "ERROR: GEMINI_API_KEY is not set"
         )
@@ -934,111 +1101,176 @@ def main():
 
     input_config = load_input_config()
 
-    source_topic = resolve_topic(
+    source_topic = get_topic(
         input_config
     )
 
-    source_story_text = resolve_story_text(
+    source_story_text = get_story_text(
         input_config
     )
 
-    story = load_json(INPUT)
+    story = load_json(
+        INPUT
+    )
 
     if story.get("status") != "completed":
+
         raise SystemExit(
             "ERROR: AI story is not completed"
         )
 
     if not source_topic:
+
         source_topic = str(
-            story.get("topic", "")
+            story.get(
+                "topic",
+                ""
+            )
         ).strip()
 
     if not source_story_text:
+
         source_story_text = str(
-            story.get("story_text", "")
+            story.get(
+                "story_text",
+                ""
+            )
         ).strip()
 
     if not source_topic and not source_story_text:
+
         raise SystemExit(
             "ERROR: No topic or story text available"
         )
 
-    print("==============================================")
-    print("       CHARACTER / WORLD BIBLE")
-    print("==============================================")
-    print(f"Model              : {model}")
-    print(f"Format             : {pipeline_config['format']}")
-    print(f"Audience           : {pipeline_config['audience']}")
+    print(
+        "=============================================="
+    )
+
+    print(
+        "       CHARACTER / WORLD BIBLE"
+    )
+
+    print(
+        "=============================================="
+    )
+
+    print(
+        f"Model              : {model}"
+    )
+
+    print(
+        f"Format             : "
+        f"{pipeline_config['format']}"
+    )
+
+    print(
+        f"Audience           : "
+        f"{pipeline_config['audience']}"
+    )
+
     print(
         "Character Bible     : "
         f"{pipeline_config['character_bible']}"
     )
+
     print(
         "Character consistency: "
         f"{pipeline_config['character_consistency']}"
     )
+
     print(
         "World consistency   : "
         f"{pipeline_config['world_consistency']}"
     )
+
     print(
         "Scene continuity    : "
         f"{pipeline_config['scene_continuity']}"
     )
+
     print(
         "Visual style        : "
         f"{pipeline_config['visual_style']}"
     )
+
     print(
         "Realism             : "
         f"{pipeline_config['realism']}"
     )
-    print(f"Topic               : {source_topic}")
+
+    print(
+        f"Topic               : {source_topic}"
+    )
+
     print(
         "Story text          : "
         f"{'provided' if source_story_text else 'not provided'}"
     )
-    print("==============================================")
 
-    # --------------------------------------------------
-    # CHARACTER_BIBLE = false
-    # --------------------------------------------------
+    print(
+        "=============================================="
+    )
 
-    if not pipeline_config["character_bible"]:
+
+    # ========================================================
+    # CHARACTER_BIBLE DISABLED
+    # ========================================================
+
+    if not pipeline_config[
+        "character_bible"
+    ]:
 
         disabled_output = {
+
             "status": "disabled",
+
             "topic": source_topic,
+
             "model": model,
+
             "characters": [],
+
             "world": {
+
                 "setting": "",
+
                 "time_period": "",
+
                 "geography": "",
+
                 "architecture": "",
+
                 "environment": "",
+
                 "weather_style": "",
+
                 "color_and_lighting": "",
+
                 "continuity_rules": []
             },
+
             "input_config": pipeline_config
         }
 
-        save_json(disabled_output)
+        save_json(
+            disabled_output
+        )
 
         print(
             "CHARACTER_BIBLE=false"
         )
+
         print(
             "Character Bible generation skipped."
         )
 
         return
 
-    # --------------------------------------------------
-    # Resume existing compatible bible
-    # --------------------------------------------------
+
+    # ========================================================
+    # RESUME
+    # ========================================================
 
     if OUTPUT.exists():
 
@@ -1049,16 +1281,25 @@ def main():
             )
 
             if (
-                existing.get("status")
-                == "completed"
-                and existing.get("topic")
-                == source_topic
+                existing.get(
+                    "status"
+                ) == "completed"
+
+                and existing.get(
+                    "topic"
+                ) == source_topic
+
                 and isinstance(
-                    existing.get("characters"),
+                    existing.get(
+                        "characters"
+                    ),
                     list
                 )
+
                 and isinstance(
-                    existing.get("world"),
+                    existing.get(
+                        "world"
+                    ),
                     dict
                 )
             ):
@@ -1069,9 +1310,14 @@ def main():
                 )
 
                 existing["model"] = model
-                existing["input_config"] = pipeline_config
 
-                save_json(existing)
+                existing["input_config"] = (
+                    pipeline_config
+                )
+
+                save_json(
+                    existing
+                )
 
                 print(
                     "Characters: "
@@ -1087,9 +1333,10 @@ def main():
                 "Starting fresh."
             )
 
-    # --------------------------------------------------
-    # Generate
-    # --------------------------------------------------
+
+    # ========================================================
+    # GENERATE
+    # ========================================================
 
     generated = generate_character_bible(
         api_key,
@@ -1111,6 +1358,7 @@ def main():
     )
 
     result = {
+
         "status": "completed",
 
         "topic": source_topic,
@@ -1136,21 +1384,46 @@ def main():
         "input_config": pipeline_config
     }
 
-    save_json(result)
+    save_json(
+        result
+    )
 
-    print("==============================================")
-    print("   CHARACTER / WORLD BIBLE COMPLETED")
-    print("==============================================")
-    print(f"Topic      : {source_topic}")
-    print(f"Model      : {model}")
+    print(
+        "=============================================="
+    )
+
+    print(
+        "   CHARACTER / WORLD BIBLE COMPLETED"
+    )
+
+    print(
+        "=============================================="
+    )
+
+    print(
+        f"Topic      : {source_topic}"
+    )
+
+    print(
+        f"Model      : {model}"
+    )
+
     print(
         f"Characters : {len(characters)}"
     )
+
     print(
-        f"World      : {'created' if world else 'missing'}"
+        "World      : "
+        f"{'created' if world else 'missing'}"
     )
-    print(f"Output     : {OUTPUT}")
-    print("==============================================")
+
+    print(
+        f"Output     : {OUTPUT}"
+    )
+
+    print(
+        "=============================================="
+    )
 
 
 if __name__ == "__main__":
