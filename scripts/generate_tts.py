@@ -1,331 +1,611 @@
 #!/usr/bin/env python3
 
-import asyncio
 import json
-import re
+import os
 import subprocess
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from input_config import (
     load_input_config,
-    cfg_bool,
-    cfg_text,
     get_parts,
     get_scenes,
-    get_max_retries,
-    get_failure_policy,
     normalize_format,
 )
 
 
-NARRATION = Path("output/narration/narration.json")
-OUT = Path("output/narration/audio")
-MANIFEST = Path("output/narration/audio_jobs.json")
+# ============================================================
+# PATHS
+# ============================================================
 
+NARRATION_FILE = Path(
+    "output/narration/narration.json"
+)
 
-VOICE_MAP = {
-    "male": [
-        "hi-IN-MadhurNeural",
-        "hi-IN-SwaraNeural",
-    ],
-    "female": [
-        "hi-IN-SwaraNeural",
-        "hi-IN-MadhurNeural",
-    ],
-}
+OUTPUT_DIR = Path(
+    "output/narration/audio"
+)
+
+MANIFEST_FILE = Path(
+    "output/narration/audio_jobs.json"
+)
 
 
 # ============================================================
-# HELPERS
+# INPUT CONFIG COMPATIBILITY HELPERS
 # ============================================================
 
-def save_manifest(data):
-    MANIFEST.parent.mkdir(
+def cfg_text(config, key, default=""):
+    value = config.get(key, default)
+
+    if value is None:
+        return str(default)
+
+    return str(value).strip()
+
+
+def cfg_bool(config, key, default=False):
+    value = config.get(key, default)
+
+    if isinstance(value, bool):
+        return value
+
+    text = str(value).strip().lower()
+
+    if text in {"true", "yes", "on", "1"}:
+        return True
+
+    if text in {"false", "no", "off", "0"}:
+        return False
+
+    return bool(default)
+
+
+def get_failure_policy_value(
+    config,
+    default="retry_then_checkpoint",
+):
+    value = config.get(
+        "FAILURE_POLICY",
+        default,
+    )
+
+    if value is None:
+        return default
+
+    text = str(value).strip()
+
+    if not text:
+        return default
+
+    return text
+
+
+# ============================================================
+# JSON HELPERS
+# ============================================================
+
+def load_json(path):
+    if not path.is_file():
+        raise SystemExit(
+            f"ERROR: Required file not found: {path}"
+        )
+
+    try:
+        with path.open(
+            "r",
+            encoding="utf-8",
+        ) as file:
+            return json.load(file)
+
+    except Exception as exc:
+        raise SystemExit(
+            f"ERROR: Could not read {path}: {exc}"
+        )
+
+
+def load_optional_json(path):
+    if not path.is_file():
+        return None
+
+    try:
+        with path.open(
+            "r",
+            encoding="utf-8",
+        ) as file:
+            return json.load(file)
+
+    except Exception as exc:
+        print(
+            f"WARNING: Could not read {path}: {exc}"
+        )
+        return None
+
+
+def save_json_atomic(path, data):
+    path.parent.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    temp = Path(
-        f"{MANIFEST}.tmp"
+    tmp = Path(
+        f"{path}.tmp"
     )
 
-    temp.write_text(
-        json.dumps(
+    with tmp.open(
+        "w",
+        encoding="utf-8",
+    ) as file:
+        json.dump(
             data,
+            file,
             ensure_ascii=False,
             indent=2,
-        ),
-        encoding="utf-8",
-    )
+        )
+        file.write("\n")
 
-    temp.replace(MANIFEST)
-
-
-def parse_rate(value):
-    match = re.search(
-        r"([+-]?\d+(?:\.\d+)?)\s*%",
-        str(value or ""),
-    )
-
-    if not match:
-        return "+0%"
-
-    number = float(
-        match.group(1)
-    )
-
-    if number == 0:
-        return "+0%"
-
-    if number > 0:
-        return f"+{number:g}%"
-
-    return f"{number:g}%"
-
-
-def get_duration(path):
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=noprint_wrappers=1:nokey=1",
-            str(path),
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-
-    return round(
-        float(result.stdout.strip()),
-        3,
+    os.replace(
+        tmp,
+        path,
     )
 
 
-def valid_audio(path):
-    if not path.is_file():
-        return False
+# ============================================================
+# COMMAND HELPERS
+# ============================================================
 
-    if path.stat().st_size <= 1000:
-        return False
-
+def command_exists(command):
     try:
-        duration = get_duration(path)
+        result = subprocess.run(
+            [
+                "bash",
+                "-lc",
+                f"command -v {command}",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
 
-        return duration > 0.05
+        return result.returncode == 0
 
     except Exception:
         return False
 
 
-def scene_key(item):
+def run_command(
+    command,
+    retries,
+    retry_delay,
+):
+    last_error = None
+
+    for attempt in range(
+        1,
+        retries + 1,
+    ):
+        try:
+            result = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+
+            if result.returncode == 0:
+                return result
+
+            last_error = (
+                result.stderr.strip()
+                or result.stdout.strip()
+                or f"exit code {result.returncode}"
+            )
+
+        except Exception as exc:
+            last_error = str(exc)
+
+        if attempt < retries:
+            print(
+                f"Retry {attempt}/{retries - 1} "
+                f"after failure..."
+            )
+
+            time.sleep(
+                retry_delay * attempt
+            )
+
+    raise RuntimeError(
+        f"Command failed after "
+        f"{retries} attempts: "
+        f"{last_error}"
+    )
+
+
+# ============================================================
+# TTS ENGINE
+# ============================================================
+
+def detect_tts_engine():
+    configured = os.environ.get(
+        "TTS_ENGINE",
+        "",
+    ).strip().lower()
+
+    if configured:
+        return configured
+
+    if command_exists("edge-tts"):
+        return "edge-tts"
+
+    if command_exists("espeak-ng"):
+        return "espeak-ng"
+
+    if command_exists("espeak"):
+        return "espeak"
+
+    return ""
+
+
+def generate_with_edge_tts(
+    text,
+    output_file,
+    voice,
+    speed,
+):
+    if not command_exists("edge-tts"):
+        raise RuntimeError(
+            "edge-tts command not found."
+        )
+
+    command = [
+        "edge-tts",
+        "--voice",
+        voice,
+        "--rate",
+        speed,
+        "--text",
+        text,
+        "--write-media",
+        str(output_file),
+    ]
+
+    run_command(
+        command,
+        retries=3,
+        retry_delay=2,
+    )
+
+
+def generate_with_espeak(
+    text,
+    output_file,
+    voice,
+    speed,
+):
+    command_name = "espeak-ng"
+
+    if not command_exists(
+        command_name
+    ):
+        command_name = "espeak"
+
+    if not command_exists(
+        command_name
+    ):
+        raise RuntimeError(
+            "Neither espeak-ng nor espeak "
+            "is installed."
+        )
+
+    # Convert +0%, -10%, +20% etc. to an
+    # approximate espeak speed.
+    base_speed = 165
+
+    try:
+        numeric = int(
+            str(speed)
+            .replace("%", "")
+            .replace("+", "")
+            .strip()
+        )
+
+        if str(speed).strip().startswith("-"):
+            numeric = -abs(
+                int(
+                    str(speed)
+                    .replace("%", "")
+                    .strip()
+                )
+            )
+
+        elif str(speed).strip().startswith("+"):
+            numeric = abs(numeric)
+
+        speech_speed = int(
+            base_speed
+            * (
+                1.0
+                + numeric / 100.0
+            )
+        )
+
+        speech_speed = max(
+            80,
+            min(
+                300,
+                speech_speed,
+            ),
+        )
+
+    except Exception:
+        speech_speed = base_speed
+
+    command = [
+        command_name,
+        "-s",
+        str(speech_speed),
+        "-w",
+        str(output_file),
+        text,
+    ]
+
+    run_command(
+        command,
+        retries=3,
+        retry_delay=2,
+    )
+
+
+def generate_audio(
+    text,
+    output_file,
+    voice,
+    speed,
+    engine,
+):
+    output_file.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    if engine == "edge-tts":
+        generate_with_edge_tts(
+            text,
+            output_file,
+            voice,
+            speed,
+        )
+
+    elif engine in {
+        "espeak",
+        "espeak-ng",
+    }:
+        generate_with_espeak(
+            text,
+            output_file,
+            voice,
+            speed,
+        )
+
+    else:
+        raise RuntimeError(
+            "No supported TTS engine available. "
+            "Install edge-tts or espeak-ng."
+        )
+
+    if not output_file.is_file():
+        raise RuntimeError(
+            f"TTS did not create output file: "
+            f"{output_file}"
+        )
+
+    if output_file.stat().st_size <= 0:
+        raise RuntimeError(
+            f"TTS output file is empty: "
+            f"{output_file}"
+        )
+
+
+# ============================================================
+# VOICE RESOLUTION
+# ============================================================
+
+def resolve_voice(
+    configured_voice,
+):
+    voice = str(
+        configured_voice
+    ).strip().lower()
+
+    if voice in {
+        "female",
+        "woman",
+        "f",
+    }:
+        return "hi-IN-SwaraNeural"
+
+    if voice in {
+        "male",
+        "man",
+        "m",
+    }:
+        return "hi-IN-MadhurNeural"
+
+    # Allow direct provider voice names.
+    return str(
+        configured_voice
+    ).strip()
+
+
+# ============================================================
+# SCENE HELPERS
+# ============================================================
+
+def scene_key(scene):
     try:
         return (
-            int(item.get("part")),
-            int(item.get("scene")),
+            int(scene.get("part")),
+            int(scene.get("scene")),
         )
     except Exception:
         return None
 
 
-def expected_scene_keys(parts, scenes_per_part):
-    return {
-        (part, scene)
-        for part in range(
-            1,
-            parts + 1,
-        )
-        for scene in range(
-            1,
-            scenes_per_part + 1,
-        )
-    }
-
-
-# ============================================================
-# EDGE TTS
-# ============================================================
-
-async def synthesize(
-    text,
-    voice,
-    rate,
-    output,
-):
-    import edge_tts
-
-    communicate = edge_tts.Communicate(
-        text=text,
-        voice=voice,
-        rate=rate,
-    )
-
-    await communicate.save(
-        str(output)
-    )
-
-
-async def synthesize_with_retry(
-    text,
-    voices,
-    rate,
-    output,
-    max_retries,
-):
-    attempts = []
-
-    total_attempts = max(
-        1,
-        max_retries,
-    )
-
-    for attempt_number in range(
-        1,
-        total_attempts + 1,
+def normalize_scenes(data):
+    if not isinstance(
+        data,
+        dict,
     ):
+        return []
 
-        for voice in voices:
-
-            attempt = {
-                "attempt": attempt_number,
-                "voice": voice,
-                "rate": rate,
-            }
-
-            attempts.append(
-                attempt
-            )
-
-            output.unlink(
-                missing_ok=True
-            )
-
-            print(
-                f"  TRY {attempt_number}/{total_attempts} "
-                f"{voice} | rate={rate}"
-            )
-
-            try:
-                await synthesize(
-                    text,
-                    voice,
-                    rate,
-                    output,
-                )
-
-                if valid_audio(
-                    output
-                ):
-                    attempt["status"] = (
-                        "completed"
-                    )
-
-                    return (
-                        voice,
-                        rate,
-                        attempts,
-                    )
-
-                attempt["status"] = (
-                    "invalid_audio"
-                )
-
-            except Exception as exc:
-
-                attempt["status"] = (
-                    "failed"
-                )
-
-                attempt["error"] = str(
-                    exc
-                )
-
-                print(
-                    f"  ERROR: {exc}"
-                )
-
-            output.unlink(
-                missing_ok=True
-            )
-
-        if attempt_number < total_attempts:
-
-            delay = min(
-                2 ** attempt_number,
-                15,
-            )
-
-            print(
-                f"  Retry wait: {delay}s"
-            )
-
-            await asyncio.sleep(
-                delay
-            )
-
-    raise RuntimeError(
-        "All TTS attempts failed."
+    scenes = data.get(
+        "scenes",
+        [],
     )
+
+    if not isinstance(
+        scenes,
+        list,
+    ):
+        return []
+
+    result = []
+
+    for scene in scenes:
+        if not isinstance(
+            scene,
+            dict,
+        ):
+            continue
+
+        result.append(
+            dict(scene)
+        )
+
+    return result
+
+
+# ============================================================
+# MANIFEST
+# ============================================================
+
+def load_manifest():
+    data = load_optional_json(
+        MANIFEST_FILE
+    )
+
+    if not isinstance(
+        data,
+        dict,
+    ):
+        return {
+            "status": "in_progress",
+            "jobs": [],
+        }
+
+    if not isinstance(
+        data.get("jobs"),
+        list,
+    ):
+        data["jobs"] = []
+
+    return data
+
+
+def manifest_map(manifest):
+    result = {}
+
+    for job in manifest.get(
+        "jobs",
+        [],
+    ):
+        if not isinstance(
+            job,
+            dict,
+        ):
+            continue
+
+        key = scene_key(
+            job
+        )
+
+        if key is not None:
+            result[key] = job
+
+    return result
+
+
+# ============================================================
+# AUDIO DURATION
+# ============================================================
+
+def get_audio_duration(path):
+    if not path.is_file():
+        return 0.0
+
+    if not command_exists(
+        "ffprobe"
+    ):
+        return 0.0
+
+    command = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        str(path),
+    ]
+
+    try:
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            return 0.0
+
+        return float(
+            result.stdout.strip()
+        )
+
+    except Exception:
+        return 0.0
 
 
 # ============================================================
 # MAIN
 # ============================================================
 
-async def main():
+def main():
 
     print(
-        "=============================================="
+        "======================================"
     )
     print(
-        "             TTS GENERATION"
+        "          GENERATING TTS"
     )
     print(
-        "=============================================="
+        "======================================"
     )
-
-    if not NARRATION.is_file():
-        print(
-            "ERROR: narration.json not found."
-        )
-        return 1
 
     # --------------------------------------------------------
-    # CENTRALIZED INPUT
+    # CENTRALIZED CONFIG
     # --------------------------------------------------------
 
     config = load_input_config()
 
-    video_format = normalize_format(
-        cfg_text(
-            config,
-            "FORMAT",
-            "short",
-        )
-    )
-
-    requested_voice = cfg_text(
-        config,
-        "VOICE",
-        "male",
-    ).strip().lower()
-
-    configured_speed = parse_rate(
-        cfg_text(
-            config,
-            "SPEED",
-            "+0%",
-        )
-    )
-
-    captions = cfg_text(
-        config,
-        "CAPTIONS",
-        "hindi",
+    fmt = normalize_format(
+        config
     )
 
     parts = get_parts(
@@ -336,12 +616,28 @@ async def main():
         config
     )
 
-    max_retries = get_max_retries(
-        config
+    voice_config = cfg_text(
+        config,
+        "VOICE",
+        "male",
     )
 
-    failure_policy = get_failure_policy(
-        config
+    speed = cfg_text(
+        config,
+        "SPEED",
+        "+0%",
+    )
+
+    captions = cfg_text(
+        config,
+        "CAPTIONS",
+        "hindi",
+    )
+
+    failure_policy = (
+        get_failure_policy_value(
+            config
+        )
     )
 
     resume_enabled = cfg_bool(
@@ -356,763 +652,558 @@ async def main():
         True,
     )
 
-    checkpoint_each_scene = cfg_bool(
+    save_checkpoint = cfg_bool(
         config,
         "SAVE_CHECKPOINT_AFTER_EACH_SCENE",
         True,
     )
 
-    music_enabled = cfg_bool(
-        config,
-        "MUSIC",
-        True,
-    )
-
-    sfx_enabled = cfg_bool(
-        config,
-        "SFX",
-        True,
-    )
-
-    ambient_enabled = cfg_bool(
-        config,
-        "AMBIENT_SOUND",
-        True,
-    )
-
-    # --------------------------------------------------------
-    # VOICE
-    # --------------------------------------------------------
-
-    voices = VOICE_MAP.get(
-        requested_voice
-    )
-
-    if not voices:
-        print(
-            f"ERROR: Unsupported VOICE: "
-            f"{requested_voice}"
-        )
-
-        print(
-            "Supported voices: male, female"
-        )
-
-        return 1
-
-    # --------------------------------------------------------
-    # LOAD NARRATION
-    # --------------------------------------------------------
-
     try:
-        data = json.loads(
-            NARRATION.read_text(
-                encoding="utf-8"
+        max_retries = int(
+            config.get(
+                "MAX_RETRIES",
+                3,
             )
         )
+    except Exception:
+        max_retries = 3
 
-    except Exception as exc:
-        print(
-            f"ERROR: Could not read narration.json: "
-            f"{exc}"
-        )
-        return 1
-
-    scenes = data.get(
-        "scenes",
-        [],
+    max_retries = max(
+        1,
+        max_retries,
     )
-
-    if not isinstance(
-        scenes,
-        list,
-    ) or not scenes:
-
-        print(
-            "ERROR: No narration scenes found."
-        )
-        return 1
-
-    expected_total = (
-        parts * scenes_per_part
-    )
-
-    if len(scenes) != expected_total:
-
-        print(
-            "ERROR: Narration scene count "
-            "does not match Input."
-        )
-
-        print(
-            f"Expected: {expected_total}"
-        )
-
-        print(
-            f"Found: {len(scenes)}"
-        )
-
-        return 1
 
     # --------------------------------------------------------
-    # EXACT SCENE VALIDATION
+    # TTS ENGINE
     # --------------------------------------------------------
 
-    expected_keys = expected_scene_keys(
-        parts,
-        scenes_per_part,
+    engine = detect_tts_engine()
+
+    if not engine:
+        raise SystemExit(
+            "ERROR: No TTS engine found.\n"
+            "Install edge-tts or espeak-ng."
+        )
+
+    provider_voice = resolve_voice(
+        voice_config
     )
-
-    actual_keys = set()
-
-    for item in scenes:
-
-        key = scene_key(
-            item
-        )
-
-        if key is None:
-            print(
-                "ERROR: Invalid narration scene "
-                "number."
-            )
-            return 1
-
-        actual_keys.add(
-            key
-        )
-
-    missing = sorted(
-        expected_keys - actual_keys
-    )
-
-    extra = sorted(
-        actual_keys - expected_keys
-    )
-
-    if missing:
-
-        print(
-            f"ERROR: Missing narration scenes: "
-            f"{missing}"
-        )
-
-        return 1
-
-    if extra:
-
-        print(
-            f"ERROR: Unexpected narration scenes: "
-            f"{extra}"
-        )
-
-        return 1
-
-    # --------------------------------------------------------
-    # CONFIG SUMMARY
-    # --------------------------------------------------------
 
     print()
     print(
-        "=============== TTS CONFIG ==============="
+        "========== TTS CONFIG =========="
     )
     print(
-        f"FORMAT              : {video_format}"
+        f"FORMAT             : {fmt}"
     )
     print(
-        f"VOICE               : {requested_voice}"
+        f"PARTS              : {parts}"
     )
     print(
-        f"VOICE FALLBACK      : {', '.join(voices)}"
+        f"SCENES/PART        : {scenes_per_part}"
     )
     print(
-        f"SPEED               : {configured_speed}"
+        f"VOICE              : {voice_config}"
     )
     print(
-        f"CAPTIONS            : {captions}"
+        f"PROVIDER VOICE     : {provider_voice}"
     )
     print(
-        f"PARTS               : {parts}"
+        f"SPEED              : {speed}"
     )
     print(
-        f"SCENES/PART         : {scenes_per_part}"
+        f"CAPTIONS           : {captions}"
     )
     print(
-        f"TOTAL SCENES        : {expected_total}"
+        f"TTS ENGINE         : {engine}"
     )
     print(
-        f"MAX_RETRIES         : {max_retries}"
+        f"RESUME_ENABLED     : {resume_enabled}"
     )
     print(
-        f"RESUME_ENABLED      : {resume_enabled}"
+        f"SKIP_COMPLETED     : {skip_completed}"
     )
     print(
-        f"SKIP_COMPLETED      : {skip_completed}"
+        f"MAX_RETRIES        : {max_retries}"
     )
     print(
-        f"CHECKPOINT          : {checkpoint_each_scene}"
+        f"FAILURE_POLICY     : {failure_policy}"
     )
     print(
-        f"FAILURE_POLICY      : {failure_policy}"
-    )
-    print(
-        f"MUSIC               : {music_enabled}"
-    )
-    print(
-        f"SFX                 : {sfx_enabled}"
-    )
-    print(
-        f"AMBIENT_SOUND       : {ambient_enabled}"
-    )
-    print(
-        "=========================================="
+        "================================"
     )
 
     # --------------------------------------------------------
-    # EXISTING MANIFEST
+    # NARRATION
     # --------------------------------------------------------
 
-    existing_jobs = {}
+    narration = load_json(
+        NARRATION_FILE
+    )
 
-    if (
-        resume_enabled
-        and MANIFEST.is_file()
-    ):
+    if narration.get(
+        "status"
+    ) != "completed":
+        raise SystemExit(
+            "ERROR: Narration is not completed."
+        )
 
-        try:
+    scenes = normalize_scenes(
+        narration
+    )
 
-            old_manifest = json.loads(
-                MANIFEST.read_text(
-                    encoding="utf-8"
-                )
-            )
+    if not scenes:
+        raise SystemExit(
+            "ERROR: No narration scenes found."
+        )
 
-            old_jobs = old_manifest.get(
-                "jobs",
-                [],
-            )
+    expected_total = (
+        parts
+        * scenes_per_part
+    )
 
-            if isinstance(
-                old_jobs,
-                list,
-            ):
-
-                for job in old_jobs:
-
-                    if not isinstance(
-                        job,
-                        dict,
-                    ):
-                        continue
-
-                    key = scene_key(
-                        job
-                    )
-
-                    if key is not None:
-                        existing_jobs[key] = (
-                            job
-                        )
-
-        except Exception as exc:
-
-            print(
-                f"WARNING: Existing TTS "
-                f"manifest could not be read: "
-                f"{exc}"
-            )
+    if len(scenes) != expected_total:
+        raise SystemExit(
+            "ERROR: Narration scene count mismatch.\n"
+            f"Expected: {expected_total}\n"
+            f"Found: {len(scenes)}"
+        )
 
     # --------------------------------------------------------
     # OUTPUT
     # --------------------------------------------------------
 
-    OUT.mkdir(
+    OUTPUT_DIR.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    jobs = []
-    failures = []
+    manifest = load_manifest()
+
+    manifest["status"] = (
+        "in_progress"
+    )
+
+    manifest["format"] = fmt
+    manifest["voice"] = voice_config
+    manifest["provider_voice"] = (
+        provider_voice
+    )
+    manifest["speed"] = speed
+    manifest["tts_engine"] = engine
+    manifest["total_parts"] = parts
+    manifest["scenes_per_part"] = (
+        scenes_per_part
+    )
+    manifest["total_scenes"] = (
+        len(scenes)
+    )
+    manifest["failure_policy"] = (
+        failure_policy
+    )
+    manifest["jobs"] = manifest.get(
+        "jobs",
+        [],
+    )
+
+    jobs = manifest_map(
+        manifest
+    )
+
+    save_json_atomic(
+        MANIFEST_FILE,
+        manifest
+    )
 
     # --------------------------------------------------------
-    # PROCESS EVERY SCENE
+    # GENERATE EACH SCENE
     # --------------------------------------------------------
 
-    for index, item in enumerate(
+    for index, scene in enumerate(
         scenes,
         start=1,
     ):
 
-        part = int(
-            item["part"]
+        part = scene.get(
+            "part"
         )
 
-        scene = int(
-            item["scene"]
+        scene_number = scene.get(
+            "scene"
         )
 
-        key = (
-            part,
-            scene,
+        key = scene_key(
+            scene
         )
+
+        if key is None:
+            raise SystemExit(
+                f"ERROR: Invalid scene "
+                f"number at index {index}."
+            )
 
         text = str(
-            item.get(
+            scene.get(
                 "text",
-                "",
+                ""
             )
         ).strip()
 
-        # Scene-level speed from narration takes
-        # priority, otherwise Input SPEED.
-        scene_speed = item.get(
-            "speed",
-            configured_speed,
+        if not text:
+            raise SystemExit(
+                f"ERROR: Empty narration "
+                f"for Part {part} "
+                f"Scene {scene_number}."
+            )
+
+        part_dir = (
+            OUTPUT_DIR
+            / f"part_{int(part):02d}"
         )
 
-        scene_speed = parse_rate(
-            scene_speed
+        output_file = (
+            part_dir
+            / f"scene_{int(scene_number):02d}.mp3"
         )
 
-        out_dir = (
-            OUT
-            / f"part_{part:02d}"
-        )
-
-        out_dir.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        output = (
-            out_dir
-            / f"scene_{scene:02d}.mp3"
-        )
-
-        job = {
-            "part": part,
-            "scene": scene,
-            "requested_voice": (
-                requested_voice
-            ),
-            "configured_rate": (
-                scene_speed
-            ),
-            "captions": captions,
-            "format": video_format,
-            "output": str(output),
-            "status": "pending",
-        }
-
-        print()
-        print(
-            f"[{index}/{expected_total}] "
-            f"Part {part} Scene {scene}"
+        existing_job = jobs.get(
+            key
         )
 
         # ----------------------------------------------------
         # RESUME
         # ----------------------------------------------------
 
-        can_skip = (
+        if (
             resume_enabled
             and skip_completed
-            and valid_audio(output)
+            and existing_job
+            and existing_job.get(
+                "status"
+            ) == "completed"
+            and output_file.is_file()
+            and output_file.stat().st_size > 0
+        ):
+            print(
+                f"[{index}/{len(scenes)}] "
+                f"Skipping completed "
+                f"Part {part} Scene "
+                f"{scene_number}"
+            )
+            continue
+
+        print(
+            f"[{index}/{len(scenes)}] "
+            f"TTS Part {part} Scene "
+            f"{scene_number}"
         )
 
-        if can_skip:
+        job = {
+            "part": part,
+            "scene": scene_number,
+            "status": "in_progress",
+            "output": str(
+                output_file
+            ),
+            "voice": voice_config,
+            "provider_voice": provider_voice,
+            "speed": speed,
+            "engine": engine,
+            "started_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+        }
 
-            try:
-                duration = get_duration(
-                    output
-                )
+        jobs[key] = job
 
-                old_job = existing_jobs.get(
-                    key,
-                    {},
-                )
+        manifest["jobs"] = sorted(
+            jobs.values(),
+            key=lambda item: (
+                int(item.get("part", 0)),
+                int(item.get("scene", 0)),
+            ),
+        )
 
-                job.update(
-                    {
-                        "status": "completed",
-                        "duration": duration,
-                        "voice": old_job.get(
-                            "voice",
-                            voices[0],
-                        ),
-                        "rate": old_job.get(
-                            "rate",
-                            scene_speed,
-                        ),
-                        "skipped": True,
-                    }
-                )
-
-                jobs.append(
-                    job
-                )
-
-                print(
-                    "  SKIP: Existing valid "
-                    "audio found."
-                )
-
-                if checkpoint_each_scene:
-                    save_manifest(
-                        {
-                            "status": "in_progress",
-                            "requested_voice": (
-                                requested_voice
-                            ),
-                            "configured_rate": (
-                                configured_speed
-                            ),
-                            "format": video_format,
-                            "captions": captions,
-                            "total": expected_total,
-                            "completed": sum(
-                                1
-                                for j in jobs
-                                if j["status"]
-                                == "completed"
-                            ),
-                            "failed": len(
-                                failures
-                            ),
-                            "jobs": jobs,
-                        }
-                    )
-
-                continue
-
-            except Exception:
-                output.unlink(
-                    missing_ok=True
-                )
-
-        # ----------------------------------------------------
-        # EMPTY TEXT
-        # ----------------------------------------------------
-
-        if not text:
-
-            job["status"] = "failed"
-
-            job["error"] = (
-                "Empty narration text."
+        if save_checkpoint:
+            save_json_atomic(
+                MANIFEST_FILE,
+                manifest
             )
-
-            failures.append(
-                job
-            )
-
-            jobs.append(
-                job
-            )
-
-            print(
-                "  ERROR: Empty narration text."
-            )
-
-            if (
-                failure_policy
-                == "retry_then_checkpoint"
-            ):
-                break
-
-            continue
 
         # ----------------------------------------------------
         # GENERATE
         # ----------------------------------------------------
 
         try:
-
-            (
-                used_voice,
-                used_rate,
-                attempts,
-            ) = await synthesize_with_retry(
+            generate_audio(
                 text=text,
-                voices=voices,
-                rate=scene_speed,
-                output=output,
-                max_retries=max_retries,
+                output_file=output_file,
+                voice=provider_voice,
+                speed=speed,
+                engine=engine,
             )
 
-            duration = get_duration(
-                output
+            duration = (
+                get_audio_duration(
+                    output_file
+                )
             )
 
-            job.update(
-                {
-                    "status": "completed",
-                    "voice": used_voice,
-                    "rate": used_rate,
-                    "duration": duration,
-                    "attempts": attempts,
-                }
+            job["status"] = (
+                "completed"
             )
+
+            job["duration"] = (
+                duration
+            )
+
+            job["size_bytes"] = (
+                output_file.stat().st_size
+            )
+
+            job["completed_at"] = (
+                datetime.now(
+                    timezone.utc
+                ).isoformat()
+            )
+
+            jobs[key] = job
+
+            manifest["jobs"] = sorted(
+                jobs.values(),
+                key=lambda item: (
+                    int(
+                        item.get(
+                            "part",
+                            0
+                        )
+                    ),
+                    int(
+                        item.get(
+                            "scene",
+                            0
+                        )
+                    ),
+                ),
+            )
+
+            if save_checkpoint:
+                save_json_atomic(
+                    MANIFEST_FILE,
+                    manifest
+                )
 
             print(
-                f"  OK: {duration}s"
+                f"Completed: "
+                f"Part {part} Scene "
+                f"{scene_number}"
             )
 
         except Exception as exc:
 
-            output.unlink(
-                missing_ok=True
+            job["status"] = (
+                "failed"
             )
-
-            job["status"] = "failed"
 
             job["error"] = str(
                 exc
             )
 
-            failures.append(
-                job
+            job["failed_at"] = (
+                datetime.now(
+                    timezone.utc
+                ).isoformat()
+            )
+
+            jobs[key] = job
+
+            manifest["jobs"] = sorted(
+                jobs.values(),
+                key=lambda item: (
+                    int(
+                        item.get(
+                            "part",
+                            0
+                        )
+                    ),
+                    int(
+                        item.get(
+                            "scene",
+                            0
+                        )
+                    ),
+                ),
+            )
+
+            save_json_atomic(
+                MANIFEST_FILE,
+                manifest
             )
 
             print(
-                f"  FAILED: {exc}"
+                f"FAILED: Part {part} "
+                f"Scene {scene_number}: "
+                f"{exc}"
             )
 
-        jobs.append(
-            job
-        )
+            # ------------------------------------------------
+            # FAILURE POLICY
+            # ------------------------------------------------
 
-        # ----------------------------------------------------
-        # CHECKPOINT
-        # ----------------------------------------------------
-
-        if checkpoint_each_scene:
-
-            save_manifest(
-                {
-                    "status": (
-                        "failed"
-                        if failures
-                        else "in_progress"
-                    ),
-                    "requested_voice": (
-                        requested_voice
-                    ),
-                    "configured_rate": (
-                        configured_speed
-                    ),
-                    "format": video_format,
-                    "captions": captions,
-                    "music": music_enabled,
-                    "sfx": sfx_enabled,
-                    "ambient_sound": (
-                        ambient_enabled
-                    ),
-                    "total": expected_total,
-                    "completed": sum(
-                        1
-                        for j in jobs
-                        if j["status"]
-                        == "completed"
-                    ),
-                    "failed": len(
-                        failures
-                    ),
-                    "jobs": jobs,
-                }
+            policy = (
+                failure_policy
+                .strip()
+                .lower()
             )
-
-        # ----------------------------------------------------
-        # FAILURE POLICY
-        # ----------------------------------------------------
-
-        if failures:
 
             if (
-                failure_policy
-                == "retry_then_checkpoint"
+                policy
+                in {
+                    "checkpoint",
+                    "retry_then_checkpoint",
+                    "retry",
+                }
             ):
-                print(
-                    "  FAILURE_POLICY: "
-                    "retry_then_checkpoint"
+                raise SystemExit(
+                    "ERROR: TTS generation failed. "
+                    "Checkpoint saved. "
+                    "Resume is enabled for the "
+                    "next workflow run."
                 )
-                break
+
+            raise
 
     # --------------------------------------------------------
     # FINAL VALIDATION
     # --------------------------------------------------------
 
-    completed = sum(
-        1
-        for job in jobs
-        if job["status"] == "completed"
-    )
+    completed = []
 
-    failed = len(
-        failures
-    )
+    for scene in scenes:
 
-    # Every expected scene must have valid audio.
-    physical_audio = 0
-
-    for item in scenes:
-
-        part = int(
-            item["part"]
+        key = scene_key(
+            scene
         )
 
-        scene = int(
-            item["scene"]
+        if key is None:
+            continue
+
+        job = jobs.get(
+            key
         )
 
-        path = (
-            OUT
-            / f"part_{part:02d}"
-            / f"scene_{scene:02d}.mp3"
+        if not job:
+            continue
+
+        if (
+            job.get("status")
+            != "completed"
+        ):
+            continue
+
+        output_path = Path(
+            job.get(
+                "output",
+                ""
+            )
         )
 
-        if valid_audio(path):
-            physical_audio += 1
+        if (
+            output_path.is_file()
+            and output_path.stat().st_size > 0
+        ):
+            completed.append(
+                key
+            )
 
-    if (
-        completed == expected_total
-        and failed == 0
-        and physical_audio == expected_total
+    if len(completed) != len(
+        scenes
     ):
-        final_status = "completed"
+        missing = []
 
-    else:
-        final_status = "failed"
+        for scene in scenes:
+            key = scene_key(
+                scene
+            )
+
+            if key not in completed:
+                missing.append(
+                    key
+                )
+
+        manifest["status"] = (
+            "incomplete"
+        )
+
+        manifest["missing"] = (
+            missing
+        )
+
+        save_json_atomic(
+            MANIFEST_FILE,
+            manifest
+        )
+
+        raise SystemExit(
+            "ERROR: Not all TTS files "
+            "were generated.\n"
+            f"Missing: {missing}"
+        )
 
     # --------------------------------------------------------
     # FINAL MANIFEST
     # --------------------------------------------------------
 
-    manifest = {
-        "status": final_status,
+    manifest["status"] = (
+        "completed"
+    )
 
-        "requested_voice": (
-            requested_voice
-        ),
+    manifest["completed_scenes"] = (
+        len(completed)
+    )
 
-        "configured_rate": (
-            configured_speed
-        ),
+    manifest["missing"] = []
 
-        "format": video_format,
+    manifest["completed_at"] = (
+        datetime.now(
+            timezone.utc
+        ).isoformat()
+    )
 
-        "captions": captions,
-
-        "music": music_enabled,
-
-        "sfx": sfx_enabled,
-
-        "ambient_sound": (
-            ambient_enabled
-        ),
-
-        "parts": parts,
-
-        "scenes_per_part": (
-            scenes_per_part
-        ),
-
-        "total": expected_total,
-
-        "completed": completed,
-
-        "failed": failed,
-
-        "physical_audio": (
-            physical_audio
-        ),
-
-        "max_retries": max_retries,
-
-        "resume_enabled": (
-            resume_enabled
-        ),
-
-        "skip_completed_scenes": (
-            skip_completed
-        ),
-
-        "failure_policy": (
-            failure_policy
-        ),
-
-        "jobs": jobs,
-    }
-
-    save_manifest(
+    save_json_atomic(
+        MANIFEST_FILE,
         manifest
     )
 
-    # --------------------------------------------------------
-    # SUMMARY
-    # --------------------------------------------------------
-
     print()
     print(
-        "=============================================="
+        "======================================"
     )
     print(
-        "               TTS SUMMARY"
+        "          TTS COMPLETED"
     )
     print(
-        "=============================================="
+        "======================================"
     )
-
     print(
-        f"Status          : {final_status}"
+        f"Total scenes : {len(scenes)}"
     )
-
     print(
-        f"Expected        : {expected_total}"
+        f"Completed    : {len(completed)}"
     )
-
     print(
-        f"Completed       : {completed}"
+        f"Engine       : {engine}"
     )
-
     print(
-        f"Failed          : {failed}"
+        f"Voice        : {provider_voice}"
     )
-
     print(
-        f"Physical audio  : {physical_audio}"
+        f"Manifest     : {MANIFEST_FILE}"
     )
-
     print(
-        f"Voice           : {requested_voice}"
-    )
-
-    print(
-        f"Speed           : {configured_speed}"
-    )
-
-    print(
-        f"Captions        : {captions}"
-    )
-
-    print(
-        f"Manifest        : {MANIFEST}"
-    )
-
-    print(
-        "=============================================="
-    )
-
-    return (
-        0
-        if final_status == "completed"
-        else 1
+        "======================================"
     )
 
 
 if __name__ == "__main__":
-    raise SystemExit(
-        asyncio.run(
-            main()
-        )
-    )
+    main()
