@@ -10,8 +10,6 @@ import requests
 
 from input_config import (
     load_input_config,
-    cfg_int,
-    cfg_bool,
     normalize_format,
 )
 
@@ -27,6 +25,42 @@ API_BASE = (
 )
 
 TEST_TIMEOUT = 120
+
+
+# ---------------------------------------------------------
+# LOCAL CONFIG COMPATIBILITY HELPERS
+# ---------------------------------------------------------
+
+def cfg_bool(config, key, default=False):
+    value = config.get(key, default)
+
+    if isinstance(value, bool):
+        return value
+
+    if value is None:
+        return default
+
+    text = str(value).strip().lower()
+
+    if text in {"true", "1", "yes", "y", "on"}:
+        return True
+
+    if text in {"false", "0", "no", "n", "off"}:
+        return False
+
+    return default
+
+
+def cfg_int(config, key, default=0):
+    value = config.get(key, default)
+
+    if value is None:
+        return default
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def fail(message):
