@@ -7,13 +7,10 @@ from pathlib import Path
 
 from input_config import (
     load_input_config,
-    cfg_bool,
-    cfg_text,
     get_parts,
     get_scenes,
-    get_scene_duration,
     normalize_format,
-    resolve_topic,
+    get_topic,
 )
 
 
@@ -21,6 +18,65 @@ AI_STORY_FILE = Path("output/story/ai_story.json")
 SCENES_FILE = Path("output/scenes/scenes.json")
 MODEL_FILE = Path("output/config/selected_model.json")
 OUTPUT_FILE = Path("output/narration/narration.json")
+
+
+# ============================================================
+# INPUT CONFIG COMPATIBILITY HELPERS
+# ============================================================
+
+def cfg_text(config, key, default=""):
+    value = config.get(key, default)
+
+    if value is None:
+        return str(default)
+
+    return str(value).strip()
+
+
+def cfg_bool(config, key, default=False):
+    value = config.get(key, default)
+
+    if isinstance(value, bool):
+        return value
+
+    text = str(value).strip().lower()
+
+    if text in {"true", "yes", "on", "1"}:
+        return True
+
+    if text in {"false", "no", "off", "0"}:
+        return False
+
+    return bool(default)
+
+
+def get_scene_duration_value(config):
+    value = config.get("SCENE_DURATION", "auto")
+
+    if value is None:
+        return "auto"
+
+    text = str(value).strip()
+
+    if not text:
+        return "auto"
+
+    if text.lower() == "auto":
+        return "auto"
+
+    return text
+
+
+def resolve_topic_value(config):
+    try:
+        topic = get_topic(config)
+    except Exception:
+        topic = config.get("TOPIC", "")
+
+    if topic is None:
+        return ""
+
+    return str(topic).strip()
 
 
 # ============================================================
@@ -360,11 +416,7 @@ def main():
 
     settings = {
         "format": normalize_format(
-            cfg_text(
-                config,
-                "FORMAT",
-                "short"
-            )
+            config
         ),
 
         "audience": cfg_text(
@@ -391,7 +443,7 @@ def main():
             "hindi"
         ),
 
-        "scene_duration": get_scene_duration(
+        "scene_duration": get_scene_duration_value(
             config
         ),
 
@@ -467,7 +519,7 @@ def main():
     # TOPIC / TITLE
     # --------------------------------------------------------
 
-    topic = resolve_topic(
+    topic = resolve_topic_value(
         config
     )
 
