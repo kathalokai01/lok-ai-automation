@@ -10,16 +10,12 @@ import urllib.request
 from pathlib import Path
 
 from input_config import (
-    load_input_config,
-    validate_config,
-    cfg_bool,
-    cfg_text,
+    load_and_validate,
+    get_format,
+    get_topic,
+    get_story_text,
     get_parts,
     get_scenes,
-    get_story_length,
-    normalize_format,
-    resolve_topic,
-    resolve_story_text,
 )
 
 
@@ -40,6 +36,32 @@ MODEL = os.environ.get(
 MAX_RETRIES = 5
 INITIAL_BACKOFF = 8
 MAX_BACKOFF = 90
+
+
+def cfg_bool(config, key, default=True):
+    value = config.get(key, default)
+
+    if isinstance(value, bool):
+        return value
+
+    text = str(value).strip().lower()
+
+    if text in {"true", "yes", "on", "1"}:
+        return True
+
+    if text in {"false", "no", "off", "0"}:
+        return False
+
+    return bool(default)
+
+
+def cfg_text(config, key, default=""):
+    value = config.get(key, default)
+
+    if value is None:
+        return str(default)
+
+    return str(value).strip()
 
 
 def clean_title(title):
@@ -86,6 +108,7 @@ def extract_json(text):
 
     try:
         return json.loads(text)
+
     except json.JSONDecodeError:
         pass
 
@@ -101,6 +124,7 @@ def extract_json(text):
 
     try:
         return json.loads(candidate)
+
     except json.JSONDecodeError as exc:
         raise RuntimeError(
             f"Could not parse Gemini JSON: {exc}"
@@ -275,13 +299,6 @@ def generate_title_from_story(
     story_text,
     audience,
 ):
-    """
-    Generate the final title only when TOPIC is empty.
-
-    This title becomes the canonical title for
-    the complete pipeline.
-    """
-
     prompt = f"""
 You are creating the final title for a video story.
 
@@ -333,8 +350,10 @@ def build_common_context(
         "adult",
     )
 
-    story_length = get_story_length(
-        config
+    story_length = cfg_text(
+        config,
+        "STORY_LENGTH",
+        "auto",
     )
 
     part_hook = cfg_bool(
@@ -428,22 +447,20 @@ def build_short_prompt(
     )
 
     hook_rule = (
-        "EVERY PART must begin with a strong "
-        "hook."
+        "EVERY PART must begin with a strong hook."
         if part_hook
         else
-        "Do not force a separate hook at every "
-        "part."
+        "Do not force a separate hook at every part."
     )
 
     suspense_rule = (
-        "Every part except the final part must "
-        "end with an unanswered question, "
-        "reversal, danger or cliffhanger."
+        "Every part except the final part must end "
+        "with an unanswered question, reversal, "
+        "danger or cliffhanger."
         if part_suspense
         else
-        "Suspense should be used naturally "
-        "without mandatory part cliffhangers."
+        "Suspense should be used naturally without "
+        "mandatory part cliffhangers."
     )
 
     resolution_rule = (
@@ -472,8 +489,8 @@ Do NOT:
 - make the ending feel accidentally cut off
 - tell viewers to watch a full version
 
-The short must be independently written from beginning
-to ending.
+The short must be independently written from
+beginning to ending.
 
 SHORT STORY DESIGN:
 
@@ -772,8 +789,7 @@ def validate_story(
 
         if not isinstance(part, dict):
             raise RuntimeError(
-                f"Part {part_index} "
-                "is not an object"
+                f"Part {part_index} is not an object"
             )
 
         scene_list = part.get(
@@ -785,16 +801,14 @@ def validate_story(
             list,
         ):
             raise RuntimeError(
-                f"Part {part_index} "
-                "has no scenes"
+                f"Part {part_index} has no scenes"
             )
 
         if len(scene_list) != scenes_expected:
             raise RuntimeError(
                 f"Part {part_index}: "
-                f"expected {scenes_expected} "
-                f"scenes, got "
-                f"{len(scene_list)}"
+                f"expected {scenes_expected} scenes, "
+                f"got {len(scene_list)}"
             )
 
         for scene_index, scene in enumerate(
@@ -851,9 +865,7 @@ def validate_story(
                     )
                 ).strip():
 
-                    scene["purpose"] = (
-                        "story"
-                    )
+                    scene["purpose"] = "story"
 
         part["part"] = part_index
 
@@ -873,8 +885,6 @@ def validate_story(
             f"{total_scenes}"
         )
 
-    # The final title must always be the
-    # canonical title selected before generation.
     data["title"] = title
     data["topic"] = topic
     data["format"] = expected_format
@@ -890,8 +900,7 @@ def validate_story(
 
         if not hook:
             raise RuntimeError(
-                "Short story is missing "
-                "its hook"
+                "Short story is missing its hook"
             )
 
         data["story_type"] = (
@@ -913,21 +922,17 @@ def main():
     print("        GENERATING STORY")
     print("=" * 60)
 
-    config = load_input_config()
+    config = load_and_validate()
 
-    validate_config(
+    expected_format = get_format(
         config
     )
 
-    expected_format = normalize_format(
+    topic = get_topic(
         config
     )
 
-    topic = resolve_topic(
-        config
-    )
-
-    story_text = resolve_story_text(
+    story_text = get_story_text(
         config
     )
 
@@ -982,8 +987,7 @@ def main():
     else:
 
         raise RuntimeError(
-            "Both TOPIC and STORY_TEXT "
-            "are empty."
+            "Both TOPIC and STORY_TEXT are empty."
         )
 
     if not title:
@@ -1018,12 +1022,12 @@ def main():
     )
     print(
         f"Story length : "
-        f"{get_story_length(config)}"
+        f"{cfg_text(config, 'STORY_LENGTH', 'auto')}"
     )
     print()
 
     # --------------------------------------------------
-    # BUILD FORMAT-SPECIFIC STORY
+    # FORMAT-SPECIFIC STORY
     # --------------------------------------------------
 
     if expected_format == "short":
@@ -1112,8 +1116,15 @@ def main():
             story_text
         ),
         "audience": audience,
-        "story_length": get_story_length(
-            config
+        "story_length": cfg_text(
+            config,
+            "STORY_LENGTH",
+            "auto",
+        ),
+        "scene_duration": cfg_text(
+            config,
+            "SCENE_DURATION",
+            "auto",
         ),
         "parts": parts,
         "scenes_per_part": scenes,
@@ -1137,8 +1148,7 @@ def main():
         encoding="utf-8",
     )
 
-    # Canonical title for all later
-    # packaging/rendering scripts.
+    # Canonical title.
     TITLE_FILE.write_text(
         title,
         encoding="utf-8",
