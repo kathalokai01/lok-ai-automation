@@ -19,14 +19,31 @@ from input_config import (
 )
 
 
+# ============================================================
+# PATHS / SETTINGS
+# ============================================================
+
 OUTPUT_DIR = Path("output/scenes")
 SCENES_FILE = OUTPUT_DIR / "scenes.json"
-CHECKPOINT_FILE = Path("output/checkpoints/scenes_progress.json")
+CHECKPOINT_FILE = Path(
+    "output/checkpoints/scenes_progress.json"
+)
 
-REQUEST_DELAY = float(os.getenv("SCENE_REQUEST_DELAY", "2"))
-REQUEST_TIMEOUT = int(os.getenv("SCENE_REQUEST_TIMEOUT", "120"))
-INITIAL_BACKOFF = int(os.getenv("SCENE_INITIAL_BACKOFF", "15"))
-MAX_BACKOFF = int(os.getenv("SCENE_MAX_BACKOFF", "300"))
+REQUEST_DELAY = float(
+    os.getenv("SCENE_REQUEST_DELAY", "2")
+)
+
+REQUEST_TIMEOUT = int(
+    os.getenv("SCENE_REQUEST_TIMEOUT", "120")
+)
+
+INITIAL_BACKOFF = int(
+    os.getenv("SCENE_INITIAL_BACKOFF", "15")
+)
+
+MAX_BACKOFF = int(
+    os.getenv("SCENE_MAX_BACKOFF", "300")
+)
 
 
 # ============================================================
@@ -38,7 +55,7 @@ def log(message=""):
 
 
 # ============================================================
-# INPUT CONFIG COMPATIBILITY
+# INPUT CONFIG HELPERS
 # ============================================================
 
 def cfg_text(config, key, default=""):
@@ -88,7 +105,7 @@ def cfg_bool(config, key, default=False):
 def get_scene_duration_value(config):
     value = config.get(
         "SCENE_DURATION",
-        "auto"
+        "auto",
     )
 
     if value is None:
@@ -124,7 +141,7 @@ def resolve_story_text_value(config):
 
 
 # ============================================================
-# JSON
+# JSON HELPERS
 # ============================================================
 
 def read_json(path):
@@ -171,17 +188,14 @@ def write_json(path, data):
 # CHECKPOINT
 # ============================================================
 
-def scene_key(
-    part_number,
-    scene_number
-):
+def scene_key(part_number, scene_number):
     return f"{part_number}:{scene_number}"
 
 
 def save_checkpoint(
     total_scenes,
     completed_scenes,
-    failed_scene=None
+    failed_scene=None,
 ):
     completed = sorted(
         list(completed_scenes)
@@ -200,11 +214,11 @@ def save_checkpoint(
             "completed_count": len(completed),
             "remaining_scenes": max(
                 0,
-                total_scenes - len(completed)
+                total_scenes - len(completed),
             ),
             "failed_scene": failed_scene,
             "updated_at": int(time.time()),
-        }
+        },
     )
 
 
@@ -218,13 +232,10 @@ def load_checkpoint():
 
     completed = data.get(
         "completed_scenes",
-        []
+        [],
     )
 
-    if not isinstance(
-        completed,
-        list
-    ):
+    if not isinstance(completed, list):
         return set()
 
     result = set()
@@ -246,29 +257,30 @@ def load_checkpoint():
 def scene_already_saved(
     existing_scenes,
     part_number,
-    scene_number
+    scene_number,
 ):
-    for scene in existing_scenes:
+    target_key = scene_key(
+        part_number,
+        scene_number,
+    )
 
-        if not isinstance(
-            scene,
-            dict
-        ):
+    target_ids = {
+        target_key,
+        f"scene_{part_number}_{scene_number}",
+        f"part_{part_number}_scene_{scene_number}",
+    }
+
+    for scene in existing_scenes:
+        if not isinstance(scene, dict):
             continue
 
         try:
             part = int(
-                scene.get(
-                    "part",
-                    -1
-                )
+                scene.get("part", -1)
             )
 
             number = int(
-                scene.get(
-                    "scene",
-                    -1
-                )
+                scene.get("scene", -1)
             )
 
             if (
@@ -281,20 +293,10 @@ def scene_already_saved(
             pass
 
         scene_id = str(
-            scene.get(
-                "id",
-                ""
-            )
+            scene.get("id", "")
         ).strip()
 
-        if scene_id in {
-            scene_key(
-                part_number,
-                scene_number
-            ),
-            f"scene_{part_number}_{scene_number}",
-            f"part_{part_number}_scene_{scene_number}",
-        }:
+        if scene_id in target_ids:
             return True
 
     return False
@@ -313,10 +315,7 @@ def get_model():
         selected_model_file
     )
 
-    if isinstance(
-        data,
-        dict
-    ):
+    if isinstance(data, dict):
         for key in (
             "model",
             "selected_model",
@@ -325,9 +324,7 @@ def get_model():
             value = data.get(key)
 
             if value:
-                return str(
-                    value
-                ).strip()
+                return str(value).strip()
 
     return "gemini-3.5-flash-lite"
 
@@ -335,7 +332,7 @@ def get_model():
 def get_api_key():
     key = os.getenv(
         "GEMINI_API_KEY",
-        ""
+        "",
     ).strip()
 
     if not key:
@@ -347,13 +344,13 @@ def get_api_key():
 
 
 # ============================================================
-# GEMINI
+# GEMINI API
 # ============================================================
 
 def call_gemini(
     api_key,
     model,
-    prompt
+    prompt,
 ):
     url = (
         "https://generativelanguage.googleapis.com/"
@@ -372,18 +369,16 @@ def call_gemini(
             }
         ],
         "generationConfig": {
-            "temperature": 0.7,
+            "temperature": 0.70,
             "topP": 0.90,
             "responseMimeType": "application/json",
-        }
+        },
     }
 
     body = json.dumps(
         payload,
-        ensure_ascii=False
-    ).encode(
-        "utf-8"
-    )
+        ensure_ascii=False,
+    ).encode("utf-8")
 
     request = urllib.request.Request(
         url,
@@ -397,7 +392,7 @@ def call_gemini(
     try:
         with urllib.request.urlopen(
             request,
-            timeout=REQUEST_TIMEOUT
+            timeout=REQUEST_TIMEOUT,
         ) as response:
 
             raw = response.read().decode(
@@ -416,7 +411,7 @@ def call_gemini(
 
     candidates = data.get(
         "candidates",
-        []
+        [],
     )
 
     if not candidates:
@@ -426,12 +421,12 @@ def call_gemini(
 
     content = candidates[0].get(
         "content",
-        {}
+        {},
     )
 
     parts = content.get(
         "parts",
-        []
+        [],
     )
 
     if not parts:
@@ -441,7 +436,7 @@ def call_gemini(
 
     text = parts[0].get(
         "text",
-        ""
+        "",
     ).strip()
 
     if not text:
@@ -453,7 +448,7 @@ def call_gemini(
 
 
 # ============================================================
-# JSON RESPONSE
+# JSON RESPONSE PARSER
 # ============================================================
 
 def parse_json_response(text):
@@ -465,7 +460,6 @@ def parse_json_response(text):
         pass
 
     if text.startswith("```"):
-
         lines = text.splitlines()
 
         if lines:
@@ -482,9 +476,7 @@ def parse_json_response(text):
         ).strip()
 
         try:
-            return json.loads(
-                cleaned
-            )
+            return json.loads(cleaned)
         except Exception:
             pass
 
@@ -500,9 +492,7 @@ def parse_json_response(text):
         ]
 
         try:
-            return json.loads(
-                candidate
-            )
+            return json.loads(candidate)
         except Exception:
             pass
 
@@ -516,14 +506,16 @@ def parse_json_response(text):
 # ============================================================
 
 def load_story():
-    for path in (
+    paths = [
         Path(
             "output/story/ai_story.json"
         ),
         Path(
             "output/story/story.json"
         ),
-    ):
+    ]
+
+    for path in paths:
         data = read_json(path)
 
         if data is not None:
@@ -545,10 +537,7 @@ def load_character_bible():
 
     data = read_json(path)
 
-    if not isinstance(
-        data,
-        dict
-    ):
+    if not isinstance(data, dict):
         return {
             "status": "unavailable",
             "characters": [],
@@ -557,30 +546,24 @@ def load_character_bible():
 
     characters = data.get(
         "characters",
-        []
+        [],
     )
 
-    if not isinstance(
-        characters,
-        list
-    ):
+    if not isinstance(characters, list):
         characters = []
 
     world = data.get(
         "world",
-        {}
+        {},
     )
 
-    if not isinstance(
-        world,
-        dict
-    ):
+    if not isinstance(world, dict):
         world = {}
 
     return {
         "status": data.get(
             "status",
-            "completed"
+            "completed",
         ),
         "characters": characters,
         "world": world,
@@ -594,59 +577,39 @@ def load_character_bible():
 def load_previous_scene_context(
     existing_scenes,
     part_number,
-    scene_number
+    scene_number,
 ):
     previous = []
 
     for scene in existing_scenes:
-
-        if not isinstance(
-            scene,
-            dict
-        ):
+        if not isinstance(scene, dict):
             continue
 
         try:
-            p = int(
-                scene.get(
-                    "part",
-                    0
-                )
+            part = int(
+                scene.get("part", 0)
             )
 
-            s = int(
-                scene.get(
-                    "scene",
-                    0
-                )
+            number = int(
+                scene.get("scene", 0)
             )
 
         except Exception:
             continue
 
         if (
-            p < part_number
+            part < part_number
             or (
-                p == part_number
-                and s < scene_number
+                part == part_number
+                and number < scene_number
             )
         ):
             previous.append(scene)
 
     previous.sort(
         key=lambda item: (
-            int(
-                item.get(
-                    "part",
-                    0
-                )
-            ),
-            int(
-                item.get(
-                    "scene",
-                    0
-                )
-            ),
+            int(item.get("part", 0)),
+            int(item.get("scene", 0)),
         )
     )
 
@@ -658,25 +621,22 @@ def load_previous_scene_context(
 # ============================================================
 
 def build_input_settings(config):
+    # IMPORTANT:
+    # normalize_format() expects the COMPLETE config dict.
+    # Do NOT pass cfg_text(config, "FORMAT", ...).
     return {
-        "format": normalize_format(
-            cfg_text(
-                config,
-                "FORMAT",
-                "short"
-            )
-        ),
+        "format": normalize_format(config),
 
         "audience": cfg_text(
             config,
             "AUDIENCE",
-            "adult"
+            "adult",
         ),
 
         "story_length": cfg_text(
             config,
             "STORY_LENGTH",
-            "auto"
+            "auto",
         ),
 
         "scene_duration": (
@@ -688,157 +648,157 @@ def build_input_settings(config):
         "part_hook": cfg_bool(
             config,
             "PART_HOOK",
-            True
+            True,
         ),
 
         "part_suspense": cfg_bool(
             config,
             "PART_SUSPENSE",
-            True
+            True,
         ),
 
         "final_resolution": cfg_bool(
             config,
             "FINAL_RESOLUTION",
-            True
+            True,
         ),
 
         "visual_style": cfg_text(
             config,
             "VISUAL_STYLE",
-            "cinematic_realistic"
+            "cinematic_realistic",
         ),
 
         "realism": cfg_text(
             config,
             "REALISM",
-            "high"
+            "high",
         ),
 
         "character_bible": cfg_bool(
             config,
             "CHARACTER_BIBLE",
-            True
+            True,
         ),
 
         "character_consistency": cfg_bool(
             config,
             "CHARACTER_CONSISTENCY",
-            True
+            True,
         ),
 
         "world_consistency": cfg_bool(
             config,
             "WORLD_CONSISTENCY",
-            True
+            True,
         ),
 
         "scene_continuity": cfg_bool(
             config,
             "SCENE_CONTINUITY",
-            True
+            True,
         ),
 
         "cinematic_camera": cfg_bool(
             config,
             "CINEMATIC_CAMERA",
-            True
+            True,
         ),
 
         "camera_style": cfg_text(
             config,
             "CAMERA_STYLE",
-            "cinematic"
+            "cinematic",
         ),
 
         "lighting": cfg_text(
             config,
             "LIGHTING",
-            "cinematic"
+            "cinematic",
         ),
 
         "mood": cfg_text(
             config,
             "MOOD",
-            "dramatic"
+            "dramatic",
         ),
 
         "quality": cfg_text(
             config,
             "QUALITY",
-            "high"
+            "high",
         ),
 
         "negative_prompt": cfg_bool(
             config,
             "NEGATIVE_PROMPT",
-            True
+            True,
         ),
 
         "avoid_cartoon": cfg_bool(
             config,
             "AVOID_CARTOON_LOOK",
-            True
+            True,
         ),
 
         "avoid_neon": cfg_bool(
             config,
             "AVOID_NEON",
-            True
+            True,
         ),
 
         "avoid_glitch": cfg_bool(
             config,
             "AVOID_GLITCH_EFFECTS",
-            True
+            True,
         ),
 
         "natural_motion": cfg_bool(
             config,
             "NATURAL_MOTION",
-            True
+            True,
         ),
 
         "realistic_lighting": cfg_bool(
             config,
             "REALISTIC_LIGHTING",
-            True
+            True,
         ),
 
         "transitions": cfg_text(
             config,
             "TRANSITIONS",
-            "cinematic"
+            "cinematic",
         ),
 
         "captions": cfg_text(
             config,
             "CAPTIONS",
-            "hindi"
+            "hindi",
         ),
 
         "music": cfg_bool(
             config,
             "MUSIC",
-            True
+            True,
         ),
 
         "music_style": cfg_text(
             config,
             "MUSIC_STYLE",
-            "cinematic"
+            "cinematic",
         ),
 
         "sfx": cfg_bool(
             config,
             "SFX",
-            True
+            True,
         ),
 
         "ambient_sound": cfg_bool(
             config,
             "AMBIENT_SOUND",
-            True
+            True,
         ),
     }
 
@@ -860,37 +820,35 @@ def build_prompt(
     story_text = json.dumps(
         story,
         ensure_ascii=False,
-        indent=2
+        indent=2,
     )
 
     bible_text = json.dumps(
         character_bible,
         ensure_ascii=False,
-        indent=2
+        indent=2,
     )
 
     previous_text = json.dumps(
         previous_scenes,
         ensure_ascii=False,
-        indent=2
+        indent=2,
     )
 
     topic = resolve_topic_value(
         config
     )
 
-    story_source = (
-        resolve_story_text_value(
-            config
-        )
+    story_source = resolve_story_text_value(
+        config
     )
 
     if settings["format"] == "short":
         story_structure = """
 This is SHORT-FORM video.
 
-Do NOT write a scene as if it is merely
-a chopped section from a long video.
+Do NOT write scenes as if they are merely
+chopped sections from a long video.
 
 The complete short must feel independently
 structured.
@@ -903,12 +861,11 @@ Use:
 - reveal/payoff
 - final memorable beat
 
-The opening scene must create immediate
-viewer curiosity.
+Scene 1 must create immediate viewer curiosity.
 
 The final scene must provide payoff or
-a deliberate suspense ending according
-to FINAL_RESOLUTION.
+deliberate suspense according to
+FINAL_RESOLUTION.
 """.strip()
 
     else:
@@ -916,10 +873,17 @@ to FINAL_RESOLUTION.
 This is FULL-LENGTH video.
 
 Maintain a coherent long-form progression.
+
 Do not rush the story simply to fit a short.
 
-Build setup, development, conflict,
-escalation and resolution naturally.
+Build:
+- setup
+- development
+- conflict
+- escalation
+- resolution
+
+naturally.
 """.strip()
 
     hook_rule = (
@@ -957,7 +921,7 @@ escalation and resolution naturally.
 
     if settings["scene_continuity"]:
         consistency_rules.append(
-            "Continue naturally from the previous scene. "
+            "Continue naturally from previous scenes. "
             "Do not randomly teleport characters or change "
             "their positions, clothing or environment."
         )
@@ -985,8 +949,8 @@ escalation and resolution naturally.
 
     if settings["natural_motion"]:
         visual_rules.append(
-            "Describe natural human/body/environment motion "
-            "suitable for image-to-video generation."
+            "Describe natural human, body and environment "
+            "motion suitable for image-to-video generation."
         )
 
     if settings["realistic_lighting"]:
@@ -1070,6 +1034,18 @@ escalation and resolution naturally.
         negative_items
     )
 
+    direct_story = (
+        story_source
+        if story_source
+        else "(No direct STORY_TEXT supplied.)"
+    )
+
+    continuity_text = (
+        consistency_text
+        if consistency_text
+        else "- Follow story continuity naturally."
+    )
+
     return f"""
 You are the scene director for a professional
 AI-generated Hindi video.
@@ -1084,11 +1060,7 @@ TOPIC:
 {topic}
 
 USER STORY TEXT:
-{
-    story_source
-    if story_source
-    else "(No direct STORY_TEXT supplied.)"
-}
+{direct_story}
 
 The user's STORY_TEXT, when present, is a PRIMARY SOURCE.
 Do not replace its meaning with an unrelated invented story.
@@ -1140,11 +1112,7 @@ VISUAL DIRECTOR SETTINGS
 CONTINUITY RULES
 ============================================================
 
-{
-    consistency_text
-    if consistency_text
-    else "- Follow story continuity naturally."
-}
+{continuity_text}
 
 ============================================================
 AUDIO / EDITING SETTINGS
@@ -1267,26 +1235,26 @@ def calculate_backoff(attempt):
     base = INITIAL_BACKOFF * (
         2 ** max(
             0,
-            attempt - 1
+            attempt - 1,
         )
     )
 
     base = min(
         base,
-        MAX_BACKOFF
+        MAX_BACKOFF,
     )
 
     jitter = random.uniform(
         0,
         min(
             5,
-            base * 0.10
-        )
+            base * 0.10,
+        ),
     )
 
     return round(
         base + jitter,
-        2
+        2,
     )
 
 
@@ -1302,7 +1270,7 @@ def generate_scene_with_retry(
 
     for attempt in range(
         1,
-        max_attempts + 1
+        max_attempts + 1,
     ):
         log(
             f"Generating Part {part_number} "
@@ -1315,17 +1283,14 @@ def generate_scene_with_retry(
             response = call_gemini(
                 api_key,
                 model,
-                prompt
+                prompt,
             )
 
             scene = parse_json_response(
                 response
             )
 
-            if not isinstance(
-                scene,
-                dict
-            ):
+            if not isinstance(scene, dict):
                 raise ValueError(
                     "Scene response must be a JSON object."
                 )
@@ -1339,26 +1304,21 @@ def generate_scene_with_retry(
             last_error = exc
 
             if exc.code == 429:
-
                 if attempt >= max_attempts:
                     break
 
-                retry_after = (
-                    extract_retry_after(
-                        exc
-                    )
+                retry_after = extract_retry_after(
+                    exc
                 )
 
-                calculated = (
-                    calculate_backoff(
-                        attempt
-                    )
+                calculated = calculate_backoff(
+                    attempt
                 )
 
                 if retry_after is not None:
                     wait_seconds = max(
                         retry_after,
-                        calculated
+                        calculated,
                     )
                 else:
                     wait_seconds = calculated
@@ -1380,10 +1340,8 @@ def generate_scene_with_retry(
                 503,
                 504,
             }:
-                wait_seconds = (
-                    calculate_backoff(
-                        attempt
-                    )
+                wait_seconds = calculate_backoff(
+                    attempt
                 )
 
                 log(
@@ -1409,11 +1367,8 @@ def generate_scene_with_retry(
             )
 
         if attempt < max_attempts:
-
-            wait_seconds = (
-                calculate_backoff(
-                    attempt
-                )
+            wait_seconds = calculate_backoff(
+                attempt
             )
 
             log(
@@ -1436,10 +1391,7 @@ def generate_scene_with_retry(
 # ============================================================
 
 def validate_scene(scene):
-    if not isinstance(
-        scene,
-        dict
-    ):
+    if not isinstance(scene, dict):
         raise ValueError(
             "Scene must be a JSON object."
         )
@@ -1452,10 +1404,7 @@ def validate_scene(scene):
     ]
 
     for key in required:
-
-        value = scene.get(
-            key
-        )
+        value = scene.get(key)
 
         if value is None:
             raise ValueError(
@@ -1472,13 +1421,10 @@ def validate_scene(scene):
 
     character_ids = scene.get(
         "character_ids",
-        []
+        [],
     )
 
-    if not isinstance(
-        character_ids,
-        list
-    ):
+    if not isinstance(character_ids, list):
         scene["character_ids"] = []
 
     return scene
@@ -1489,7 +1435,6 @@ def validate_scene(scene):
 # ============================================================
 
 def main():
-
     log(
         "======================================"
     )
@@ -1502,13 +1447,8 @@ def main():
 
     config = load_input_config()
 
-    parts = get_parts(
-        config
-    )
-
-    scenes_per_part = get_scenes(
-        config
-    )
+    parts = get_parts(config)
+    scenes_per_part = get_scenes(config)
 
     total_scenes = (
         parts * scenes_per_part
@@ -1551,8 +1491,7 @@ def main():
     )
 
     log(
-        f"PARTS              : "
-        f"{parts}"
+        f"PARTS              : {parts}"
     )
 
     log(
@@ -1631,25 +1570,22 @@ def main():
 
     OUTPUT_DIR.mkdir(
         parents=True,
-        exist_ok=True
+        exist_ok=True,
     )
 
     CHECKPOINT_FILE.parent.mkdir(
         parents=True,
-        exist_ok=True
+        exist_ok=True,
     )
 
     story = load_story()
 
-    character_bible = (
-        load_character_bible()
-    )
+    character_bible = load_character_bible()
 
     if (
         settings["character_bible"]
-        and character_bible.get(
-            "status"
-        ) == "unavailable"
+        and character_bible.get("status")
+        == "unavailable"
     ):
         raise RuntimeError(
             "CHARACTER_BIBLE is enabled but "
@@ -1660,72 +1596,53 @@ def main():
         SCENES_FILE
     )
 
-    if isinstance(
-        existing_data,
-        dict
-    ):
-        existing_scenes = (
-            existing_data.get(
-                "scenes",
-                []
-            )
+    if isinstance(existing_data, dict):
+        existing_scenes = existing_data.get(
+            "scenes",
+            [],
         )
 
-    elif isinstance(
-        existing_data,
-        list
-    ):
-        existing_scenes = (
-            existing_data
-        )
+    elif isinstance(existing_data, list):
+        existing_scenes = existing_data
 
     else:
         existing_scenes = []
 
-    if not isinstance(
-        existing_scenes,
-        list
-    ):
+    if not isinstance(existing_scenes, list):
         existing_scenes = []
 
     completed = load_checkpoint()
 
-    # Existing valid scenes are also completed.
+    # Existing scenes are also treated as completed.
     for part_number in range(
         1,
-        parts + 1
+        parts + 1,
     ):
         for scene_number in range(
             1,
-            scenes_per_part + 1
+            scenes_per_part + 1,
         ):
-
             key = scene_key(
                 part_number,
-                scene_number
+                scene_number,
             )
 
             if scene_already_saved(
                 existing_scenes,
                 part_number,
-                scene_number
+                scene_number,
             ):
-                completed.add(
-                    key
-                )
+                completed.add(key)
 
     valid_keys = {
-        scene_key(
-            p,
-            s
-        )
+        scene_key(p, s)
         for p in range(
             1,
-            parts + 1
+            parts + 1,
         )
         for s in range(
             1,
-            scenes_per_part + 1
+            scenes_per_part + 1,
         )
     }
 
@@ -1742,7 +1659,7 @@ def main():
 
     save_checkpoint(
         total_scenes,
-        completed
+        completed,
     )
 
     # ========================================================
@@ -1751,34 +1668,30 @@ def main():
 
     for part_number in range(
         1,
-        parts + 1
+        parts + 1,
     ):
-
         for scene_number in range(
             1,
-            scenes_per_part + 1
+            scenes_per_part + 1,
         ):
-
             key = scene_key(
                 part_number,
-                scene_number
+                scene_number,
             )
 
             if key in completed:
-
                 log(
                     f"Part {part_number} "
                     f"Scene {scene_number} "
                     f"already completed. Skipping."
                 )
-
                 continue
 
             previous_scenes = (
                 load_previous_scene_context(
                     existing_scenes,
                     part_number,
-                    scene_number
+                    scene_number,
                 )
             )
 
@@ -1794,28 +1707,22 @@ def main():
             )
 
             try:
-
-                scene = (
-                    generate_scene_with_retry(
-                        api_key,
-                        model,
-                        prompt,
-                        part_number,
-                        scene_number,
-                        max_attempts,
-                    )
+                scene = generate_scene_with_retry(
+                    api_key,
+                    model,
+                    prompt,
+                    part_number,
+                    scene_number,
+                    max_attempts,
                 )
 
-                scene = validate_scene(
-                    scene
-                )
+                scene = validate_scene(scene)
 
             except Exception as exc:
-
                 save_checkpoint(
                     total_scenes,
                     completed,
-                    failed_scene=key
+                    failed_scene=key,
                 )
 
                 log(
@@ -1829,26 +1736,21 @@ def main():
             for index, old_scene in enumerate(
                 existing_scenes
             ):
-
-                if not isinstance(
-                    old_scene,
-                    dict
-                ):
+                if not isinstance(old_scene, dict):
                     continue
 
                 try:
-
                     old_part = int(
                         old_scene.get(
                             "part",
-                            -1
+                            -1,
                         )
                     )
 
                     old_number = int(
                         old_scene.get(
                             "scene",
-                            -1
+                            -1,
                         )
                     )
 
@@ -1859,53 +1761,40 @@ def main():
                     old_part == part_number
                     and old_number == scene_number
                 ):
-
-                    existing_scenes[index] = (
-                        scene
-                    )
-
+                    existing_scenes[index] = scene
                     replaced = True
-
                     break
 
             if not replaced:
-                existing_scenes.append(
-                    scene
-                )
+                existing_scenes.append(scene)
 
             def sort_key(item):
-
                 try:
-
                     return (
                         int(
                             item.get(
                                 "part",
-                                999999
+                                999999,
                             )
                         ),
                         int(
                             item.get(
                                 "scene",
-                                999999
+                                999999,
                             )
                         ),
                     )
-
                 except Exception:
-
                     return (
                         999999,
-                        999999
+                        999999,
                     )
 
             existing_scenes.sort(
                 key=sort_key
             )
 
-            completed.add(
-                key
-            )
+            completed.add(key)
 
             write_json(
                 SCENES_FILE,
@@ -1917,56 +1806,31 @@ def main():
                         completed
                     ),
                     "input_config": {
-                        "format": settings[
-                            "format"
-                        ],
-                        "audience": settings[
-                            "audience"
-                        ],
-                        "story_length": settings[
-                            "story_length"
-                        ],
-                        "scene_duration": settings[
-                            "scene_duration"
-                        ],
-                        "visual_style": settings[
-                            "visual_style"
-                        ],
-                        "realism": settings[
-                            "realism"
-                        ],
-                        "quality": settings[
-                            "quality"
-                        ],
-                        "camera_style": settings[
-                            "camera_style"
-                        ],
-                        "lighting": settings[
-                            "lighting"
-                        ],
-                        "mood": settings[
-                            "mood"
-                        ],
-                        "character_consistency": settings[
-                            "character_consistency"
-                        ],
-                        "world_consistency": settings[
-                            "world_consistency"
-                        ],
-                        "scene_continuity": settings[
-                            "scene_continuity"
-                        ],
-                        "natural_motion": settings[
-                            "natural_motion"
-                        ],
+                        "format": settings["format"],
+                        "audience": settings["audience"],
+                        "story_length": settings["story_length"],
+                        "scene_duration": settings["scene_duration"],
+                        "visual_style": settings["visual_style"],
+                        "realism": settings["realism"],
+                        "quality": settings["quality"],
+                        "camera_style": settings["camera_style"],
+                        "lighting": settings["lighting"],
+                        "mood": settings["mood"],
+                        "character_bible": settings["character_bible"],
+                        "character_consistency": settings["character_consistency"],
+                        "world_consistency": settings["world_consistency"],
+                        "scene_continuity": settings["scene_continuity"],
+                        "natural_motion": settings["natural_motion"],
+                        "negative_prompt": settings["negative_prompt"],
+                        "transitions": settings["transitions"],
                     },
                     "scenes": existing_scenes,
-                }
+                },
             )
 
             save_checkpoint(
                 total_scenes,
-                completed
+                completed,
             )
 
             log(
@@ -1976,7 +1840,6 @@ def main():
             )
 
             if len(completed) < total_scenes:
-
                 time.sleep(
                     REQUEST_DELAY
                 )
@@ -1986,54 +1849,32 @@ def main():
     # ========================================================
 
     expected_keys = {
-        scene_key(
-            p,
-            s
-        )
+        scene_key(p, s)
         for p in range(
             1,
-            parts + 1
+            parts + 1,
         )
         for s in range(
             1,
-            scenes_per_part + 1
+            scenes_per_part + 1,
         )
     }
 
     actual_keys = set()
 
     for scene in existing_scenes:
-
-        if not isinstance(
-            scene,
-            dict
-        ):
+        if not isinstance(scene, dict):
             continue
 
         try:
+            p = int(scene["part"])
+            s = int(scene["scene"])
 
-            p = int(
-                scene["part"]
-            )
-
-            s = int(
-                scene["scene"]
-            )
-
-            key = scene_key(
-                p,
-                s
-            )
+            key = scene_key(p, s)
 
             if key in expected_keys:
-
-                validate_scene(
-                    scene
-                )
-
-                actual_keys.add(
-                    key
-                )
+                validate_scene(scene)
+                actual_keys.add(key)
 
         except Exception:
             pass
@@ -2043,7 +1884,6 @@ def main():
     )
 
     if missing:
-
         raise RuntimeError(
             "Scene generation incomplete. "
             f"Missing {len(missing)} scenes: "
@@ -2054,68 +1894,32 @@ def main():
         "status": "completed",
         "model": model,
         "total_scenes": total_scenes,
-        "completed_scenes": len(
-            actual_keys
-        ),
+        "completed_scenes": len(actual_keys),
 
         "input_config": {
-            "format": settings[
-                "format"
-            ],
-            "audience": settings[
-                "audience"
-            ],
-            "story_length": settings[
-                "story_length"
-            ],
-            "scene_duration": settings[
-                "scene_duration"
-            ],
-            "visual_style": settings[
-                "visual_style"
-            ],
-            "realism": settings[
-                "realism"
-            ],
-            "quality": settings[
-                "quality"
-            ],
-            "camera_style": settings[
-                "camera_style"
-            ],
-            "lighting": settings[
-                "lighting"
-            ],
-            "mood": settings[
-                "mood"
-            ],
-            "character_bible": settings[
-                "character_bible"
-            ],
-            "character_consistency": settings[
-                "character_consistency"
-            ],
-            "world_consistency": settings[
-                "world_consistency"
-            ],
-            "scene_continuity": settings[
-                "scene_continuity"
-            ],
-            "natural_motion": settings[
-                "natural_motion"
-            ],
-            "negative_prompt": settings[
-                "negative_prompt"
-            ],
-            "transitions": settings[
-                "transitions"
-            ],
+            "format": settings["format"],
+            "audience": settings["audience"],
+            "story_length": settings["story_length"],
+            "scene_duration": settings["scene_duration"],
+            "visual_style": settings["visual_style"],
+            "realism": settings["realism"],
+            "quality": settings["quality"],
+            "camera_style": settings["camera_style"],
+            "lighting": settings["lighting"],
+            "mood": settings["mood"],
+            "character_bible": settings["character_bible"],
+            "character_consistency": settings["character_consistency"],
+            "world_consistency": settings["world_consistency"],
+            "scene_continuity": settings["scene_continuity"],
+            "natural_motion": settings["natural_motion"],
+            "negative_prompt": settings["negative_prompt"],
+            "transitions": settings["transitions"],
         },
 
         "character_bible_status": (
             character_bible.get(
                 "status",
-                "unknown"
+                "unknown",
             )
         ),
 
@@ -2124,13 +1928,13 @@ def main():
 
     write_json(
         SCENES_FILE,
-        final_data
+        final_data,
     )
 
     save_checkpoint(
         total_scenes,
         actual_keys,
-        failed_scene=None
+        failed_scene=None,
     )
 
     log()
