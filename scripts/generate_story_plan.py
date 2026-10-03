@@ -4,175 +4,262 @@ import json
 from pathlib import Path
 
 from input_config import (
-    load_input_config,
-    cfg,
-    cfg_bool,
-    cfg_text,
+    load_and_validate,
+    get_format,
+    get_topic,
+    get_story_text,
     get_parts,
     get_scenes,
-    get_story_length,
-    get_scene_duration,
-    resolve_topic,
-    resolve_story_text,
-    normalize_format,
-    get_caption_mode,
 )
 
 
 OUT = Path("output/story/story_plan.json")
 
 
-def main():
-    config = load_input_config()
+def as_bool(config, key, default=True):
+    value = config.get(key, default)
 
-    format_type = normalize_format(config)
-    topic = resolve_topic(config)
-    story_text = resolve_story_text(config)
+    if isinstance(value, bool):
+        return value
+
+    text = str(value).strip().lower()
+
+    if text in {"true", "yes", "on", "1"}:
+        return True
+
+    if text in {"false", "no", "off", "0"}:
+        return False
+
+    return bool(default)
+
+
+def as_text(config, key, default=""):
+    value = config.get(key, default)
+
+    if value is None:
+        return str(default)
+
+    return str(value).strip()
+
+
+def main():
+    # ----------------------------------------------------------
+    # LOAD + VALIDATE CENTRAL CONFIG
+    # ----------------------------------------------------------
+
+    config = load_and_validate()
+
+    format_type = get_format(config)
+    topic = get_topic(config)
+    story_text = get_story_text(config)
 
     parts = get_parts(config)
     scenes_per_part = get_scenes(config)
-    story_length = get_story_length(config)
-    scene_duration = get_scene_duration(config)
 
-    if parts < 1:
-        raise SystemExit("ERROR: PARTS must be >= 1")
+    story_length = as_text(
+        config,
+        "STORY_LENGTH",
+        "auto",
+    )
 
-    if scenes_per_part < 1:
-        raise SystemExit("ERROR: SCENES must be >= 1")
+    scene_duration = as_text(
+        config,
+        "SCENE_DURATION",
+        "auto",
+    )
 
-    audience = cfg_text(config, "AUDIENCE", "adult")
-    caption_mode = get_caption_mode(config)
+    audience = as_text(
+        config,
+        "AUDIENCE",
+        "adult",
+    )
 
-    part_hook = cfg_bool(config, "PART_HOOK", True)
-    part_suspense = cfg_bool(config, "PART_SUSPENSE", True)
-    final_resolution = cfg_bool(config, "FINAL_RESOLUTION", True)
+    caption_mode = as_text(
+        config,
+        "CAPTIONS",
+        "hindi",
+    ).lower()
 
-    character_bible = cfg_bool(config, "CHARACTER_BIBLE", True)
-    character_consistency = cfg_bool(
+    # ----------------------------------------------------------
+    # STORY STRUCTURE SETTINGS
+    # ----------------------------------------------------------
+
+    part_hook = as_bool(
+        config,
+        "PART_HOOK",
+        True,
+    )
+
+    part_suspense = as_bool(
+        config,
+        "PART_SUSPENSE",
+        True,
+    )
+
+    final_resolution = as_bool(
+        config,
+        "FINAL_RESOLUTION",
+        True,
+    )
+
+    # ----------------------------------------------------------
+    # CHARACTER / WORLD CONTINUITY
+    # ----------------------------------------------------------
+
+    character_bible = as_bool(
+        config,
+        "CHARACTER_BIBLE",
+        True,
+    )
+
+    character_consistency = as_bool(
         config,
         "CHARACTER_CONSISTENCY",
         True,
     )
-    world_consistency = cfg_bool(
+
+    world_consistency = as_bool(
         config,
         "WORLD_CONSISTENCY",
         True,
     )
-    scene_continuity = cfg_bool(
+
+    scene_continuity = as_bool(
         config,
         "SCENE_CONTINUITY",
         True,
     )
 
-    visual_style = cfg_text(
+    # ----------------------------------------------------------
+    # VISUAL SETTINGS
+    # ----------------------------------------------------------
+
+    visual_style = as_text(
         config,
         "VISUAL_STYLE",
         "cinematic_realistic",
     )
 
-    realism = cfg_text(
+    realism = as_text(
         config,
         "REALISM",
         "high",
     )
 
-    camera_style = cfg_text(
+    camera_style = as_text(
         config,
         "CAMERA_STYLE",
         "cinematic",
     )
 
-    lighting = cfg_text(
-        config,
-        "LIGHTING",
-        "cinematic",
-    )
-
-    mood = cfg_text(
-        config,
-        "MOOD",
-        "dramatic",
-    )
-
-    quality = cfg_text(
-        config,
-        "QUALITY",
-        "high",
-    )
-
-    cinematic_camera = cfg_bool(
+    cinematic_camera = as_bool(
         config,
         "CINEMATIC_CAMERA",
         True,
     )
 
-    natural_motion = cfg_bool(
+    lighting = as_text(
         config,
-        "NATURAL_MOTION",
-        True,
+        "LIGHTING",
+        "cinematic",
     )
 
-    realistic_lighting = cfg_bool(
+    realistic_lighting = as_bool(
         config,
         "REALISTIC_LIGHTING",
         True,
     )
 
-    negative_prompt_enabled = cfg_bool(
+    mood = as_text(
+        config,
+        "MOOD",
+        "dramatic",
+    )
+
+    quality = as_text(
+        config,
+        "QUALITY",
+        "high",
+    )
+
+    natural_motion = as_bool(
+        config,
+        "NATURAL_MOTION",
+        True,
+    )
+
+    # ----------------------------------------------------------
+    # NEGATIVE PROMPT SETTINGS
+    # ----------------------------------------------------------
+
+    negative_prompt_enabled = as_bool(
         config,
         "NEGATIVE_PROMPT",
         True,
     )
 
-    avoid_cartoon = cfg_bool(
+    avoid_cartoon = as_bool(
         config,
         "AVOID_CARTOON_LOOK",
         True,
     )
 
-    avoid_neon = cfg_bool(
+    avoid_neon = as_bool(
         config,
         "AVOID_NEON",
         True,
     )
 
-    avoid_glitch = cfg_bool(
+    avoid_glitch = as_bool(
         config,
         "AVOID_GLITCH_EFFECTS",
         True,
     )
 
-    music_enabled = cfg_bool(
+    # ----------------------------------------------------------
+    # AUDIO SETTINGS
+    # ----------------------------------------------------------
+
+    music_enabled = as_bool(
         config,
         "MUSIC",
         True,
     )
 
-    sfx_enabled = cfg_bool(
-        config,
-        "SFX",
-        True,
-    )
-
-    ambient_enabled = cfg_bool(
-        config,
-        "AMBIENT_SOUND",
-        True,
-    )
-
-    music_style = cfg_text(
+    music_style = as_text(
         config,
         "MUSIC_STYLE",
         "cinematic",
     )
 
-    transitions = cfg_text(
+    sfx_enabled = as_bool(
+        config,
+        "SFX",
+        True,
+    )
+
+    ambient_enabled = as_bool(
+        config,
+        "AMBIENT_SOUND",
+        True,
+    )
+
+    transitions = as_text(
         config,
         "TRANSITIONS",
         "cinematic",
     )
 
-    fps = config.get("FPS", 24)
+    fps = int(
+        config.get(
+            "FPS",
+            24,
+        )
+    )
+
+    # ----------------------------------------------------------
+    # FORMAT-SPECIFIC SCENE ROLES
+    # ----------------------------------------------------------
 
     scene_roles_full = [
         "opening hook and setup",
@@ -207,11 +294,16 @@ def main():
     else:
         scene_roles = scene_roles_full
 
+    # ----------------------------------------------------------
+    # STORY PLAN
+    # ----------------------------------------------------------
+
     plan = {
         "status": "planned",
 
         # Canonical content source.
-        # generate_story.py remains responsible for the final title.
+        # TOPIC is preferred.
+        # STORY_TEXT is fallback.
         "topic": topic,
 
         "story_text": story_text,
@@ -234,7 +326,9 @@ def main():
 
         "scenes_per_part": scenes_per_part,
 
-        "total_scenes": parts * scenes_per_part,
+        "total_scenes": (
+            parts * scenes_per_part
+        ),
 
         "caption_mode": caption_mode,
 
@@ -281,7 +375,14 @@ def main():
         },
     }
 
-    for part_no in range(1, parts + 1):
+    # ----------------------------------------------------------
+    # BUILD PARTS + SCENES
+    # ----------------------------------------------------------
+
+    for part_no in range(
+        1,
+        parts + 1,
+    ):
 
         part = {
             "part": part_no,
@@ -359,9 +460,17 @@ def main():
                 ),
             }
 
-            part["scenes"].append(scene)
+            part["scenes"].append(
+                scene
+            )
 
-        plan["parts"].append(part)
+        plan["parts"].append(
+            part
+        )
+
+    # ----------------------------------------------------------
+    # WRITE OUTPUT
+    # ----------------------------------------------------------
 
     OUT.parent.mkdir(
         parents=True,
@@ -377,30 +486,80 @@ def main():
         encoding="utf-8",
     )
 
+    # ----------------------------------------------------------
+    # LOG
+    # ----------------------------------------------------------
+
     print("=" * 60)
     print("STORY PLAN CREATED")
     print("=" * 60)
-    print(f"Output          : {OUT}")
-    print(f"Format          : {format_type}")
-    print(f"Topic           : {topic}")
+
     print(
-        f"Story text      : "
-        f"{'provided' if story_text else 'not provided'}"
+        f"Output          : {OUT}"
     )
-    print(f"Audience        : {audience}")
-    print(f"Story length    : {story_length}")
-    print(f"Scene duration  : {scene_duration}")
-    print(f"Parts           : {parts}")
-    print(f"Scenes/part     : {scenes_per_part}")
+
+    print(
+        f"Format          : {format_type}"
+    )
+
+    print(
+        f"Topic           : {topic}"
+    )
+
+    print(
+        "Story text      : "
+        + (
+            "provided"
+            if story_text
+            else "not provided"
+        )
+    )
+
+    print(
+        f"Audience        : {audience}"
+    )
+
+    print(
+        f"Story length    : {story_length}"
+    )
+
+    print(
+        f"Scene duration  : {scene_duration}"
+    )
+
+    print(
+        f"Parts           : {parts}"
+    )
+
+    print(
+        f"Scenes/part     : {scenes_per_part}"
+    )
+
     print(
         f"Total scenes    : "
         f"{parts * scenes_per_part}"
     )
-    print(f"Hook enabled    : {part_hook}")
-    print(f"Suspense        : {part_suspense}")
-    print(f"Final resolution: {final_resolution}")
-    print(f"Visual style    : {visual_style}")
-    print(f"Realism         : {realism}")
+
+    print(
+        f"Hook enabled    : {part_hook}"
+    )
+
+    print(
+        f"Suspense        : {part_suspense}"
+    )
+
+    print(
+        f"Final resolution: {final_resolution}"
+    )
+
+    print(
+        f"Visual style    : {visual_style}"
+    )
+
+    print(
+        f"Realism         : {realism}"
+    )
+
     print("=" * 60)
 
 
