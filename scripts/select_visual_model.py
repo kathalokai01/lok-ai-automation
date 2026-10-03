@@ -21,15 +21,15 @@ OUTPUT_FILE = Path(
 MODEL = "alibaba/wan-2.6-image"
 
 API_BASE = (
-    "https://api.cloudflare.com/client/v4/accounts/"
+    "https://api.cloudflare.com/client/v4/accounts"
 )
 
 TEST_TIMEOUT = 120
 
 
-# ---------------------------------------------------------
-# LOCAL CONFIG COMPATIBILITY HELPERS
-# ---------------------------------------------------------
+# ============================================================
+# INPUT CONFIG COMPATIBILITY HELPERS
+# ============================================================
 
 def cfg_bool(config, key, default=False):
     value = config.get(key, default)
@@ -63,12 +63,17 @@ def cfg_int(config, key, default=0):
         return default
 
 
+# ============================================================
+# BASIC HELPERS
+# ============================================================
+
 def fail(message):
     print(f"ERROR: {message}")
     sys.exit(1)
 
 
 def get_credentials():
+
     account_id = os.getenv(
         "CLOUDFLARE_ACCOUNT_ID",
         ""
@@ -80,67 +85,123 @@ def get_credentials():
     ).strip()
 
     if not account_id:
-        fail("CLOUDFLARE_ACCOUNT_ID is not set.")
+        fail(
+            "CLOUDFLARE_ACCOUNT_ID is not set."
+        )
 
     if not api_token:
-        fail("CLOUDFLARE_API_TOKEN is not set.")
+        fail(
+            "CLOUDFLARE_API_TOKEN is not set."
+        )
 
     return account_id, api_token
 
 
-def test_model(account_id, api_token):
+# ============================================================
+# CLOUDFLARE MODEL TEST
+# ============================================================
+
+def test_model(
+    account_id,
+    api_token,
+):
+
+    # IMPORTANT:
+    # Cloudflare's current REST API uses:
+    #
+    # POST /accounts/{account_id}/ai/run
+    #
+    # with:
+    #
+    # {
+    #   "model": "...",
+    #   "input": {...}
+    # }
+    #
+    # Do NOT append /@model to the URL.
+
     url = (
-        f"{API_BASE}{account_id}"
-        f"/ai/run/@{MODEL}"
+        f"{API_BASE}/"
+        f"{account_id}"
+        f"/ai/run"
     )
 
     headers = {
-        "Authorization": f"Bearer {api_token}",
+        "Authorization": (
+            f"Bearer {api_token}"
+        ),
         "Content-Type": "application/json",
     }
 
-    # Minimal valid image-generation test payload.
-    # The actual visual generator supplies the complete prompt
-    # and dimensions later.
     payload = {
-        "prompt": (
-            "A photorealistic cinematic live-action "
-            "environment test frame, natural lighting, "
-            "real-world appearance"
-        )
+        "model": MODEL,
+        "input": {
+            "prompt": (
+                "A photorealistic cinematic "
+                "live-action environment test "
+                "frame, natural realistic lighting, "
+                "real-world appearance"
+            ),
+            "size": "768x1024",
+        },
     }
 
     print()
-    print(f"Testing visual model: {MODEL}")
-    print(f"Endpoint: {url}")
+    print(
+        f"Testing visual model: {MODEL}"
+    )
+    print(
+        f"Endpoint: {url}"
+    )
 
     try:
+
         response = requests.post(
             url,
             headers=headers,
             json=payload,
             timeout=TEST_TIMEOUT,
         )
+
     except requests.RequestException as exc:
+
         print(
             f"Model test request failed: {exc}"
         )
+
         return False, None
 
     print(
-        f"HTTP status: {response.status_code}"
+        f"HTTP status: "
+        f"{response.status_code}"
     )
 
-    if response.status_code in (200, 201, 202):
-        try:
-            data = response.json()
-        except Exception:
-            data = {}
+    try:
 
-        if data.get("success") is False:
+        data = response.json()
+
+    except Exception:
+
+        data = {
+            "raw": response.text[:3000]
+        }
+
+    if response.status_code in (
+        200,
+        201,
+        202,
+    ):
+
+        if (
+            isinstance(data, dict)
+            and data.get("success") is False
+        ):
+
             print(
-                "Cloudflare returned success=false."
+                "Cloudflare returned "
+                "success=false."
             )
+
             print(
                 json.dumps(
                     data,
@@ -148,40 +209,86 @@ def test_model(account_id, api_token):
                     indent=2,
                 )[:3000]
             )
+
             return False, data
 
-        return True, data
+        # Wan 2.6 returns the generated image
+        # inside result.image.
+        result = (
+            data.get("result", {})
+            if isinstance(data, dict)
+            else {}
+        )
+
+        image = (
+            result.get("image")
+            if isinstance(result, dict)
+            else None
+        )
+
+        if image:
+
+            print(
+                "Cloudflare visual model "
+                "test succeeded."
+            )
+
+            print(
+                "Generated image result received."
+            )
+
+            return True, data
+
+        print(
+            "Cloudflare request succeeded, "
+            "but no result.image was returned."
+        )
+
+        print(
+            json.dumps(
+                data,
+                ensure_ascii=False,
+                indent=2,
+            )[:3000]
+        )
+
+        return False, data
 
     if response.status_code in (
         401,
         403,
     ):
+
         print(
-            "Cloudflare authentication/permission "
-            "error."
+            "Cloudflare authentication/"
+            "permission error."
+        )
+
+    elif response.status_code == 400:
+
+        print(
+            "Cloudflare rejected the model "
+            "request."
         )
 
     elif response.status_code == 404:
+
         print(
-            "Cloudflare model endpoint was not found."
+            "Cloudflare AI endpoint was "
+            "not found."
         )
 
     elif response.status_code == 429:
+
         print(
             "Cloudflare rate limit received."
         )
 
     elif response.status_code >= 500:
+
         print(
             "Cloudflare server-side error."
         )
-
-    try:
-        data = response.json()
-    except Exception:
-        data = {
-            "raw": response.text[:3000]
-        }
 
     print(
         json.dumps(
@@ -194,10 +301,15 @@ def test_model(account_id, api_token):
     return False, data
 
 
+# ============================================================
+# SAVE MODEL SELECTION
+# ============================================================
+
 def save_selection(
     model,
     status,
 ):
+
     OUTPUT_FILE.parent.mkdir(
         parents=True,
         exist_ok=True,
@@ -207,7 +319,9 @@ def save_selection(
         "status": status,
         "model": model,
         "provider": "cloudflare",
-        "selected_by": "select_visual_model.py",
+        "selected_by": (
+            "select_visual_model.py"
+        ),
         "timestamp": int(time.time()),
     }
 
@@ -219,6 +333,7 @@ def save_selection(
         "w",
         encoding="utf-8",
     ) as f:
+
         json.dump(
             data,
             f,
@@ -226,24 +341,45 @@ def save_selection(
             indent=2,
         )
 
-    tmp.replace(OUTPUT_FILE)
+    tmp.replace(
+        OUTPUT_FILE
+    )
 
     return data
 
 
+# ============================================================
+# MAIN
+# ============================================================
+
 def main():
-    print("=" * 60)
-    print("        SELECTING VISUAL GENERATION MODEL")
-    print("=" * 60)
+
+    print(
+        "=" * 60
+    )
+
+    print(
+        "        SELECTING VISUAL GENERATION MODEL"
+    )
+
+    print(
+        "=" * 60
+    )
 
     try:
+
         config = load_input_config()
+
     except Exception as exc:
+
         fail(
-            f"Failed to load Input configuration: {exc}"
+            "Failed to load Input "
+            f"configuration: {exc}"
         )
 
-    format_name = normalize_format(config)
+    format_name = normalize_format(
+        config
+    )
 
     max_retries = cfg_int(
         config,
@@ -257,16 +393,29 @@ def main():
         True,
     )
 
-    print(f"FORMAT        : {format_name}")
-    print(f"MAX_RETRIES   : {max_retries}")
-    print(f"RESUME        : {resume_enabled}")
-    print(f"MODEL         : {MODEL}")
+    print(
+        f"FORMAT        : {format_name}"
+    )
 
-    account_id, api_token = get_credentials()
+    print(
+        f"MAX_RETRIES   : {max_retries}"
+    )
 
-    # ---------------------------------------------------------
-    # TEST THE EXACT MODEL USED BY generate_visuals.py
-    # ---------------------------------------------------------
+    print(
+        f"RESUME        : {resume_enabled}"
+    )
+
+    print(
+        f"MODEL         : {MODEL}"
+    )
+
+    account_id, api_token = (
+        get_credentials()
+    )
+
+    # ========================================================
+    # TEST EXACT MODEL
+    # ========================================================
 
     success = False
     result = None
@@ -280,7 +429,9 @@ def main():
         1,
         attempts + 1,
     ):
+
         print()
+
         print(
             f"Model test attempt "
             f"{attempt}/{attempts}"
@@ -295,6 +446,7 @@ def main():
             break
 
         if attempt < attempts:
+
             wait_seconds = min(
                 10 * attempt,
                 60,
@@ -309,19 +461,25 @@ def main():
                 wait_seconds
             )
 
+    # ========================================================
+    # FAILURE
+    # ========================================================
+
     if not success:
+
         save_selection(
             MODEL,
             "failed",
         )
 
         fail(
-            f"Visual model test failed: {MODEL}"
+            f"Visual model test failed: "
+            f"{MODEL}"
         )
 
-    # ---------------------------------------------------------
+    # ========================================================
     # SAVE SELECTED MODEL
-    # ---------------------------------------------------------
+    # ========================================================
 
     selection = save_selection(
         MODEL,
@@ -329,26 +487,43 @@ def main():
     )
 
     print()
-    print("=" * 60)
-    print("        VISUAL MODEL SELECTED")
-    print("=" * 60)
 
     print(
-        f"Selected model : {selection['model']}"
+        "=" * 60
     )
 
     print(
-        f"Provider       : {selection['provider']}"
+        "        VISUAL MODEL SELECTED"
     )
 
     print(
-        f"Saved to       : {OUTPUT_FILE}"
+        "=" * 60
     )
 
-    print("=" * 60)
+    print(
+        f"Selected model : "
+        f"{selection['model']}"
+    )
+
+    print(
+        f"Provider       : "
+        f"{selection['provider']}"
+    )
+
+    print(
+        f"Saved to       : "
+        f"{OUTPUT_FILE}"
+    )
+
+    print(
+        "=" * 60
+    )
 
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+
+    sys.exit(
+        main()
+    )
