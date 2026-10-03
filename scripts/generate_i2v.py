@@ -99,6 +99,35 @@ if FORMAT not in {"short", "full"}:
 
 
 # ============================================================
+# FORMAT-BASED I2V RESOLUTION
+# ============================================================
+
+def get_i2v_resolution(format_name):
+
+    """
+    Cloudflare HH 1.1 I2V supports:
+        720P
+        1080P
+
+    SHORT:
+        720P
+
+    FULL:
+        1080P
+    """
+
+    if format_name == "short":
+        return "720P"
+
+    return "1080P"
+
+
+I2V_RESOLUTION = get_i2v_resolution(
+    FORMAT
+)
+
+
+# ============================================================
 # VALIDATE API
 # ============================================================
 
@@ -168,6 +197,7 @@ jobs = load_json(
         "status": "running",
         "format": FORMAT,
         "model": MODEL,
+        "resolution": I2V_RESOLUTION,
         "jobs": []
     }
 )
@@ -710,6 +740,11 @@ def generate_clip(
     )
 
     print(
+        f"I2V resolution : "
+        f"{I2V_RESOLUTION}"
+    )
+
+    print(
         f"Model          : "
         f"{MODEL}"
     )
@@ -729,7 +764,7 @@ def generate_clip(
                 "identity change, body deformation, "
                 "warping, flicker, jitter"
             ),
-            "resolution": "720P",
+            "resolution": I2V_RESOLUTION,
             "duration": duration,
             "watermark": False,
         }
@@ -836,11 +871,15 @@ def main():
     print("=" * 70)
 
     print(
-        f"Format : {FORMAT}"
+        f"Format     : {FORMAT}"
     )
 
     print(
-        f"Model  : {MODEL}"
+        f"Resolution : {I2V_RESOLUTION}"
+    )
+
+    print(
+        f"Model      : {MODEL}"
     )
 
     if not SCENES_FILE.exists():
@@ -981,6 +1020,7 @@ def main():
                     "status": "completed",
                     "model": MODEL,
                     "format": FORMAT,
+                    "resolution": I2V_RESOLUTION,
                     "visual": str(
                         visual_path
                     ),
@@ -1021,6 +1061,7 @@ def main():
                 "status": "completed",
                 "model": MODEL,
                 "format": FORMAT,
+                "resolution": I2V_RESOLUTION,
                 "visual": str(
                     visual_path
                 ),
@@ -1039,6 +1080,8 @@ def main():
 
         jobs["jobs"] = final_jobs
         jobs["status"] = "running"
+        jobs["format"] = FORMAT
+        jobs["resolution"] = I2V_RESOLUTION
 
         save_json(
             JOBS_FILE,
@@ -1072,7 +1115,15 @@ def main():
     print("=" * 70)
 
     print(
-        f"Completed: {completed}/{expected}"
+        f"Format     : {FORMAT}"
+    )
+
+    print(
+        f"Resolution : {I2V_RESOLUTION}"
+    )
+
+    print(
+        f"Completed  : {completed}/{expected}"
     )
 
     if completed != expected:
@@ -1084,6 +1135,7 @@ def main():
     jobs["status"] = "completed"
     jobs["format"] = FORMAT
     jobs["model"] = MODEL
+    jobs["resolution"] = I2V_RESOLUTION
     jobs["total"] = expected
 
     save_json(
