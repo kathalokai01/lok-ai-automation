@@ -14,7 +14,7 @@ from input_config import (
 BASE = Path("output")
 
 SCENES_FILE = BASE / "scenes" / "scenes.json"
-CHARACTER_BIBLE_FILE = BASE / "character_bible" / "character_bible.json"
+CHARACTER_BIBLE_FILE = BASE / "story" / "character_bible.json"
 
 VISUALS_DIR = BASE / "visuals"
 JOBS_FILE = VISUALS_DIR / "visual_jobs.json"
