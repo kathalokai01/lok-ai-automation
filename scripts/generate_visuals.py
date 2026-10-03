@@ -71,10 +71,12 @@ def load_json(path, default=None):
         return default
 
     try:
+
         with path.open(
             "r",
             encoding="utf-8"
         ) as f:
+
             return json.load(f)
 
     except Exception as exc:
@@ -123,6 +125,7 @@ def valid_image(path):
 
     try:
         return path.stat().st_size > 1000
+
     except Exception:
         return False
 
@@ -137,12 +140,12 @@ def get_image_size(format_name):
     Cloudflare Wan 2.6 Image supports custom WxH size.
 
     SHORT:
-        Portrait 9:16-style source image.
+        Portrait source image.
 
     FULL:
-        Landscape 4:3 source image.
+        Landscape source image.
 
-    The final render will later be converted to:
+    Final render:
         SHORT -> 720x1280
         FULL  -> 1920x1080
     """
@@ -164,7 +167,10 @@ def get_model():
         {}
     )
 
-    if isinstance(data, dict):
+    if isinstance(
+        data,
+        dict
+    ):
 
         model = str(
             data.get(
@@ -437,6 +443,7 @@ def build_visual_prompt(
                 )
 
                 if char_id in wanted:
+
                     selected.append(
                         character
                     )
@@ -451,13 +458,23 @@ def build_visual_prompt(
                 )
 
     prompt_parts = [
-        "Photorealistic live-action cinematic frame.",
-        "Real human beings and real-world physical environments.",
+
+        "Photorealistic live-action "
+        "cinematic frame.",
+
+        "Real human beings and "
+        "real-world physical environments.",
+
         f"Visual style: {visual_style}.",
+
         f"Realism level: {realism}.",
+
         f"Camera style: {camera_style}.",
+
         f"Lighting: {lighting}.",
+
         f"Mood: {mood}.",
+
         f"Quality: {quality}.",
     ]
 
@@ -648,8 +665,109 @@ def config_signature(
 
 
 # ============================================================
-# EXTRACT IMAGE
+# EXTRACT / DOWNLOAD IMAGE
 # ============================================================
+
+def download_image_url(url):
+
+    try:
+
+        response = requests.get(
+            url,
+            timeout=REQUEST_TIMEOUT
+        )
+
+        response.raise_for_status()
+
+        content = response.content
+
+        if (
+            content
+            and len(content) > 1000
+        ):
+
+            return content
+
+    except requests.RequestException as exc:
+
+        print(
+            "    Failed to download "
+            f"generated image URL: {exc}"
+        )
+
+    return None
+
+
+def decode_image_string(value):
+
+    if not isinstance(
+        value,
+        str
+    ):
+        return None
+
+    value = value.strip()
+
+    if not value:
+        return None
+
+    # --------------------------------------------------------
+    # HTTPS / HTTP IMAGE URL
+    # --------------------------------------------------------
+
+    if (
+        value.startswith("http://")
+        or value.startswith("https://")
+    ):
+
+        return download_image_url(
+            value
+        )
+
+    # --------------------------------------------------------
+    # DATA URI
+    # --------------------------------------------------------
+
+    if value.startswith(
+        "data:image"
+    ):
+
+        try:
+
+            encoded = value.split(
+                ",",
+                1
+            )[1]
+
+            decoded = base64.b64decode(
+                encoded
+            )
+
+            if len(decoded) > 1000:
+                return decoded
+
+        except Exception:
+            return None
+
+    # --------------------------------------------------------
+    # RAW BASE64
+    # --------------------------------------------------------
+
+    try:
+
+        decoded = base64.b64decode(
+            value,
+            validate=True
+        )
+
+        if len(decoded) > 1000:
+            return decoded
+
+    except Exception:
+        pass
+
+    return None
+
 
 def extract_image_bytes(data):
 
@@ -670,82 +788,70 @@ def extract_image_bytes(data):
         return None
 
     candidates = [
+
         result.get("image"),
+
         result.get("image_data"),
+
         result.get("output"),
+
         result.get("data"),
     ]
 
     for item in candidates:
+
+        # ----------------------------------------------------
+        # STRING RESPONSE
+        # ----------------------------------------------------
 
         if isinstance(
             item,
             str
         ):
 
-            if item.startswith(
-                "data:image"
-            ):
-
-                try:
-
-                    return base64.b64decode(
-                        item.split(
-                            ",",
-                            1
-                        )[1]
-                    )
-
-                except Exception:
-                    pass
-
-            try:
-
-                return base64.b64decode(
+            image_bytes = (
+                decode_image_string(
                     item
                 )
+            )
 
-            except Exception:
-                pass
+            if image_bytes:
+
+                return image_bytes
+
+        # ----------------------------------------------------
+        # NESTED OBJECT
+        # ----------------------------------------------------
 
         if isinstance(
             item,
             dict
         ):
 
-            for key in (
-                "image",
-                "image_data",
-                "data"
+            nested_candidates = [
+
+                item.get("image"),
+
+                item.get("image_data"),
+
+                item.get("data"),
+
+                item.get("url"),
+            ]
+
+            for value in (
+                nested_candidates
             ):
 
-                value = item.get(
-                    key
-                )
-
-                if not isinstance(
-                    value,
-                    str
-                ):
-                    continue
-
-                try:
-
-                    if value.startswith(
-                        "data:image"
-                    ):
-
-                        value = value.split(
-                            ",",
-                            1
-                        )[1]
-
-                    return base64.b64decode(
+                image_bytes = (
+                    decode_image_string(
                         value
                     )
+                )
 
-                except Exception:
-                    pass
+                if image_bytes:
+
+                    return image_bytes
 
     return None
 
@@ -771,14 +877,18 @@ def generate_image(
     )
 
     headers = {
+
         "Authorization":
             f"Bearer {api_token}",
+
         "Content-Type":
             "application/json",
     }
 
     payload = {
+
         "prompt": prompt,
+
         "size": image_size,
     }
 
@@ -793,18 +903,20 @@ def generate_image(
         f"{image_size}"
     )
 
+    total_attempts = max(
+        1,
+        retries
+    )
+
     for attempt in range(
         1,
-        max(
-            1,
-            retries
-        ) + 1
+        total_attempts + 1
     ):
 
         print(
             f"    Generation attempt "
             f"{attempt}/"
-            f"{max(1, retries)}"
+            f"{total_attempts}"
         )
 
         try:
@@ -823,7 +935,7 @@ def generate_image(
                 f"{exc}"
             )
 
-            if attempt < retries:
+            if attempt < total_attempts:
 
                 time.sleep(
                     min(
@@ -849,7 +961,7 @@ def generate_image(
             except Exception as exc:
 
                 print(
-                    f"    Invalid JSON response: "
+                    "    Invalid JSON response: "
                     f"{exc}"
                 )
 
@@ -862,10 +974,12 @@ def generate_image(
             )
 
             if image_bytes:
+
                 return image_bytes
 
             print(
-                "    Model returned no image data."
+                "    Model returned no "
+                "usable image data."
             )
 
             print(
@@ -873,7 +987,7 @@ def generate_image(
                     data,
                     ensure_ascii=False,
                     indent=2
-                )[:2000]
+                )[:3000]
             )
 
         elif response.status_code in (
@@ -897,7 +1011,7 @@ def generate_image(
             )
 
             print(
-                response.text[:2000]
+                response.text[:3000]
             )
 
             if response.status_code in (
@@ -909,7 +1023,7 @@ def generate_image(
 
                 return None
 
-        if attempt < retries:
+        if attempt < total_attempts:
 
             wait = min(
                 5 * attempt,
@@ -1094,17 +1208,13 @@ def main():
             dict
         )
         and isinstance(
-            old_manifest.get(
-                "jobs"
-            ),
+            old_manifest.get("jobs"),
             dict
         )
     ):
 
         old_jobs = (
-            old_manifest[
-                "jobs"
-            ]
+            old_manifest["jobs"]
         )
 
     signature = config_signature(
@@ -1200,6 +1310,17 @@ def main():
             else None
         )
 
+        old_image_size = (
+            old_job.get(
+                "image_size"
+            )
+            if isinstance(
+                old_job,
+                dict
+            )
+            else None
+        )
+
         physical_valid = (
             valid_image(
                 output_path
@@ -1207,10 +1328,17 @@ def main():
         )
 
         reusable = (
+
             resume_enabled
+
             and skip_completed
+
             and physical_valid
+
             and old_model == model
+
+            and old_image_size == image_size
+
             and old_signature == signature
         )
 
@@ -1224,12 +1352,19 @@ def main():
             )
 
             jobs[key] = {
+
                 "part": part,
+
                 "scene": scene_number,
+
                 "status": "completed",
+
                 "model": model,
+
                 "image_size": image_size,
+
                 "config_signature": signature,
+
                 "visual_path": str(
                     output_path
                 ),
@@ -1266,12 +1401,19 @@ def main():
         if not image_bytes:
 
             jobs[key] = {
+
                 "part": part,
+
                 "scene": scene_number,
+
                 "status": "failed",
+
                 "model": model,
+
                 "image_size": image_size,
+
                 "config_signature": signature,
+
                 "visual_path": str(
                     output_path
                 ),
@@ -1280,13 +1422,23 @@ def main():
             save_json(
                 MANIFEST_FILE,
                 {
+
                     "status": "failed",
+
                     "format": format_name,
+
                     "model": model,
+
                     "image_size": image_size,
+
                     "config_signature": signature,
-                    "expected_total": expected_total,
-                    "completed": completed,
+
+                    "expected_total":
+                        expected_total,
+
+                    "completed":
+                        completed,
+
                     "jobs": jobs,
                 }
             )
@@ -1319,12 +1471,19 @@ def main():
             )
 
         jobs[key] = {
+
             "part": part,
+
             "scene": scene_number,
+
             "status": "completed",
+
             "model": model,
+
             "image_size": image_size,
+
             "config_signature": signature,
+
             "visual_path": str(
                 output_path
             ),
@@ -1337,17 +1496,27 @@ def main():
             save_json(
                 MANIFEST_FILE,
                 {
+
                     "status": "pending",
+
                     "format": format_name,
+
                     "model": model,
+
                     "image_size": image_size,
+
                     "config_signature": signature,
-                    "expected_total": expected_total,
-                    "completed": completed,
-                    "pending": (
+
+                    "expected_total":
+                        expected_total,
+
+                    "completed":
+                        completed,
+
+                    "pending":
                         expected_total
-                        - completed
-                    ),
+                        - completed,
+
                     "jobs": jobs,
                 }
             )
@@ -1388,37 +1557,61 @@ def main():
         save_json(
             MANIFEST_FILE,
             {
+
                 "status": "failed",
+
                 "format": format_name,
+
                 "model": model,
+
                 "image_size": image_size,
-                "config_signature": signature,
-                "expected_total": expected_total,
-                "completed": (
+
+                "config_signature":
+                    signature,
+
+                "expected_total":
+                    expected_total,
+
+                "completed":
                     expected_total
-                    - len(missing)
-                ),
+                    - len(missing),
+
                 "missing": missing,
+
                 "jobs": jobs,
             }
         )
 
         fail(
             "Missing visual(s): "
-            + ", ".join(missing)
+            + ", ".join(
+                missing
+            )
         )
 
     save_json(
         MANIFEST_FILE,
         {
+
             "status": "completed",
+
             "format": format_name,
+
             "model": model,
+
             "image_size": image_size,
-            "config_signature": signature,
-            "expected_total": expected_total,
-            "completed": expected_total,
+
+            "config_signature":
+                signature,
+
+            "expected_total":
+                expected_total,
+
+            "completed":
+                expected_total,
+
             "pending": 0,
+
             "jobs": jobs,
         }
     )
@@ -1454,7 +1647,8 @@ def main():
 
     print(
         f"Visuals         : "
-        f"{completed}/{expected_total}"
+        f"{completed}/"
+        f"{expected_total}"
     )
 
     print(
