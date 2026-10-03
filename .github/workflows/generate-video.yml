@@ -390,19 +390,45 @@ jobs:
           set -e
           python3 scripts/generate_narration.py
 
+
       # ============================================================
-      # INSTALL FFMPEG
+      # INSTALL FFMPEG + R2 UPLOAD SDK
       # ============================================================
-      - name: Install FFmpeg
+      - name: Install FFmpeg and R2 upload SDK
         shell: bash
         run: |
           set -e
 
+          echo "=============================================="
+          echo "      INSTALLING FFMPEG + R2 SDK"
+          echo "=============================================="
+
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
+          echo
+          echo "FFmpeg:"
           ffmpeg -version | head -n 1
+
+          echo
+          echo "FFprobe:"
           ffprobe -version | head -n 1
+
+          echo
+          echo "Installing boto3..."
+          python3 -m pip install --upgrade boto3
+
+          echo
+          echo "Testing boto3..."
+          python3 - <<'PY'
+          import boto3
+          print("boto3:", boto3.__version__)
+          PY
+
+          echo
+          echo "FFmpeg and R2 SDK ready."
+
+
 
       # ============================================================
       # GENERATE HINDI TTS
