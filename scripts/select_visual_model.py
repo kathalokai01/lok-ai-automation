@@ -1,367 +1,320 @@
-import os
+#!/usr/bin/env python3
+
 import json
-import base64
-import urllib.request
-import urllib.error
-from datetime import datetime, timezone
+import os
+import sys
+import time
+from pathlib import Path
+
+import requests
+
+from input_config import (
+    load_input_config,
+    cfg_int,
+    cfg_bool,
+    normalize_format,
+)
 
 
-ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
-API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
+OUTPUT_FILE = Path(
+    "output/config/selected_visual_model.json"
+)
 
-OUTPUT_FILE = "output/config/selected_visual_model.json"
+MODEL = "alibaba/wan-2.6-image"
 
-BASE_URL = "https://api.cloudflare.com/client/v4/accounts"
+API_BASE = (
+    "https://api.cloudflare.com/client/v4/accounts/"
+)
 
-VISUAL_MODELS = [
-    {
-        "model": "@cf/bytedance/stable-diffusion-xl-lightning",
-        "display_name": "Stable Diffusion XL Lightning",
-        "priority": 0,
-    },
-    {
-        "model": "@cf/black-forest-labs/flux-1-schnell",
-        "display_name": "FLUX.1 Schnell",
-        "priority": 10,
-    },
-]
+TEST_TIMEOUT = 120
 
 
-def api_request(model, payload, timeout=180):
+def fail(message):
+    print(f"ERROR: {message}")
+    sys.exit(1)
+
+
+def get_credentials():
+    account_id = os.getenv(
+        "CLOUDFLARE_ACCOUNT_ID",
+        ""
+    ).strip()
+
+    api_token = os.getenv(
+        "CLOUDFLARE_API_TOKEN",
+        ""
+    ).strip()
+
+    if not account_id:
+        fail("CLOUDFLARE_ACCOUNT_ID is not set.")
+
+    if not api_token:
+        fail("CLOUDFLARE_API_TOKEN is not set.")
+
+    return account_id, api_token
+
+
+def test_model(account_id, api_token):
     url = (
-        f"{BASE_URL}/{ACCOUNT_ID}"
-        f"/ai/run/{model}"
+        f"{API_BASE}{account_id}"
+        f"/ai/run/@{MODEL}"
     )
 
     headers = {
-        "Authorization": f"Bearer {API_TOKEN}",
+        "Authorization": f"Bearer {api_token}",
         "Content-Type": "application/json",
     }
 
-    data = json.dumps(payload).encode("utf-8")
+    # Minimal valid image-generation test payload.
+    # The actual visual generator supplies the complete prompt
+    # and dimensions later.
+    payload = {
+        "prompt": (
+            "A photorealistic cinematic live-action "
+            "environment test frame, natural lighting, "
+            "real-world appearance"
+        )
+    }
 
-    request = urllib.request.Request(
-        url,
-        data=data,
-        headers=headers,
-        method="POST",
+    print()
+    print(f"Testing visual model: {MODEL}")
+    print(f"Endpoint: {url}")
+
+    try:
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=TEST_TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        print(
+            f"Model test request failed: {exc}"
+        )
+        return False, None
+
+    print(
+        f"HTTP status: {response.status_code}"
     )
 
-    with urllib.request.urlopen(
-        request,
-        timeout=timeout,
-    ) as response:
-        return response.read()
+    if response.status_code in (200, 201, 202):
+        try:
+            data = response.json()
+        except Exception:
+            data = {}
 
+        if data.get("success") is False:
+            print(
+                "Cloudflare returned success=false."
+            )
+            print(
+                json.dumps(
+                    data,
+                    ensure_ascii=False,
+                    indent=2,
+                )[:3000]
+            )
+            return False, data
 
-def extract_image(response_bytes):
-    """
-    Cloudflare image responses can be returned as
-    raw image bytes or JSON containing base64 data.
-    """
+        return True, data
 
-    if not response_bytes:
-        return None
-
-    # Direct image response
-    if response_bytes.startswith(b"\x89PNG"):
-        return response_bytes
-
-    if response_bytes.startswith(b"\xff\xd8"):
-        return response_bytes
-
-    # JSON response
-    try:
-        result = json.loads(
-            response_bytes.decode("utf-8")
+    if response.status_code in (
+        401,
+        403,
+    ):
+        print(
+            "Cloudflare authentication/permission "
+            "error."
         )
+
+    elif response.status_code == 404:
+        print(
+            "Cloudflare model endpoint was not found."
+        )
+
+    elif response.status_code == 429:
+        print(
+            "Cloudflare rate limit received."
+        )
+
+    elif response.status_code >= 500:
+        print(
+            "Cloudflare server-side error."
+        )
+
+    try:
+        data = response.json()
     except Exception:
-        return None
+        data = {
+            "raw": response.text[:3000]
+        }
 
-    if not isinstance(result, dict):
-        return None
-
-    candidates = []
-
-    def collect(value):
-        if isinstance(value, str):
-            candidates.append(value)
-
-        elif isinstance(value, dict):
-            for item in value.values():
-                collect(item)
-
-        elif isinstance(value, list):
-            for item in value:
-                collect(item)
-
-    collect(result)
-
-    for value in candidates:
-        try:
-            decoded = base64.b64decode(
-                value,
-                validate=True,
-            )
-
-            if (
-                decoded.startswith(b"\x89PNG")
-                or decoded.startswith(b"\xff\xd8")
-            ):
-                return decoded
-
-        except Exception:
-            continue
-
-    return None
-
-
-def test_model(model_info):
-    model = model_info["model"]
-
-    prompt = (
-        "A cinematic realistic Indian village road "
-        "at dusk, natural lighting, realistic "
-        "environment, detailed photography, "
-        "dramatic atmosphere, no text."
+    print(
+        json.dumps(
+            data,
+            ensure_ascii=False,
+            indent=2,
+        )[:3000]
     )
 
-    if "stable-diffusion-xl-lightning" in model:
-        payload = {
-            "prompt": prompt,
-            "negative_prompt": (
-                "cartoon, anime, illustration, "
-                "neon, glitch, distorted, blurry, "
-                "text, watermark, logo"
-            ),
-            "width": 768,
-            "height": 432,
-            "num_steps": 4,
-            "guidance": 7.5,
-            "seed": 123456,
-        }
-
-    else:
-        payload = {
-            "prompt": prompt,
-            "steps": 4,
-            "seed": 123456,
-        }
-
-    try:
-        response = api_request(
-            model,
-            payload,
-        )
-
-        image_bytes = extract_image(
-            response
-        )
-
-        if not image_bytes:
-            return (
-                False,
-                "API returned no valid image data",
-            )
-
-        return (
-            True,
-            "IMAGE_GENERATION_OK",
-        )
-
-    except urllib.error.HTTPError as e:
-        try:
-            body = e.read().decode(
-                "utf-8",
-                errors="replace",
-            )
-        except Exception:
-            body = ""
-
-        return (
-            False,
-            f"HTTP {e.code}: "
-            f"{e.reason}. "
-            f"{body[:500]}",
-        )
-
-    except Exception as e:
-        return (
-            False,
-            str(e),
-        )
+    return False, data
 
 
 def save_selection(
-    model_info,
-    tested_models,
+    model,
+    status,
 ):
-    os.makedirs(
-        os.path.dirname(OUTPUT_FILE),
+    OUTPUT_FILE.parent.mkdir(
+        parents=True,
         exist_ok=True,
     )
 
-    result = {
-        "status": "selected",
-        "provider": "cloudflare_workers_ai",
-        "model": model_info["model"],
-        "display_name": model_info[
-            "display_name"
-        ],
-        "selected_at": datetime.now(
-            timezone.utc
-        ).isoformat(),
-        "tested_models": tested_models,
+    data = {
+        "status": status,
+        "model": model,
+        "provider": "cloudflare",
+        "selected_by": "select_visual_model.py",
+        "timestamp": int(time.time()),
     }
 
-    temp_file = (
-        f"{OUTPUT_FILE}.tmp"
+    tmp = OUTPUT_FILE.with_suffix(
+        OUTPUT_FILE.suffix + ".tmp"
     )
 
-    with open(
-        temp_file,
+    with tmp.open(
         "w",
         encoding="utf-8",
-    ) as file:
+    ) as f:
         json.dump(
-            result,
-            file,
+            data,
+            f,
             ensure_ascii=False,
             indent=2,
         )
-        file.write("\n")
 
-    os.replace(
-        temp_file,
-        OUTPUT_FILE,
-    )
+    tmp.replace(OUTPUT_FILE)
 
-    return result
+    return data
 
 
 def main():
-    print(
-        "===== CLOUDFLARE VISUAL MODEL SELECTION ====="
-    )
+    print("=" * 60)
+    print("        SELECTING VISUAL GENERATION MODEL")
+    print("=" * 60)
 
-    if not ACCOUNT_ID:
-        raise SystemExit(
-            "ERROR: CLOUDFLARE_ACCOUNT_ID "
-            "is not set"
+    try:
+        config = load_input_config()
+    except Exception as exc:
+        fail(
+            f"Failed to load Input configuration: {exc}"
         )
 
-    if not API_TOKEN:
-        raise SystemExit(
-            "ERROR: CLOUDFLARE_API_TOKEN "
-            "is not set"
-        )
+    format_name = normalize_format(config)
 
-    print(
-        "Cloudflare credentials detected."
+    max_retries = cfg_int(
+        config,
+        "MAX_RETRIES",
+        3,
     )
 
-    tested_models = []
-
-    models = sorted(
-        VISUAL_MODELS,
-        key=lambda item: item[
-            "priority"
-        ],
+    resume_enabled = cfg_bool(
+        config,
+        "RESUME_ENABLED",
+        True,
     )
 
-    print(
-        "\n===== MODEL PRIORITY ====="
+    print(f"FORMAT        : {format_name}")
+    print(f"MAX_RETRIES   : {max_retries}")
+    print(f"RESUME        : {resume_enabled}")
+    print(f"MODEL         : {MODEL}")
+
+    account_id, api_token = get_credentials()
+
+    # ---------------------------------------------------------
+    # TEST THE EXACT MODEL USED BY generate_visuals.py
+    # ---------------------------------------------------------
+
+    success = False
+    result = None
+
+    attempts = max(
+        1,
+        max_retries,
     )
 
-    for index, model in enumerate(
-        models,
-        start=1,
+    for attempt in range(
+        1,
+        attempts + 1,
     ):
+        print()
         print(
-            f"{index}. "
-            f"{model['model']}"
+            f"Model test attempt "
+            f"{attempt}/{attempts}"
         )
 
-    print(
-        "=========================="
-    )
-
-    for model_info in models:
-        model = model_info[
-            "model"
-        ]
-
-        print(
-            f"\nTesting model: {model}"
-        )
-
-        success, detail = test_model(
-            model_info
-        )
-
-        tested_models.append(
-            {
-                "model": model,
-                "success": success,
-                "detail": detail[:500],
-            }
+        success, result = test_model(
+            account_id,
+            api_token,
         )
 
         if success:
-            selected = save_selection(
-                model_info,
-                tested_models,
+            break
+
+        if attempt < attempts:
+            wait_seconds = min(
+                10 * attempt,
+                60,
             )
 
             print(
-                "\n===== VISUAL MODEL SELECTED ====="
+                f"Retrying in "
+                f"{wait_seconds} seconds..."
             )
 
-            print(
-                f"Provider: "
-                f"{selected['provider']}"
+            time.sleep(
+                wait_seconds
             )
 
-            print(
-                f"Model: "
-                f"{selected['model']}"
-            )
-
-            print(
-                f"Saved to: "
-                f"{OUTPUT_FILE}"
-            )
-
-            print(
-                "=================================="
-            )
-
-            return
-
-        print(
-            f"FAILED: {model}"
+    if not success:
+        save_selection(
+            MODEL,
+            "failed",
         )
 
-        print(
-            f"Reason: {detail[:500]}"
+        fail(
+            f"Visual model test failed: {MODEL}"
         )
 
-        print(
-            "Trying next model..."
-        )
+    # ---------------------------------------------------------
+    # SAVE SELECTED MODEL
+    # ---------------------------------------------------------
 
-    print(
-        "\n===== ALL VISUAL MODELS FAILED ====="
+    selection = save_selection(
+        MODEL,
+        "selected",
     )
 
-    for item in tested_models:
-        print(
-            f"- {item['model']}: "
-            f"{item['detail']}"
-        )
+    print()
+    print("=" * 60)
+    print("        VISUAL MODEL SELECTED")
+    print("=" * 60)
 
-    raise SystemExit(1)
+    print(
+        f"Selected model : {selection['model']}"
+    )
+
+    print(
+        f"Provider       : {selection['provider']}"
+    )
+
+    print(
+        f"Saved to       : {OUTPUT_FILE}"
+    )
+
+    print("=" * 60)
+
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
