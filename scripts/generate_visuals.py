@@ -12,7 +12,6 @@ import requests
 
 from input_config import (
     load_input_config,
-    cfg,
     cfg_bool,
     cfg_int,
     cfg_text,
@@ -22,18 +21,33 @@ from input_config import (
 
 BASE = Path("output")
 
-SCENES_FILE = BASE / "scenes" / "scenes.json"
+SCENES_FILE = (
+    BASE / "scenes" / "scenes.json"
+)
+
 CHARACTER_BIBLE_FILE = (
-    BASE / "character_bible" / "character_bible.json"
+    BASE
+    / "character_bible"
+    / "character_bible.json"
 )
+
 MODEL_FILE = (
-    BASE / "config" / "selected_visual_model.json"
+    BASE
+    / "config"
+    / "selected_visual_model.json"
 )
 
-VISUALS_DIR = BASE / "visuals"
-MANIFEST_FILE = VISUALS_DIR / "visual_jobs.json"
+VISUALS_DIR = (
+    BASE / "visuals"
+)
 
-DEFAULT_MODEL = "alibaba/wan-2.6-image"
+MANIFEST_FILE = (
+    VISUALS_DIR / "visual_jobs.json"
+)
+
+DEFAULT_MODEL = (
+    "alibaba/wan-2.6-image"
+)
 
 API_BASE = (
     "https://api.cloudflare.com/client/v4/accounts"
@@ -42,41 +56,69 @@ API_BASE = (
 REQUEST_TIMEOUT = 180
 
 
+# ============================================================
+# BASIC HELPERS
+# ============================================================
+
 def fail(message):
     print(f"ERROR: {message}")
     sys.exit(1)
 
 
 def load_json(path, default=None):
+
     if not path.exists():
         return default
 
     try:
-        with path.open("r", encoding="utf-8") as f:
+        with path.open(
+            "r",
+            encoding="utf-8"
+        ) as f:
             return json.load(f)
+
     except Exception as exc:
-        print(f"WARNING: Failed to read {path}: {exc}")
+
+        print(
+            f"WARNING: Failed to read "
+            f"{path}: {exc}"
+        )
+
         return default
 
 
 def save_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
 
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    with tmp.open("w", encoding="utf-8") as f:
+    tmp = path.with_suffix(
+        path.suffix + ".tmp"
+    )
+
+    with tmp.open(
+        "w",
+        encoding="utf-8"
+    ) as f:
+
         json.dump(
             data,
             f,
             ensure_ascii=False,
-            indent=2,
+            indent=2
         )
 
     tmp.replace(path)
 
 
 def valid_image(path):
-    if not path.exists() or not path.is_file():
+
+    if not path.exists():
+        return False
+
+    if not path.is_file():
         return False
 
     try:
@@ -85,70 +127,134 @@ def valid_image(path):
         return False
 
 
+# ============================================================
+# FORMAT / IMAGE SIZE
+# ============================================================
+
+def get_image_size(format_name):
+
+    """
+    Cloudflare Wan 2.6 Image supports custom WxH size.
+
+    SHORT:
+        Portrait 9:16-style source image.
+
+    FULL:
+        Landscape 4:3 source image.
+
+    The final render will later be converted to:
+        SHORT -> 720x1280
+        FULL  -> 1920x1080
+    """
+
+    if format_name == "short":
+        return "768x1024"
+
+    return "1024x768"
+
+
+# ============================================================
+# MODEL
+# ============================================================
+
 def get_model():
+
     data = load_json(
         MODEL_FILE,
-        {},
+        {}
     )
 
     if isinstance(data, dict):
+
         model = str(
-            data.get("model", "")
+            data.get(
+                "model",
+                ""
+            )
         ).strip()
 
         status = str(
-            data.get("status", "")
+            data.get(
+                "status",
+                ""
+            )
         ).strip().lower()
 
-        if model and status == "selected":
+        if (
+            model
+            and status == "selected"
+        ):
+
             print(
-                f"Selected visual model: {model}"
+                f"Selected visual model: "
+                f"{model}"
             )
+
             return model
 
     print(
-        "WARNING: No valid selected visual model found."
+        "WARNING: No valid selected "
+        "visual model found."
     )
 
     print(
-        f"Using fallback model: {DEFAULT_MODEL}"
+        f"Using fallback model: "
+        f"{DEFAULT_MODEL}"
     )
 
     return DEFAULT_MODEL
 
 
+# ============================================================
+# CREDENTIALS
+# ============================================================
+
 def get_credentials():
+
     account_id = os.getenv(
         "CLOUDFLARE_ACCOUNT_ID",
-        "",
+        ""
     ).strip()
 
     api_token = os.getenv(
         "CLOUDFLARE_API_TOKEN",
-        "",
+        ""
     ).strip()
 
     if not account_id:
+
         fail(
-            "CLOUDFLARE_ACCOUNT_ID is not set."
+            "CLOUDFLARE_ACCOUNT_ID "
+            "is not set."
         )
 
     if not api_token:
+
         fail(
-            "CLOUDFLARE_API_TOKEN is not set."
+            "CLOUDFLARE_API_TOKEN "
+            "is not set."
         )
 
-    return account_id, api_token
+    return (
+        account_id,
+        api_token
+    )
 
+
+# ============================================================
+# NEGATIVE PROMPT
+# ============================================================
 
 def build_negative_prompt(config):
+
     negative = []
 
     if cfg_bool(
         config,
         "AVOID_CARTOON_LOOK",
-        True,
+        True
     ):
+
         negative.extend([
             "cartoon",
             "comic",
@@ -161,8 +267,9 @@ def build_negative_prompt(config):
     if cfg_bool(
         config,
         "AVOID_NEON",
-        True,
+        True
     ):
+
         negative.append(
             "neon colors"
         )
@@ -170,8 +277,9 @@ def build_negative_prompt(config):
     if cfg_bool(
         config,
         "AVOID_GLITCH_EFFECTS",
-        True,
+        True
     ):
+
         negative.extend([
             "glitch",
             "digital distortion",
@@ -190,60 +298,67 @@ def build_negative_prompt(config):
         "text",
     ])
 
-    return ", ".join(negative)
+    return ", ".join(
+        negative
+    )
 
+
+# ============================================================
+# VISUAL PROMPT
+# ============================================================
 
 def build_visual_prompt(
     config,
     scene,
-    character_bible,
+    character_bible
 ):
+
     visual_style = cfg_text(
         config,
         "VISUAL_STYLE",
-        "cinematic_realistic",
+        "cinematic_realistic"
     )
 
     realism = cfg_text(
         config,
         "REALISM",
-        "high",
+        "high"
     )
 
     camera_style = cfg_text(
         config,
         "CAMERA_STYLE",
-        "cinematic",
+        "cinematic"
     )
 
     lighting = cfg_text(
         config,
         "LIGHTING",
-        "cinematic",
+        "cinematic"
     )
 
     mood = cfg_text(
         config,
         "MOOD",
-        "dramatic",
+        "dramatic"
     )
 
     quality = cfg_text(
         config,
         "QUALITY",
-        "high",
+        "high"
     )
 
     natural_motion = cfg_bool(
         config,
         "NATURAL_MOTION",
-        True,
+        True
     )
 
     realistic_lighting = cfg_bool(
         config,
         "REALISTIC_LIGHTING",
-        True,
+        True
     )
 
     scene_prompt = str(
@@ -253,9 +368,9 @@ def build_visual_prompt(
                 "visual",
                 scene.get(
                     "description",
-                    "",
-                ),
-            ),
+                    ""
+                )
+            )
         )
     ).strip()
 
@@ -263,33 +378,40 @@ def build_visual_prompt(
         "characters",
         scene.get(
             "character_ids",
-            [],
-        ),
+            []
+        )
     )
 
     world_context = scene.get(
         "world_context",
         scene.get(
             "world",
-            "",
-        ),
+            ""
+        )
     )
 
     character_context = ""
 
     if (
-        isinstance(character_bible, dict)
+        isinstance(
+            character_bible,
+            dict
+        )
         and characters
     ):
-        bible_characters = character_bible.get(
-            "characters",
-            [],
+
+        bible_characters = (
+            character_bible.get(
+                "characters",
+                []
+            )
         )
 
         if isinstance(
             bible_characters,
-            list,
+            list
         ):
+
             wanted = set(
                 str(x)
                 for x in characters
@@ -297,17 +419,20 @@ def build_visual_prompt(
 
             selected = []
 
-            for character in bible_characters:
+            for character in (
+                bible_characters
+            ):
+
                 if not isinstance(
                     character,
-                    dict,
+                    dict
                 ):
                     continue
 
                 char_id = str(
                     character.get(
                         "id",
-                        "",
+                        ""
                     )
                 )
 
@@ -317,9 +442,12 @@ def build_visual_prompt(
                     )
 
             if selected:
-                character_context = json.dumps(
-                    selected,
-                    ensure_ascii=False,
+
+                character_context = (
+                    json.dumps(
+                        selected,
+                        ensure_ascii=False
+                    )
                 )
 
     prompt_parts = [
@@ -334,140 +462,184 @@ def build_visual_prompt(
     ]
 
     if natural_motion:
+
         prompt_parts.append(
-            "Natural human posture and physically believable movement."
+            "Natural human posture and "
+            "physically believable movement."
         )
 
     if realistic_lighting:
+
         prompt_parts.append(
-            "Physically realistic natural lighting and shadows."
+            "Physically realistic natural "
+            "lighting and shadows."
         )
 
     if scene_prompt:
+
         prompt_parts.append(
-            f"Scene description: {scene_prompt}"
+            f"Scene description: "
+            f"{scene_prompt}"
         )
 
     if world_context:
+
         prompt_parts.append(
-            f"World continuity: {world_context}"
+            f"World continuity: "
+            f"{world_context}"
         )
 
     if character_context:
+
         prompt_parts.append(
             "Character continuity reference: "
             + character_context
         )
 
     prompt_parts.append(
-        "Maintain identity, clothing, location, "
-        "time, environment and visual continuity "
-        "with surrounding scenes."
+        "Maintain identity, clothing, "
+        "location, time, environment and "
+        "visual continuity with surrounding scenes."
     )
 
-    return " ".join(prompt_parts)
+    return " ".join(
+        prompt_parts
+    )
 
 
-def config_signature(config, model):
+# ============================================================
+# CONFIG SIGNATURE
+# ============================================================
+
+def config_signature(
+    config,
+    model,
+    image_size
+):
+
     relevant = {
+
         "model": model,
-        "format": normalize_format(config),
+
+        "format": normalize_format(
+            config
+        ),
+
+        "image_size": image_size,
+
         "visual_style": cfg_text(
             config,
             "VISUAL_STYLE",
-            "",
+            ""
         ),
+
         "realism": cfg_text(
             config,
             "REALISM",
-            "",
+            ""
         ),
+
         "character_bible": cfg_bool(
             config,
             "CHARACTER_BIBLE",
-            True,
+            True
         ),
+
         "character_consistency": cfg_bool(
             config,
             "CHARACTER_CONSISTENCY",
-            True,
+            True
         ),
+
         "world_consistency": cfg_bool(
             config,
             "WORLD_CONSISTENCY",
-            True,
+            True
         ),
+
         "scene_continuity": cfg_bool(
             config,
             "SCENE_CONTINUITY",
-            True,
+            True
         ),
+
         "cinematic_camera": cfg_bool(
             config,
             "CINEMATIC_CAMERA",
-            True,
+            True
         ),
+
         "camera_style": cfg_text(
             config,
             "CAMERA_STYLE",
-            "",
+            ""
         ),
+
         "lighting": cfg_text(
             config,
             "LIGHTING",
-            "",
+            ""
         ),
+
         "mood": cfg_text(
             config,
             "MOOD",
-            "",
+            ""
         ),
+
         "quality": cfg_text(
             config,
             "QUALITY",
-            "",
+            ""
         ),
+
         "negative_prompt": cfg_bool(
             config,
             "NEGATIVE_PROMPT",
-            True,
+            True
         ),
+
         "avoid_cartoon": cfg_bool(
             config,
             "AVOID_CARTOON_LOOK",
-            True,
+            True
         ),
+
         "avoid_neon": cfg_bool(
             config,
             "AVOID_NEON",
-            True,
+            True
         ),
+
         "avoid_glitch": cfg_bool(
             config,
             "AVOID_GLITCH_EFFECTS",
-            True,
+            True
         ),
+
         "natural_motion": cfg_bool(
             config,
             "NATURAL_MOTION",
-            True,
+            True
         ),
+
         "realistic_lighting": cfg_bool(
             config,
             "REALISTIC_LIGHTING",
-            True,
+            True
         ),
+
         "transitions": cfg_text(
             config,
             "TRANSITIONS",
-            "",
+            ""
         ),
     }
 
     raw = json.dumps(
         relevant,
         ensure_ascii=False,
-        sort_keys=True,
+        sort_keys=True
     )
 
     return hashlib.sha256(
@@ -475,79 +647,112 @@ def config_signature(config, model):
     ).hexdigest()
 
 
+# ============================================================
+# EXTRACT IMAGE
+# ============================================================
+
 def extract_image_bytes(data):
-    if not isinstance(data, dict):
+
+    if not isinstance(
+        data,
+        dict
+    ):
         return None
 
     result = data.get(
         "result"
     )
 
-    if isinstance(result, dict):
-        candidates = [
-            result.get("image"),
-            result.get("image_data"),
-            result.get("output"),
-            result.get("data"),
-        ]
+    if not isinstance(
+        result,
+        dict
+    ):
+        return None
 
-        for item in candidates:
-            if isinstance(
-                item,
-                str,
+    candidates = [
+        result.get("image"),
+        result.get("image_data"),
+        result.get("output"),
+        result.get("data"),
+    ]
+
+    for item in candidates:
+
+        if isinstance(
+            item,
+            str
+        ):
+
+            if item.startswith(
+                "data:image"
             ):
-                if item.startswith(
-                    "data:image"
-                ):
-                    try:
-                        return base64.b64decode(
-                            item.split(
-                                ",",
-                                1,
-                            )[1]
-                        )
-                    except Exception:
-                        pass
 
                 try:
+
                     return base64.b64decode(
-                        item
+                        item.split(
+                            ",",
+                            1
+                        )[1]
                     )
+
                 except Exception:
                     pass
 
-            if isinstance(
-                item,
-                dict,
+            try:
+
+                return base64.b64decode(
+                    item
+                )
+
+            except Exception:
+                pass
+
+        if isinstance(
+            item,
+            dict
+        ):
+
+            for key in (
+                "image",
+                "image_data",
+                "data"
             ):
-                for key in (
-                    "image",
-                    "image_data",
-                    "data",
+
+                value = item.get(
+                    key
+                )
+
+                if not isinstance(
+                    value,
+                    str
                 ):
-                    value = item.get(key)
+                    continue
 
-                    if isinstance(
-                        value,
-                        str,
+                try:
+
+                    if value.startswith(
+                        "data:image"
                     ):
-                        try:
-                            if value.startswith(
-                                "data:image"
-                            ):
-                                value = value.split(
-                                    ",",
-                                    1,
-                                )[1]
 
-                            return base64.b64decode(
-                                value
-                            )
-                        except Exception:
-                            pass
+                        value = value.split(
+                            ",",
+                            1
+                        )[1]
+
+                    return base64.b64decode(
+                        value
+                    )
+
+                except Exception:
+                    pass
 
     return None
 
+
+# ============================================================
+# IMAGE GENERATION
+# ============================================================
 
 def generate_image(
     account_id,
@@ -555,57 +760,78 @@ def generate_image(
     model,
     prompt,
     negative_prompt,
-    retries,
+    image_size,
+    retries
 ):
+
     url = (
-        f"{API_BASE}/{account_id}"
+        f"{API_BASE}/"
+        f"{account_id}"
         f"/ai/run/@{model}"
     )
 
     headers = {
-        "Authorization": (
-            f"Bearer {api_token}"
-        ),
-        "Content-Type": "application/json",
+        "Authorization":
+            f"Bearer {api_token}",
+        "Content-Type":
+            "application/json",
     }
 
     payload = {
         "prompt": prompt,
+        "size": image_size,
     }
 
     if negative_prompt:
-        payload["negative_prompt"] = (
-            negative_prompt
-        )
+
+        payload[
+            "negative_prompt"
+        ] = negative_prompt
+
+    print(
+        f"    Image size: "
+        f"{image_size}"
+    )
 
     for attempt in range(
         1,
-        max(1, retries) + 1,
+        max(
+            1,
+            retries
+        ) + 1
     ):
+
         print(
             f"    Generation attempt "
-            f"{attempt}/{max(1, retries)}"
+            f"{attempt}/"
+            f"{max(1, retries)}"
         )
 
         try:
+
             response = requests.post(
                 url,
                 headers=headers,
                 json=payload,
-                timeout=REQUEST_TIMEOUT,
+                timeout=REQUEST_TIMEOUT
             )
+
         except requests.RequestException as exc:
+
             print(
-                f"    Request error: {exc}"
+                f"    Request error: "
+                f"{exc}"
             )
 
             if attempt < retries:
+
                 time.sleep(
                     min(
                         5 * attempt,
-                        30,
+                        30
                     )
                 )
+
                 continue
 
             return None
@@ -613,18 +839,26 @@ def generate_image(
         if response.status_code in (
             200,
             201,
-            202,
+            202
         ):
+
             try:
+
                 data = response.json()
+
             except Exception as exc:
+
                 print(
-                    f"    Invalid JSON response: {exc}"
+                    f"    Invalid JSON response: "
+                    f"{exc}"
                 )
+
                 data = {}
 
-            image_bytes = extract_image_bytes(
-                data
+            image_bytes = (
+                extract_image_bytes(
+                    data
+                )
             )
 
             if image_bytes:
@@ -638,7 +872,7 @@ def generate_image(
                 json.dumps(
                     data,
                     ensure_ascii=False,
-                    indent=2,
+                    indent=2
                 )[:2000]
             )
 
@@ -647,14 +881,16 @@ def generate_image(
             500,
             502,
             503,
-            504,
+            504
         ):
+
             print(
-                f"    Temporary Cloudflare error "
-                f"{response.status_code}"
+                f"    Temporary Cloudflare "
+                f"error {response.status_code}"
             )
 
         else:
+
             print(
                 f"    Cloudflare error "
                 f"{response.status_code}"
@@ -668,25 +904,42 @@ def generate_image(
                 400,
                 401,
                 403,
-                404,
+                404
             ):
+
                 return None
 
         if attempt < retries:
+
             wait = min(
                 5 * attempt,
-                30,
+                30
             )
 
-            time.sleep(wait)
+            time.sleep(
+                wait
+            )
 
     return None
 
 
+# ============================================================
+# MAIN
+# ============================================================
+
 def main():
-    print("=" * 60)
-    print("          GENERATING VISUALS")
-    print("=" * 60)
+
+    print(
+        "=" * 60
+    )
+
+    print(
+        "          GENERATING VISUALS"
+    )
+
+    print(
+        "=" * 60
+    )
 
     config = load_input_config()
 
@@ -694,86 +947,108 @@ def main():
         config
     )
 
+    image_size = get_image_size(
+        format_name
+    )
+
     parts = cfg_int(
         config,
         "PARTS",
-        1,
+        1
     )
 
     scenes_per_part = cfg_int(
         config,
         "SCENES",
-        1,
+        1
     )
 
     max_retries = cfg_int(
         config,
         "MAX_RETRIES",
-        3,
+        3
     )
 
     resume_enabled = cfg_bool(
         config,
         "RESUME_ENABLED",
-        True,
+        True
     )
 
     skip_completed = cfg_bool(
         config,
         "SKIP_COMPLETED_SCENES",
-        True,
+        True
     )
 
     save_checkpoint = cfg_bool(
         config,
         "SAVE_CHECKPOINT_AFTER_EACH_SCENE",
-        True,
+        True
     )
 
     character_bible_enabled = cfg_bool(
         config,
         "CHARACTER_BIBLE",
-        True,
+        True
     )
 
     model = get_model()
 
     print(
-        f"FORMAT          : {format_name}"
+        f"FORMAT          : "
+        f"{format_name}"
     )
+
     print(
-        f"MODEL           : {model}"
+        f"IMAGE SIZE      : "
+        f"{image_size}"
     )
+
     print(
-        f"PARTS           : {parts}"
+        f"MODEL           : "
+        f"{model}"
     )
+
     print(
-        f"SCENES/PART     : {scenes_per_part}"
+        f"PARTS           : "
+        f"{parts}"
     )
+
     print(
-        f"MAX_RETRIES     : {max_retries}"
+        f"SCENES/PART     : "
+        f"{scenes_per_part}"
+    )
+
+    print(
+        f"MAX_RETRIES     : "
+        f"{max_retries}"
     )
 
     if not SCENES_FILE.exists():
+
         fail(
-            f"Missing scenes file: {SCENES_FILE}"
+            f"Missing scenes file: "
+            f"{SCENES_FILE}"
         )
 
     scenes_data = load_json(
         SCENES_FILE,
-        {},
+        {}
     )
 
     scenes = scenes_data.get(
         "scenes",
-        [],
+        []
     )
 
     expected_total = (
-        parts * scenes_per_part
+        parts
+        * scenes_per_part
     )
 
     if len(scenes) != expected_total:
+
         fail(
             "Scene count mismatch: "
             f"expected {expected_total}, "
@@ -783,15 +1058,18 @@ def main():
     character_bible = {}
 
     if character_bible_enabled:
+
         if not CHARACTER_BIBLE_FILE.exists():
+
             fail(
-                "CHARACTER_BIBLE=true but file is "
-                f"missing: {CHARACTER_BIBLE_FILE}"
+                "CHARACTER_BIBLE=true "
+                "but file is missing: "
+                f"{CHARACTER_BIBLE_FILE}"
             )
 
         character_bible = load_json(
             CHARACTER_BIBLE_FILE,
-            {},
+            {}
         )
 
     account_id, api_token = (
@@ -800,33 +1078,43 @@ def main():
 
     VISUALS_DIR.mkdir(
         parents=True,
-        exist_ok=True,
+        exist_ok=True
     )
 
     old_manifest = load_json(
         MANIFEST_FILE,
-        {},
+        {}
     )
 
     old_jobs = {}
 
     if (
-        isinstance(old_manifest, dict)
+        isinstance(
+            old_manifest,
+            dict
+        )
         and isinstance(
-            old_manifest.get("jobs"),
-            dict,
+            old_manifest.get(
+                "jobs"
+            ),
+            dict
         )
     ):
-        old_jobs = old_manifest[
-            "jobs"
-        ]
+
+        old_jobs = (
+            old_manifest[
+                "jobs"
+            ]
+        )
 
     signature = config_signature(
         config,
         model,
+        image_size
     )
 
     jobs = {}
+
     completed = 0
 
     negative_prompt = ""
@@ -834,8 +1122,9 @@ def main():
     if cfg_bool(
         config,
         "NEGATIVE_PROMPT",
-        True,
+        True
     ):
+
         negative_prompt = (
             build_negative_prompt(
                 config
@@ -844,21 +1133,32 @@ def main():
 
     for index, scene in enumerate(
         scenes,
-        start=1,
+        start=1
     ):
+
         part = int(
             scene.get(
                 "part",
-                ((index - 1) // scenes_per_part)
-                + 1,
+                (
+                    (
+                        index - 1
+                    )
+                    // scenes_per_part
+                )
+                + 1
             )
         )
 
         scene_number = int(
             scene.get(
                 "scene",
-                ((index - 1) % scenes_per_part)
-                + 1,
+                (
+                    (
+                        index - 1
+                    )
+                    % scenes_per_part
+                )
+                + 1
             )
         )
 
@@ -875,7 +1175,7 @@ def main():
 
         old_job = old_jobs.get(
             key,
-            {},
+            {}
         )
 
         old_signature = (
@@ -884,22 +1184,26 @@ def main():
             )
             if isinstance(
                 old_job,
-                dict,
+                dict
             )
             else None
         )
 
         old_model = (
-            old_job.get("model")
+            old_job.get(
+                "model"
+            )
             if isinstance(
                 old_job,
-                dict,
+                dict
             )
             else None
         )
 
-        physical_valid = valid_image(
-            output_path
+        physical_valid = (
+            valid_image(
+                output_path
+            )
         )
 
         reusable = (
@@ -911,8 +1215,10 @@ def main():
         )
 
         if reusable:
+
             print(
-                f"[{index}/{expected_total}] "
+                f"[{index}/"
+                f"{expected_total}] "
                 f"SKIP {key} "
                 f"(valid existing visual)"
             )
@@ -922,6 +1228,7 @@ def main():
                 "scene": scene_number,
                 "status": "completed",
                 "model": model,
+                "image_size": image_size,
                 "config_signature": signature,
                 "visual_path": str(
                     output_path
@@ -929,18 +1236,21 @@ def main():
             }
 
             completed += 1
+
             continue
 
         print()
+
         print(
-            f"[{index}/{expected_total}] "
+            f"[{index}/"
+            f"{expected_total}] "
             f"GENERATE {key}"
         )
 
         prompt = build_visual_prompt(
             config,
             scene,
-            character_bible,
+            character_bible
         )
 
         image_bytes = generate_image(
@@ -949,15 +1259,18 @@ def main():
             model,
             prompt,
             negative_prompt,
-            max_retries,
+            image_size,
+            max_retries
         )
 
         if not image_bytes:
+
             jobs[key] = {
                 "part": part,
                 "scene": scene_number,
                 "status": "failed",
                 "model": model,
+                "image_size": image_size,
                 "config_signature": signature,
                 "visual_path": str(
                     output_path
@@ -970,33 +1283,38 @@ def main():
                     "status": "failed",
                     "format": format_name,
                     "model": model,
+                    "image_size": image_size,
                     "config_signature": signature,
                     "expected_total": expected_total,
                     "completed": completed,
                     "jobs": jobs,
-                },
+                }
             )
 
             fail(
-                f"Visual generation failed for "
-                f"{key}"
+                "Visual generation failed "
+                f"for {key}"
             )
 
         output_path.parent.mkdir(
             parents=True,
-            exist_ok=True,
+            exist_ok=True
         )
 
         with output_path.open(
             "wb"
         ) as f:
-            f.write(image_bytes)
+
+            f.write(
+                image_bytes
+            )
 
         if not valid_image(
             output_path
         ):
+
             fail(
-                f"Generated visual is invalid: "
+                "Generated visual is invalid: "
                 f"{output_path}"
             )
 
@@ -1005,6 +1323,7 @@ def main():
             "scene": scene_number,
             "status": "completed",
             "model": model,
+            "image_size": image_size,
             "config_signature": signature,
             "visual_path": str(
                 output_path
@@ -1014,12 +1333,14 @@ def main():
         completed += 1
 
         if save_checkpoint:
+
             save_json(
                 MANIFEST_FILE,
                 {
                     "status": "pending",
                     "format": format_name,
                     "model": model,
+                    "image_size": image_size,
                     "config_signature": signature,
                     "expected_total": expected_total,
                     "completed": completed,
@@ -1028,41 +1349,49 @@ def main():
                         - completed
                     ),
                     "jobs": jobs,
-                },
+                }
             )
 
-    # ---------------------------------------------------------
+    # ========================================================
     # FINAL VALIDATION
-    # ---------------------------------------------------------
+    # ========================================================
 
     missing = []
 
     for part in range(
         1,
-        parts + 1,
+        parts + 1
     ):
+
         for scene_number in range(
             1,
-            scenes_per_part + 1,
+            scenes_per_part + 1
         ):
+
             path = (
                 VISUALS_DIR
                 / f"part_{part:02d}"
                 / f"scene_{scene_number:02d}.png"
             )
 
-            if not valid_image(path):
+            if not valid_image(
+                path
+            ):
+
                 missing.append(
-                    f"Part {part} Scene {scene_number}"
+                    f"Part {part} "
+                    f"Scene {scene_number}"
                 )
 
     if missing:
+
         save_json(
             MANIFEST_FILE,
             {
                 "status": "failed",
                 "format": format_name,
                 "model": model,
+                "image_size": image_size,
                 "config_signature": signature,
                 "expected_total": expected_total,
                 "completed": (
@@ -1071,7 +1400,7 @@ def main():
                 ),
                 "missing": missing,
                 "jobs": jobs,
-            },
+            }
         )
 
         fail(
@@ -1085,31 +1414,63 @@ def main():
             "status": "completed",
             "format": format_name,
             "model": model,
+            "image_size": image_size,
             "config_signature": signature,
             "expected_total": expected_total,
             "completed": expected_total,
             "pending": 0,
             "jobs": jobs,
-        },
+        }
     )
 
     print()
-    print("=" * 60)
-    print("          VISUAL GENERATION COMPLETE")
-    print("=" * 60)
+
     print(
-        f"Model           : {model}"
+        "=" * 60
     )
+
     print(
-        f"Visuals         : {completed}/{expected_total}"
+        "          VISUAL GENERATION COMPLETE"
     )
+
     print(
-        f"Manifest        : {MANIFEST_FILE}"
+        "=" * 60
     )
-    print("=" * 60)
+
+    print(
+        f"Model           : "
+        f"{model}"
+    )
+
+    print(
+        f"Format          : "
+        f"{format_name}"
+    )
+
+    print(
+        f"Image size      : "
+        f"{image_size}"
+    )
+
+    print(
+        f"Visuals         : "
+        f"{completed}/{expected_total}"
+    )
+
+    print(
+        f"Manifest        : "
+        f"{MANIFEST_FILE}"
+    )
+
+    print(
+        "=" * 60
+    )
 
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+
+    sys.exit(
+        main()
+    )
