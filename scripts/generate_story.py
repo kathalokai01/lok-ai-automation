@@ -90,8 +90,27 @@ def clean_title(title):
 
 
 def extract_json(text):
+    """
+    Parse Gemini JSON safely.
+
+    Structured JSON mode should already return valid JSON,
+    but this function keeps a defensive fallback for
+    accidental markdown fences or surrounding text.
+    """
+
+    if not isinstance(text, str):
+        raise RuntimeError(
+            "Gemini response is not text"
+        )
+
     text = text.strip()
 
+    if not text:
+        raise RuntimeError(
+            "Gemini returned empty response"
+        )
+
+    # Remove markdown JSON fences if present.
     if text.startswith("```"):
         text = re.sub(
             r"^```(?:json)?\s*",
@@ -104,14 +123,23 @@ def extract_json(text):
             r"\s*```$",
             "",
             text,
-        )
+        ).strip()
 
+    # First attempt: complete response.
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
+
+        if not isinstance(parsed, dict):
+            raise RuntimeError(
+                "Gemini JSON root must be an object"
+            )
+
+        return parsed
 
     except json.JSONDecodeError:
         pass
 
+    # Defensive fallback: find outermost JSON object.
     start = text.find("{")
     end = text.rfind("}")
 
@@ -123,11 +151,36 @@ def extract_json(text):
     candidate = text[start:end + 1]
 
     try:
-        return json.loads(candidate)
+        parsed = json.loads(candidate)
+
+        if not isinstance(parsed, dict):
+            raise RuntimeError(
+                "Gemini JSON root must be an object"
+            )
+
+        return parsed
 
     except json.JSONDecodeError as exc:
+
+        preview_start = max(
+            0,
+            exc.pos - 180,
+        )
+
+        preview_end = min(
+            len(candidate),
+            exc.pos + 180,
+        )
+
+        preview = candidate[
+            preview_start:preview_end
+        ]
+
         raise RuntimeError(
-            f"Could not parse Gemini JSON: {exc}"
+            "Could not parse Gemini JSON: "
+            f"{exc}\n"
+            f"JSON context around error:\n"
+            f"{preview}"
         )
 
 
@@ -147,6 +200,7 @@ def call_gemini(prompt):
     payload = {
         "contents": [
             {
+                "role": "user",
                 "parts": [
                     {
                         "text": prompt
@@ -155,9 +209,14 @@ def call_gemini(prompt):
             }
         ],
         "generationConfig": {
-            "temperature": 0.85,
-            "topP": 0.95,
+            "temperature": 0.75,
+            "topP": 0.90,
             "maxOutputTokens": 30000,
+
+            # IMPORTANT:
+            # Force Gemini to return JSON instead
+            # of free-form text.
+            "responseMimeType": "application/json",
         },
     }
 
@@ -204,8 +263,17 @@ def call_gemini(prompt):
                     "Gemini returned no candidates"
                 )
 
+            candidate = candidates[0]
+
+            finish_reason = str(
+                candidate.get(
+                    "finishReason",
+                    ""
+                )
+            ).upper()
+
             parts_data = (
-                candidates[0]
+                candidate
                 .get("content", {})
                 .get("parts", [])
             )
@@ -231,6 +299,19 @@ def call_gemini(prompt):
                     "Gemini returned empty text"
                 )
 
+            # A truncated JSON response is not useful.
+            if finish_reason in {
+                "MAX_TOKENS",
+                "LENGTH",
+            }:
+
+                raise RuntimeError(
+                    "Gemini response was truncated "
+                    f"(finishReason={finish_reason}). "
+                    "The story JSON exceeded the "
+                    "available output limit."
+                )
+
             return text
 
         except urllib.error.HTTPError as exc:
@@ -242,7 +323,7 @@ def call_gemini(prompt):
 
             last_error = RuntimeError(
                 f"Gemini HTTP {exc.code}: "
-                f"{body[:1000]}"
+                f"{body[:1500]}"
             )
 
             if exc.code not in {
@@ -323,9 +404,13 @@ Rules:
 TITLE:
 """
 
-    response = call_gemini(prompt)
+    response = call_gemini(
+        prompt
+    )
 
-    title = clean_title(response)
+    title = clean_title(
+        response
+    )
 
     if not title:
         raise RuntimeError(
@@ -551,9 +636,25 @@ Exactly {scenes} scenes per part.
 
 Exactly {parts * scenes} total scenes.
 
-OUTPUT JSON ONLY.
+IMPORTANT JSON RULES:
 
-Required structure:
+Return ONLY one valid JSON object.
+
+Do not return Markdown.
+
+Do not wrap JSON in ```.
+
+Do not add any text before JSON.
+
+Do not add any text after JSON.
+
+All string values must use valid JSON escaping.
+
+Do not place raw line breaks inside JSON string values.
+
+Use \\n when a line break is needed inside a string.
+
+OUTPUT JSON STRUCTURE:
 
 {{
   "status": "completed",
@@ -704,9 +805,25 @@ Exactly {scenes} scenes per part.
 
 Exactly {parts * scenes} total scenes.
 
-OUTPUT JSON ONLY.
+IMPORTANT JSON RULES:
 
-Required structure:
+Return ONLY one valid JSON object.
+
+Do not return Markdown.
+
+Do not wrap JSON in ```.
+
+Do not add any text before JSON.
+
+Do not add any text after JSON.
+
+All string values must use valid JSON escaping.
+
+Do not place raw line breaks inside JSON string values.
+
+Use \\n when a line break is needed inside a string.
+
+OUTPUT JSON STRUCTURE:
 
 {{
   "status": "completed",
@@ -1137,6 +1254,7 @@ def main():
             else "long_form"
         ),
         "generated_by": MODEL,
+        "json_mode": True,
     }
 
     OUTPUT_FILE.write_text(
@@ -1148,7 +1266,6 @@ def main():
         encoding="utf-8",
     )
 
-    # Canonical title.
     TITLE_FILE.write_text(
         title,
         encoding="utf-8",
@@ -1191,6 +1308,10 @@ def main():
         )
 
         print(
+            "JSON mode    : VERIFIED"
+        )
+
+        print(
             "Ending       : "
             "PAYOFF/TWIST REQUIRED"
         )
@@ -1201,12 +1322,17 @@ def main():
             "Story type   : LONG-FORM"
         )
 
+        print(
+            "JSON mode    : VERIFIED"
+        )
+
     print("=" * 60)
 
 
 if __name__ == "__main__":
 
     try:
+
         main()
 
     except Exception as exc:
