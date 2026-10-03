@@ -89,15 +89,153 @@ def clean_title(title):
     return title.strip()
 
 
+# ============================================================
+# GEMINI RESPONSE SCHEMA
+# ============================================================
+
+SCENE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "scene": {
+            "type": "integer",
+        },
+        "purpose": {
+            "type": "string",
+        },
+        "narration": {
+            "type": "string",
+        },
+        "visual": {
+            "type": "string",
+        },
+        "dialogue": {
+            "type": "string",
+        },
+        "suspense": {
+            "type": "string",
+        },
+    },
+    "required": [
+        "scene",
+        "purpose",
+        "narration",
+        "visual",
+        "dialogue",
+        "suspense",
+    ],
+}
+
+
+PART_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "part": {
+            "type": "integer",
+        },
+        "title": {
+            "type": "string",
+        },
+        "scenes": {
+            "type": "array",
+            "items": SCENE_SCHEMA,
+        },
+    },
+    "required": [
+        "part",
+        "title",
+        "scenes",
+    ],
+}
+
+
+SHORT_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {
+            "type": "string",
+        },
+        "format": {
+            "type": "string",
+        },
+        "title": {
+            "type": "string",
+        },
+        "topic": {
+            "type": "string",
+        },
+        "story_type": {
+            "type": "string",
+        },
+        "hook": {
+            "type": "string",
+        },
+        "ending_type": {
+            "type": "string",
+        },
+        "parts": {
+            "type": "array",
+            "items": PART_SCHEMA,
+        },
+    },
+    "required": [
+        "status",
+        "format",
+        "title",
+        "topic",
+        "story_type",
+        "hook",
+        "ending_type",
+        "parts",
+    ],
+}
+
+
+FULL_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {
+            "type": "string",
+        },
+        "format": {
+            "type": "string",
+        },
+        "title": {
+            "type": "string",
+        },
+        "topic": {
+            "type": "string",
+        },
+        "story_type": {
+            "type": "string",
+        },
+        "parts": {
+            "type": "array",
+            "items": PART_SCHEMA,
+        },
+    },
+    "required": [
+        "status",
+        "format",
+        "title",
+        "topic",
+        "story_type",
+        "parts",
+    ],
+}
+
+
+def get_response_schema(expected_format):
+    if expected_format == "short":
+        return SHORT_RESPONSE_SCHEMA
+
+    return FULL_RESPONSE_SCHEMA
+
+
+# ============================================================
+# JSON PARSER
+# ============================================================
+
 def extract_json(text):
-    """
-    Parse Gemini JSON safely.
-
-    Structured JSON mode should already return valid JSON,
-    but this function keeps a defensive fallback for
-    accidental markdown fences or surrounding text.
-    """
-
     if not isinstance(text, str):
         raise RuntimeError(
             "Gemini response is not text"
@@ -110,81 +248,72 @@ def extract_json(text):
             "Gemini returned empty response"
         )
 
-    # Remove markdown JSON fences if present.
-    if text.startswith("```"):
-        text = re.sub(
-            r"^```(?:json)?\s*",
-            "",
-            text,
-            flags=re.IGNORECASE,
-        )
-
-        text = re.sub(
-            r"\s*```$",
-            "",
-            text,
-        ).strip()
-
-    # First attempt: complete response.
     try:
-        parsed = json.loads(text)
+        data = json.loads(text)
 
-        if not isinstance(parsed, dict):
+        if not isinstance(data, dict):
             raise RuntimeError(
                 "Gemini JSON root must be an object"
             )
 
-        return parsed
-
-    except json.JSONDecodeError:
-        pass
-
-    # Defensive fallback: find outermost JSON object.
-    start = text.find("{")
-    end = text.rfind("}")
-
-    if start == -1 or end == -1 or end <= start:
-        raise RuntimeError(
-            "Gemini response does not contain valid JSON"
-        )
-
-    candidate = text[start:end + 1]
-
-    try:
-        parsed = json.loads(candidate)
-
-        if not isinstance(parsed, dict):
-            raise RuntimeError(
-                "Gemini JSON root must be an object"
-            )
-
-        return parsed
+        return data
 
     except json.JSONDecodeError as exc:
 
+        start = text.find("{")
+        end = text.rfind("}")
+
+        if (
+            start != -1
+            and end != -1
+            and end > start
+        ):
+
+            candidate = text[
+                start:end + 1
+            ]
+
+            try:
+                data = json.loads(
+                    candidate
+                )
+
+                if isinstance(data, dict):
+                    return data
+
+            except json.JSONDecodeError:
+                pass
+
         preview_start = max(
             0,
-            exc.pos - 180,
+            exc.pos - 200,
         )
 
         preview_end = min(
-            len(candidate),
-            exc.pos + 180,
+            len(text),
+            exc.pos + 200,
         )
 
-        preview = candidate[
+        preview = text[
             preview_start:preview_end
         ]
 
         raise RuntimeError(
             "Could not parse Gemini JSON: "
             f"{exc}\n"
-            f"JSON context around error:\n"
+            "JSON context around error:\n"
             f"{preview}"
         )
 
 
-def call_gemini(prompt):
+# ============================================================
+# GEMINI CALL
+# ============================================================
+
+def call_gemini(
+    prompt,
+    expected_format,
+):
     if not GEMINI_API_KEY:
         raise RuntimeError(
             "GEMINI_API_KEY is not set"
@@ -195,6 +324,10 @@ def call_gemini(prompt):
         "v1beta/models/"
         f"{MODEL}:generateContent"
         f"?key={GEMINI_API_KEY}"
+    )
+
+    response_schema = get_response_schema(
+        expected_format
     )
 
     payload = {
@@ -209,14 +342,15 @@ def call_gemini(prompt):
             }
         ],
         "generationConfig": {
-            "temperature": 0.75,
+            "temperature": 0.70,
             "topP": 0.90,
             "maxOutputTokens": 30000,
 
-            # IMPORTANT:
-            # Force Gemini to return JSON instead
-            # of free-form text.
+            # Force valid JSON.
             "responseMimeType": "application/json",
+
+            # Constrain JSON structure.
+            "responseSchema": response_schema,
         },
     }
 
@@ -240,6 +374,7 @@ def call_gemini(prompt):
         1,
         MAX_RETRIES + 1,
     ):
+
         try:
 
             with urllib.request.urlopen(
@@ -268,26 +403,50 @@ def call_gemini(prompt):
             finish_reason = str(
                 candidate.get(
                     "finishReason",
-                    ""
+                    "",
                 )
             ).upper()
 
-            parts_data = (
-                candidate
-                .get("content", {})
-                .get("parts", [])
+            if finish_reason in {
+                "MAX_TOKENS",
+                "LENGTH",
+            }:
+
+                raise RuntimeError(
+                    "Gemini response was truncated "
+                    f"(finishReason={finish_reason})"
+                )
+
+            content = candidate.get(
+                "content",
+                {},
+            )
+
+            parts_data = content.get(
+                "parts",
+                [],
             )
 
             text_parts = []
 
             for part in parts_data:
 
-                if (
-                    isinstance(part, dict)
-                    and "text" in part
+                if not isinstance(
+                    part,
+                    dict,
+                ):
+                    continue
+
+                text_value = part.get(
+                    "text"
+                )
+
+                if isinstance(
+                    text_value,
+                    str,
                 ):
                     text_parts.append(
-                        part["text"]
+                        text_value
                     )
 
             text = "\n".join(
@@ -297,19 +456,6 @@ def call_gemini(prompt):
             if not text:
                 raise RuntimeError(
                     "Gemini returned empty text"
-                )
-
-            # A truncated JSON response is not useful.
-            if finish_reason in {
-                "MAX_TOKENS",
-                "LENGTH",
-            }:
-
-                raise RuntimeError(
-                    "Gemini response was truncated "
-                    f"(finishReason={finish_reason}). "
-                    "The story JSON exceeded the "
-                    "available output limit."
                 )
 
             return text
@@ -376,6 +522,10 @@ def call_gemini(prompt):
     )
 
 
+# ============================================================
+# TITLE
+# ============================================================
+
 def generate_title_from_story(
     story_text,
     audience,
@@ -405,7 +555,8 @@ TITLE:
 """
 
     response = call_gemini(
-        prompt
+        prompt,
+        "title",
     )
 
     title = clean_title(
@@ -419,6 +570,10 @@ TITLE:
 
     return title
 
+
+# ============================================================
+# COMMON CONTEXT
+# ============================================================
 
 def build_common_context(
     config,
@@ -484,6 +639,9 @@ PARTS:
 SCENES PER PART:
 {scenes}
 
+TOTAL SCENES:
+{parts * scenes}
+
 PART HOOK REQUIRED:
 {str(part_hook).lower()}
 
@@ -494,6 +652,10 @@ FINAL RESOLUTION REQUIRED:
 {str(final_resolution).lower()}
 """
 
+
+# ============================================================
+# SHORT PROMPT
+# ============================================================
 
 def build_short_prompt(
     config,
@@ -544,8 +706,7 @@ def build_short_prompt(
         "danger or cliffhanger."
         if part_suspense
         else
-        "Suspense should be used naturally without "
-        "mandatory part cliffhangers."
+        "Suspense should be used naturally."
     )
 
     resolution_rule = (
@@ -553,8 +714,7 @@ def build_short_prompt(
         "resolution and intentional final beat."
         if final_resolution
         else
-        "The ending may remain open if the story "
-        "naturally requires it."
+        "The ending may remain open if appropriate."
     )
 
     return f"""
@@ -565,6 +725,7 @@ Create an ORIGINAL short-video story.
 {common}
 
 CRITICAL:
+
 This is NOT a shortened version of a full video.
 
 Do NOT:
@@ -577,14 +738,14 @@ Do NOT:
 The short must be independently written from
 beginning to ending.
 
-SHORT STORY DESIGN:
+STORY DESIGN:
 
 1. COLD HOOK
 The first scene must immediately create curiosity,
-danger, emotion, mystery or a surprising situation.
+danger, emotion, mystery or surprise.
 
 2. FAST SETUP
-Only essential context should be provided.
+Only essential context.
 
 3. MYSTERY
 Introduce an unanswered question, secret,
@@ -599,8 +760,7 @@ or change the situation.
 Reveal an important truth or clue.
 
 6. FINAL PAYOFF
-The story must intentionally pay off the central
-question.
+Pay off the central question.
 
 7. FINAL BEAT
 End with a memorable final sentence or visual beat.
@@ -615,74 +775,47 @@ PART RULES:
 
 SHORT-FORM RULES:
 
-- The opening must work within the first few seconds.
 - No unnecessary introduction.
 - No filler scenes.
 - No repeated information.
-- No generic exposition.
 - Every scene must have a purpose.
-- The final scenes must feel deliberately written.
-- The short must feel complete.
 - Natural Hindi narration.
 - Real-world human behavior.
 - Cinematic realistic visual descriptions.
 - No cartoon/comic/anime visual language.
+- Keep character and location continuity.
+- Scene actions must logically connect.
 
 SCENE COUNT:
 
-Exactly {parts} part(s).
+Exactly {parts} parts.
 
-Exactly {scenes} scenes per part.
+Exactly {scenes} scenes in EACH part.
 
-Exactly {parts * scenes} total scenes.
+Exactly {parts * scenes} scenes TOTAL.
 
-IMPORTANT JSON RULES:
+IMPORTANT:
 
-Return ONLY one valid JSON object.
+The response will be validated programmatically.
 
-Do not return Markdown.
+Every scene MUST contain:
+- scene
+- purpose
+- narration
+- visual
+- dialogue
+- suspense
 
-Do not wrap JSON in ```.
+All six fields MUST be strings except "scene",
+which MUST be an integer.
 
-Do not add any text before JSON.
-
-Do not add any text after JSON.
-
-All string values must use valid JSON escaping.
-
-Do not place raw line breaks inside JSON string values.
-
-Use \\n when a line break is needed inside a string.
-
-OUTPUT JSON STRUCTURE:
-
-{{
-  "status": "completed",
-  "format": "short",
-  "title": "{title}",
-  "topic": "{topic}",
-  "story_type": "original_short_form",
-  "hook": "Opening hook",
-  "ending_type": "twist_or_payoff",
-  "parts": [
-    {{
-      "part": 1,
-      "title": "Part title",
-      "scenes": [
-        {{
-          "scene": 1,
-          "purpose": "hook",
-          "narration": "Hindi narration",
-          "visual": "Detailed realistic cinematic visual",
-          "dialogue": "",
-          "suspense": "Question or tension"
-        }}
-      ]
-    }}
-  ]
-}}
+Return ONLY the requested JSON structure.
 """
 
+
+# ============================================================
+# FULL PROMPT
+# ============================================================
 
 def build_full_prompt(
     config,
@@ -724,16 +857,15 @@ def build_full_prompt(
         "Each part must have a strong opening hook."
         if part_hook
         else
-        "Use natural openings without forcing "
-        "a separate hook."
+        "Use natural openings."
     )
 
     suspense_rule = (
         "Every part except the final part should "
-        "end with meaningful suspense/cliffhanger."
+        "end with meaningful suspense."
         if part_suspense
         else
-        "Use suspense naturally where appropriate."
+        "Use suspense naturally."
     )
 
     resolution_rule = (
@@ -741,8 +873,7 @@ def build_full_prompt(
         "central conflict."
         if final_resolution
         else
-        "Do not force a complete resolution if "
-        "the supplied story intentionally remains open."
+        "Do not force a resolution if inappropriate."
     )
 
     return f"""
@@ -777,21 +908,21 @@ PART RULES:
 
 CONTINUITY:
 
-- Characters must remain logically consistent.
-- Locations must remain consistent.
-- Actions must connect between scenes.
-- Time progression must make sense.
-- Each scene must move the story forward.
+- Characters remain consistent.
+- Locations remain consistent.
+- Actions connect between scenes.
+- Time progression makes sense.
+- Every scene moves the story forward.
 - Avoid repetitive scenes.
 
 VISUAL WRITING:
 
 - Real people.
 - Real-world environments.
-- Cinematic live-action visual descriptions.
+- Cinematic live-action visuals.
 - Believable human behavior.
 - Natural physical actions.
-- No unnecessary cartoon/comic/anime language.
+- No cartoon/comic/anime language.
 
 LANGUAGE:
 
@@ -799,57 +930,31 @@ Use natural Hindi narration.
 
 SCENE COUNT:
 
-Exactly {parts} part(s).
+Exactly {parts} parts.
 
-Exactly {scenes} scenes per part.
+Exactly {scenes} scenes in EACH part.
 
-Exactly {parts * scenes} total scenes.
+Exactly {parts * scenes} scenes TOTAL.
 
-IMPORTANT JSON RULES:
+Every scene MUST contain:
+- scene
+- purpose
+- narration
+- visual
+- dialogue
+- suspense
 
-Return ONLY one valid JSON object.
+All fields except "scene" MUST be strings.
 
-Do not return Markdown.
+"scene" MUST be an integer.
 
-Do not wrap JSON in ```.
-
-Do not add any text before JSON.
-
-Do not add any text after JSON.
-
-All string values must use valid JSON escaping.
-
-Do not place raw line breaks inside JSON string values.
-
-Use \\n when a line break is needed inside a string.
-
-OUTPUT JSON STRUCTURE:
-
-{{
-  "status": "completed",
-  "format": "full",
-  "title": "{title}",
-  "topic": "{topic}",
-  "story_type": "long_form",
-  "parts": [
-    {{
-      "part": 1,
-      "title": "Part title",
-      "scenes": [
-        {{
-          "scene": 1,
-          "purpose": "opening",
-          "narration": "Hindi narration",
-          "visual": "Detailed realistic cinematic visual",
-          "dialogue": "",
-          "suspense": ""
-        }}
-      ]
-    }}
-  ]
-}}
+Return ONLY the requested JSON structure.
 """
 
+
+# ============================================================
+# VALIDATION
+# ============================================================
 
 def validate_story(
     data,
@@ -884,9 +989,14 @@ def validate_story(
         config
     )
 
-    parts = data.get("parts")
+    parts = data.get(
+        "parts"
+    )
 
-    if not isinstance(parts, list):
+    if not isinstance(
+        parts,
+        list,
+    ):
         raise RuntimeError(
             "Story has no valid parts array"
         )
@@ -904,7 +1014,10 @@ def validate_story(
         start=1,
     ):
 
-        if not isinstance(part, dict):
+        if not isinstance(
+            part,
+            dict,
+        ):
             raise RuntimeError(
                 f"Part {part_index} is not an object"
             )
@@ -943,48 +1056,60 @@ def validate_story(
                     "is not an object"
                 )
 
-            narration = str(
-                scene.get(
-                    "narration",
+            scene["scene"] = scene_index
+
+            for field in [
+                "purpose",
+                "narration",
+                "visual",
+                "dialogue",
+                "suspense",
+            ]:
+
+                value = scene.get(
+                    field,
                     "",
                 )
-            ).strip()
 
-            visual = str(
-                scene.get(
-                    "visual",
-                    "",
-                )
-            ).strip()
+                if not isinstance(
+                    value,
+                    str,
+                ):
+                    raise RuntimeError(
+                        f"Part {part_index} "
+                        f"Scene {scene_index}: "
+                        f"{field} must be a string"
+                    )
 
-            if not narration:
+            if not scene[
+                "narration"
+            ].strip():
+
                 raise RuntimeError(
                     f"Missing narration for "
                     f"Part {part_index} "
                     f"Scene {scene_index}"
                 )
 
-            if not visual:
+            if not scene[
+                "visual"
+            ].strip():
+
                 raise RuntimeError(
                     f"Missing visual for "
                     f"Part {part_index} "
                     f"Scene {scene_index}"
                 )
 
-            scene["scene"] = scene_index
-
-            if expected_format == "short":
-
-                if not str(
-                    scene.get(
-                        "purpose",
-                        "",
-                    )
-                ).strip():
-
-                    scene["purpose"] = "story"
-
         part["part"] = part_index
+
+        if not isinstance(
+            part.get("title", ""),
+            str,
+        ):
+            part["title"] = (
+                f"Part {part_index}"
+            )
 
         total_scenes += len(
             scene_list
@@ -1033,6 +1158,10 @@ def validate_story(
     return data
 
 
+# ============================================================
+# MAIN
+# ============================================================
+
 def main():
 
     print("=" * 60)
@@ -1067,9 +1196,9 @@ def main():
         "adult",
     )
 
-    # --------------------------------------------------
+    # --------------------------------------------------------
     # FINAL TITLE
-    # --------------------------------------------------
+    # --------------------------------------------------------
 
     if topic:
 
@@ -1116,36 +1245,44 @@ def main():
     print(
         f"Final title  : {title}"
     )
+
     print(
         f"Title source : {title_source}"
     )
+
     print(
         f"Topic        : "
         f"{topic or '[empty]'}"
     )
+
     print(
         f"Format       : "
         f"{expected_format}"
     )
+
     print(
         f"Parts        : {parts}"
     )
+
     print(
         f"Scenes/part  : {scenes}"
     )
+
     print(
         f"Total scenes : "
         f"{parts * scenes}"
     )
+
     print(
         f"Story length : "
         f"{cfg_text(config, 'STORY_LENGTH', 'auto')}"
     )
+
     print()
 
-    # --------------------------------------------------
-    # FORMAT-SPECIFIC STORY
-    # --------------------------------------------------
+    # --------------------------------------------------------
+    # PROMPT
+    # --------------------------------------------------------
 
     if expected_format == "short":
 
@@ -1195,12 +1332,13 @@ def main():
             scenes,
         )
 
-    # --------------------------------------------------
-    # GEMINI GENERATION
-    # --------------------------------------------------
+    # --------------------------------------------------------
+    # GEMINI
+    # --------------------------------------------------------
 
     response_text = call_gemini(
-        prompt
+        prompt,
+        expected_format,
     )
 
     data = extract_json(
@@ -1215,9 +1353,9 @@ def main():
         topic,
     )
 
-    # --------------------------------------------------
+    # --------------------------------------------------------
     # SAVE
-    # --------------------------------------------------
+    # --------------------------------------------------------
 
     OUTPUT_DIR.mkdir(
         parents=True,
@@ -1254,7 +1392,7 @@ def main():
             else "long_form"
         ),
         "generated_by": MODEL,
-        "json_mode": True,
+        "structured_json": True,
     }
 
     OUTPUT_FILE.write_text(
@@ -1296,6 +1434,10 @@ def main():
         f"{parts * scenes}"
     )
 
+    print(
+        "JSON schema  : VERIFIED"
+    )
+
     if expected_format == "short":
 
         print(
@@ -1308,10 +1450,6 @@ def main():
         )
 
         print(
-            "JSON mode    : VERIFIED"
-        )
-
-        print(
             "Ending       : "
             "PAYOFF/TWIST REQUIRED"
         )
@@ -1320,10 +1458,6 @@ def main():
 
         print(
             "Story type   : LONG-FORM"
-        )
-
-        print(
-            "JSON mode    : VERIFIED"
         )
 
     print("=" * 60)
