@@ -1,746 +1,754 @@
 #!/usr/bin/env python3
 
 """
-Centralized Input configuration.
+Centralized parser and validator for Input/topic.txt.
 
-Input/topic.txt is the single source of truth for the video pipeline.
-
-Supports:
-- normal KEY = VALUE settings
-- inline comments
+Supported:
+- KEY = VALUE
 - quoted values
-- multiline STORY_TEXT = """..."""
+- inline comments
+- multiline STORY_TEXT
+- booleans
+- integers
+- floats
+- strings
+- FORMAT normalization
+- automatic title source selection
+- pipeline configuration validation
+
+Important:
+The parser is intentionally independent from GitHub Actions/Bash parsing.
 """
 
-from pathlib import Path
+from __future__ import annotations
+
+import ast
 import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
-INPUT_FILE = Path("Input/topic.txt")
-
-TRUE_VALUES = {
-    "true",
-    "1",
-    "yes",
-    "on",
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "FORMAT": "full",
+    "AUDIENCE": "adult",
+    "VOICE": "male",
+    "SPEED": "+0%",
+    "TOPIC": "",
+    "STORY_TEXT": "",
+    "PARTS": 1,
+    "SCENES": 1,
+    "STORY_LENGTH": "auto",
+    "SCENE_DURATION": "auto",
+    "CAPTIONS": "hindi",
+    "PART_HOOK": True,
+    "PART_SUSPENSE": True,
+    "FINAL_RESOLUTION": True,
+    "VISUAL_STYLE": "cinematic_realistic",
+    "REALISM": "high",
+    "CHARACTER_BIBLE": True,
+    "CHARACTER_CONSISTENCY": True,
+    "WORLD_CONSISTENCY": True,
+    "SCENE_CONTINUITY": True,
+    "CINEMATIC_CAMERA": True,
+    "CAMERA_STYLE": "cinematic",
+    "LIGHTING": "cinematic",
+    "MOOD": "dramatic",
+    "QUALITY": "high",
+    "FPS": 24,
+    "NEGATIVE_PROMPT": True,
+    "AVOID_CARTOON_LOOK": True,
+    "AVOID_NEON": True,
+    "AVOID_GLITCH_EFFECTS": True,
+    "NATURAL_MOTION": True,
+    "REALISTIC_LIGHTING": True,
+    "MUSIC": True,
+    "MUSIC_STYLE": "cinematic",
+    "SFX": True,
+    "AMBIENT_SOUND": True,
+    "TRANSITIONS": "cinematic",
+    "WATERMARK": False,
+    "LOGO": False,
+    "RESUME_ENABLED": True,
+    "MAX_RETRIES": 3,
+    "SAVE_CHECKPOINT_AFTER_EACH_SCENE": True,
+    "SKIP_COMPLETED_SCENES": True,
+    "FAILURE_POLICY": "retry_then_checkpoint",
 }
 
-FALSE_VALUES = {
-    "false",
-    "0",
-    "no",
-    "off",
+
+BOOL_KEYS = {
+    "PART_HOOK",
+    "PART_SUSPENSE",
+    "FINAL_RESOLUTION",
+    "CHARACTER_BIBLE",
+    "CHARACTER_CONSISTENCY",
+    "WORLD_CONSISTENCY",
+    "SCENE_CONTINUITY",
+    "CINEMATIC_CAMERA",
+    "NEGATIVE_PROMPT",
+    "AVOID_CARTOON_LOOK",
+    "AVOID_NEON",
+    "AVOID_GLITCH_EFFECTS",
+    "NATURAL_MOTION",
+    "REALISTIC_LIGHTING",
+    "MUSIC",
+    "SFX",
+    "AMBIENT_SOUND",
+    "WATERMARK",
+    "LOGO",
+    "RESUME_ENABLED",
+    "SAVE_CHECKPOINT_AFTER_EACH_SCENE",
+    "SKIP_COMPLETED_SCENES",
 }
 
 
-def clean_value(value):
-    value = str(value).strip()
+INT_KEYS = {
+    "PARTS",
+    "SCENES",
+    "FPS",
+    "MAX_RETRIES",
+}
 
-    if "#" in value:
-        value = value.split("#", 1)[0].strip()
 
-    value = value.strip()
+FLOAT_KEYS = set()
 
-    if len(value) >= 2:
-        if (
-            (value.startswith('"') and value.endswith('"'))
-            or
-            (value.startswith("'") and value.endswith("'"))
-        ):
-            value = value[1:-1]
+
+def _strip_inline_comment(value: str) -> str:
+    """
+    Remove comments beginning with #, but preserve # inside quoted strings.
+    """
+    quote: Optional[str] = None
+    escaped = False
+
+    for index, char in enumerate(value):
+        if escaped:
+            escaped = False
+            continue
+
+        if char == "\\":
+            escaped = True
+            continue
+
+        if quote:
+            if char == quote:
+                quote = None
+            continue
+
+        if char in ("'", '"'):
+            quote = char
+            continue
+
+        if char == "#":
+            return value[:index].rstrip()
 
     return value.strip()
 
 
-def parse_value(value):
-    value = clean_value(value)
+def _unquote(value: str) -> str:
+    """
+    Safely remove matching outer quotes.
 
-    if value == "":
-        return ""
+    Supports:
+    - "text"
+    - 'text'
+    """
+    value = value.strip()
 
-    low = value.lower()
-
-    if low in TRUE_VALUES:
-        return True
-
-    if low in FALSE_VALUES:
-        return False
-
-    if re.fullmatch(r"[+-]?\d+", value):
-        try:
-            return int(value)
-        except ValueError:
-            pass
-
-    if re.fullmatch(
-        r"[+-]?(?:\d+\.\d*|\d*\.\d+)",
-        value
-    ):
-        try:
-            return float(value)
-        except ValueError:
-            pass
+    if len(value) >= 2:
+        if value[0] == value[-1] and value[0] in ("'", '"'):
+            try:
+                parsed = ast.literal_eval(value)
+                if isinstance(parsed, str):
+                    return parsed
+            except Exception:
+                return value[1:-1]
 
     return value
 
 
-def load_input_config(path=INPUT_FILE):
+def _parse_scalar(key: str, value: str) -> Any:
     """
-    Read complete Input/topic.txt.
-
-    Supports multiline STORY_TEXT.
-
-    Example:
-
-    STORY_TEXT = """
-    यह पूरी कहानी यहाँ होगी।
-    यह कई lines में हो सकती है।
+    Convert a normal KEY=VALUE value to the appropriate Python type.
     """
+    value = value.strip()
 
-    All other KEY = VALUE settings are parsed normally.
-    """
+    if value == "":
+        return ""
 
-    path = Path(path)
+    # Remove surrounding quotes first.
+    unquoted = _unquote(value)
 
-    if not path.exists():
-        raise FileNotFoundError(
-            f"Input configuration not found: {path}"
+    if key in BOOL_KEYS:
+        lowered = unquoted.strip().lower()
+
+        if lowered in {"true", "yes", "on", "1"}:
+            return True
+
+        if lowered in {"false", "no", "off", "0"}:
+            return False
+
+        raise ValueError(
+            f"{key} must be true or false. Received: {value}"
         )
 
-    text = path.read_text(
-        encoding="utf-8"
+    if key in INT_KEYS:
+        try:
+            return int(unquoted.strip())
+        except ValueError:
+            raise ValueError(
+                f"{key} must be an integer. Received: {value}"
+            )
+
+    if key in FLOAT_KEYS:
+        try:
+            return float(unquoted.strip())
+        except ValueError:
+            raise ValueError(
+                f"{key} must be a number. Received: {value}"
+            )
+
+    return unquoted
+
+
+def _find_assignment(line: str) -> Optional[tuple[str, str]]:
+    """
+    Parse the first valid KEY = VALUE assignment on a line.
+    """
+    match = re.match(
+        r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$",
+        line,
     )
 
-    config = {}
+    if not match:
+        return None
+
+    key = match.group(1).strip()
+    value = match.group(2).strip()
+
+    return key, value
+
+
+def load_input_config(path: str | Path = "Input/topic.txt") -> Dict[str, Any]:
+    """
+    Load and parse the complete Input/topic.txt file.
+
+    STORY_TEXT may contain multiple lines.
+
+    The parser recognizes the multiline block using:
+        STORY_TEXT = """
+        story line 1
+        story line 2
+        """
+
+    The internal parser does not execute the input file as Python.
+    """
+
+    config: Dict[str, Any] = dict(DEFAULT_CONFIG)
+
+    file_path = Path(path)
+
+    if not file_path.exists():
+        raise FileNotFoundError(
+            f"Input config not found: {file_path}"
+        )
+
+    text = file_path.read_text(
+        encoding="utf-8-sig"
+    )
 
     lines = text.splitlines()
 
     index = 0
 
     while index < len(lines):
-
         raw_line = lines[index]
-        line = raw_line.strip()
+        stripped = raw_line.strip()
 
         # Empty line
-        if not line:
+        if not stripped:
             index += 1
             continue
 
         # Full-line comment
-        if line.startswith("#"):
+        if stripped.startswith("#"):
             index += 1
             continue
 
-        # --------------------------------------------------
+        assignment = _find_assignment(raw_line)
+
+        if assignment is None:
+            # Ignore non-assignment lines outside STORY_TEXT.
+            index += 1
+            continue
+
+        key, raw_value = assignment
+
+        # ---------------------------------------------------------
         # MULTILINE STORY_TEXT
-        # --------------------------------------------------
+        # ---------------------------------------------------------
+        if key == "STORY_TEXT":
+            value = raw_value.strip()
 
-        story_match = re.match(
-            r'^STORY_TEXT\s*=\s*("""|\'\'\')',
-            line,
-            flags=re.IGNORECASE,
-        )
+            # Triple double quotes
+            if value.startswith('"""'):
+                after_open = value[3:]
 
-        if story_match:
+                # Same-line close
+                if '"""' in after_open:
+                    content = after_open.split('"""', 1)[0]
+                    config[key] = content.strip()
+                    index += 1
+                    continue
 
-            delimiter = story_match.group(1)
+                story_lines: List[str] = []
 
-            remainder = line[
-                story_match.end():
-            ]
-
-            collected = []
-
-            # Closing delimiter is on same line
-            if delimiter in remainder:
-
-                end_index = remainder.find(
-                    delimiter
-                )
-
-                collected.append(
-                    remainder[:end_index]
-                )
-
-            else:
-
-                collected.append(
-                    remainder
-                )
+                if after_open:
+                    story_lines.append(after_open)
 
                 index += 1
 
-                while index < len(lines):
+                closed = False
 
+                while index < len(lines):
                     current = lines[index]
 
-                    if delimiter in current:
+                    if '"""' in current:
+                        before_close = current.split('"""', 1)[0]
 
-                        end_index = current.find(
-                            delimiter
-                        )
+                        if before_close:
+                            story_lines.append(before_close)
 
-                        collected.append(
-                            current[:end_index]
-                        )
-
+                        closed = True
+                        index += 1
                         break
 
-                    collected.append(current)
-
+                    story_lines.append(current)
                     index += 1
 
-            config["STORY_TEXT"] = "\n".join(
-                collected
-            ).strip()
+                if not closed:
+                    raise ValueError(
+                        "STORY_TEXT starts with triple quotes "
+                        'but closing """ was not found.'
+                    )
+
+                config[key] = "\n".join(story_lines).strip()
+                continue
+
+            # Triple single quotes
+            if value.startswith("'''"):
+                after_open = value[3:]
+
+                # Same-line close
+                if "'''" in after_open:
+                    content = after_open.split("'''", 1)[0]
+                    config[key] = content.strip()
+                    index += 1
+                    continue
+
+                story_lines = []
+
+                if after_open:
+                    story_lines.append(after_open)
+
+                index += 1
+
+                closed = False
+
+                while index < len(lines):
+                    current = lines[index]
+
+                    if "'''" in current:
+                        before_close = current.split("'''", 1)[0]
+
+                        if before_close:
+                            story_lines.append(before_close)
+
+                        closed = True
+                        index += 1
+                        break
+
+                    story_lines.append(current)
+                    index += 1
+
+                if not closed:
+                    raise ValueError(
+                        "STORY_TEXT starts with triple quotes "
+                        "but closing ''' was not found."
+                    )
+
+                config[key] = "\n".join(story_lines).strip()
+                continue
+
+            # Normal one-line STORY_TEXT
+            cleaned = _strip_inline_comment(value)
+            config[key] = _unquote(cleaned)
 
             index += 1
             continue
 
-        # --------------------------------------------------
-        # NORMAL KEY = VALUE
-        # --------------------------------------------------
+        # ---------------------------------------------------------
+        # NORMAL VALUE
+        # ---------------------------------------------------------
+        cleaned_value = _strip_inline_comment(raw_value)
 
-        if "=" not in line:
-            index += 1
-            continue
-
-        key, value = line.split(
-            "=",
-            1
+        config[key] = _parse_scalar(
+            key,
+            cleaned_value,
         )
-
-        key = key.strip().upper()
-
-        if not key:
-            index += 1
-            continue
-
-        config[key] = parse_value(value)
 
         index += 1
 
     return config
 
 
-def cfg(config, key, default=None):
-    return config.get(
-        str(key).upper(),
-        default
-    )
+def normalize_format(config: Dict[str, Any]) -> str:
+    """
+    Normalize FORMAT to either 'short' or 'full'.
+    """
+
+    value = str(
+        config.get("FORMAT", "")
+    ).strip().lower()
+
+    aliases = {
+        "short": "short",
+        "vertical": "short",
+        "reels": "short",
+        "reel": "short",
+        "youtube_short": "short",
+        "youtube-shorts": "short",
+        "shorts": "short",
+
+        "full": "full",
+        "long": "full",
+        "landscape": "full",
+        "youtube": "full",
+        "youtube_full": "full",
+        "youtube-long": "full",
+    }
+
+    if value not in aliases:
+        raise ValueError(
+            f"Unsupported FORMAT: {value!r}. "
+            "Use 'short' or 'full'."
+        )
+
+    normalized = aliases[value]
+
+    config["FORMAT"] = normalized
+
+    return normalized
 
 
-def cfg_text(config, key, default=""):
-    value = cfg(
-        config,
-        key,
-        default
-    )
-
-    if value is None:
-        return ""
-
-    return str(value).strip()
+def get_format(config: Dict[str, Any]) -> str:
+    return normalize_format(config)
 
 
-def cfg_bool(config, key, default=False):
-    value = cfg(
-        config,
-        key,
-        default
-    )
+def get_parts(config: Dict[str, Any]) -> int:
+    value = int(config.get("PARTS", 1))
 
-    if isinstance(value, bool):
-        return value
+    if value < 1:
+        raise ValueError("PARTS must be >= 1.")
 
-    low = str(value).strip().lower()
-
-    if low in TRUE_VALUES:
-        return True
-
-    if low in FALSE_VALUES:
-        return False
-
-    return bool(default)
+    return value
 
 
-def cfg_int(config, key, default=0):
-    value = cfg(
-        config,
-        key,
-        default
-    )
+def get_scenes(config: Dict[str, Any]) -> int:
+    value = int(config.get("SCENES", 1))
 
-    try:
-        return int(value)
-    except (
-        TypeError,
-        ValueError
-    ):
-        return int(default)
+    if value < 1:
+        raise ValueError("SCENES must be >= 1.")
+
+    return value
 
 
-def cfg_float(config, key, default=0.0):
-    value = cfg(
-        config,
-        key,
-        default
-    )
+def get_fps(config: Dict[str, Any]) -> int:
+    value = int(config.get("FPS", 24))
 
-    try:
-        return float(value)
-    except (
-        TypeError,
-        ValueError
-    ):
-        return float(default)
+    if value <= 0:
+        raise ValueError("FPS must be greater than 0.")
+
+    return value
 
 
-def normalize_format(config):
+def get_max_retries(config: Dict[str, Any]) -> int:
+    value = int(config.get("MAX_RETRIES", 3))
 
-    value = cfg_text(
-        config,
-        "FORMAT",
-        "full"
-    ).lower()
+    if value < 0:
+        raise ValueError("MAX_RETRIES cannot be negative.")
 
-    if value in {
-        "short",
-        "vertical",
-        "reels",
-        "youtube_short",
-    }:
-        return "short"
-
-    if value in {
-        "full",
-        "horizontal",
-        "long",
-        "longform",
-        "youtube_full",
-    }:
-        return "full"
-
-    raise ValueError(
-        f"Unsupported FORMAT: {value!r}. "
-        "Use 'short' or 'full'."
-    )
+    return value
 
 
-def resolve_topic(config):
-    return cfg_text(
-        config,
-        "TOPIC",
-        ""
-    )
+def get_topic(config: Dict[str, Any]) -> str:
+    """
+    Return TOPIC exactly as the preferred title/topic source.
+
+    TOPIC has priority over generated title logic.
+    """
+
+    topic = str(
+        config.get("TOPIC", "")
+    ).strip()
+
+    return topic
 
 
-def resolve_story_text(config):
-    return cfg_text(
-        config,
-        "STORY_TEXT",
-        ""
-    )
+def get_story_text(config: Dict[str, Any]) -> str:
+    return str(
+        config.get("STORY_TEXT", "")
+    ).strip()
 
 
-def has_story_text(config):
-    return bool(
-        resolve_story_text(config)
-    )
+def get_title_source(config: Dict[str, Any]) -> str:
+    """
+    Determine the title source.
 
+    Priority:
+    1. TOPIC if supplied
+    2. STORY_TEXT if supplied
+    3. otherwise no source
+    """
 
-def has_topic(config):
-    return bool(
-        resolve_topic(config)
-    )
-
-
-def resolve_title_source(config):
-
-    topic = resolve_topic(config)
+    topic = get_topic(config)
 
     if topic:
-        return {
-            "source": "input_topic",
-            "value": topic,
-        }
+        return topic
 
-    story = resolve_story_text(config)
+    story_text = get_story_text(config)
 
-    if story:
-        return {
-            "source": "story_text",
-            "value": story,
-        }
+    if story_text:
+        return story_text
 
-    return {
-        "source": "missing",
-        "value": "",
-    }
+    return ""
 
 
-def get_parts(config):
-    return max(
-        1,
-        cfg_int(
-            config,
-            "PARTS",
-            1
+def has_story_input(config: Dict[str, Any]) -> bool:
+    return bool(
+        get_topic(config)
+        or get_story_text(config)
+    )
+
+
+def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate the complete configuration.
+
+    Returns the same config after normalization.
+    """
+
+    # FORMAT
+    normalize_format(config)
+
+    # PARTS
+    parts = get_parts(config)
+    config["PARTS"] = parts
+
+    # SCENES
+    scenes = get_scenes(config)
+    config["SCENES"] = scenes
+
+    # FPS
+    fps = get_fps(config)
+    config["FPS"] = fps
+
+    # MAX_RETRIES
+    retries = get_max_retries(config)
+    config["MAX_RETRIES"] = retries
+
+    # STORY/TOPIC source
+    if not has_story_input(config):
+        raise ValueError(
+            "Either TOPIC or STORY_TEXT must be provided."
         )
-    )
 
+    # VOICE
+    voice = str(
+        config.get("VOICE", "male")
+    ).strip().lower()
 
-def get_scenes(config):
-    return max(
-        1,
-        cfg_int(
-            config,
-            "SCENES",
-            1
+    if voice not in {"male", "female"}:
+        raise ValueError(
+            "VOICE must be 'male' or 'female'."
         )
-    )
 
+    config["VOICE"] = voice
 
-def get_max_retries(config):
-    return max(
-        1,
-        cfg_int(
-            config,
-            "MAX_RETRIES",
-            3
+    # AUDIENCE
+    audience = str(
+        config.get("AUDIENCE", "adult")
+    ).strip()
+
+    if not audience:
+        audience = "adult"
+
+    config["AUDIENCE"] = audience
+
+    # FAILURE_POLICY
+    failure_policy = str(
+        config.get(
+            "FAILURE_POLICY",
+            "retry_then_checkpoint",
         )
-    )
+    ).strip().lower()
 
-
-def get_fps(config):
-
-    fps = cfg_int(
-        config,
-        "FPS",
-        24
-    )
-
-    if fps <= 0:
-        return 24
-
-    return fps
-
-
-def get_caption_mode(config):
-
-    value = cfg_text(
-        config,
-        "CAPTIONS",
-        "hindi"
-    ).lower()
-
-    allowed = {
-        "hindi",
-        "english",
-        "hinglish",
-        "none",
-        "off",
-        "false",
-    }
-
-    if value not in allowed:
-        return "hindi"
-
-    return value
-
-
-def get_story_length(config):
-
-    value = cfg_text(
-        config,
-        "STORY_LENGTH",
-        "auto"
-    ).lower()
-
-    allowed = {
-        "auto",
-        "short",
-        "medium",
-        "long",
-    }
-
-    if value not in allowed:
-        return "auto"
-
-    return value
-
-
-def get_scene_duration(config):
-
-    value = cfg_text(
-        config,
-        "SCENE_DURATION",
-        "auto"
-    ).lower()
-
-    allowed = {
-        "auto",
-        "fixed",
-    }
-
-    if value not in allowed:
-        return "auto"
-
-    return value
-
-
-def get_failure_policy(config):
-
-    value = cfg_text(
-        config,
-        "FAILURE_POLICY",
-        "retry_then_checkpoint"
-    ).lower()
-
-    allowed = {
+    allowed_failure_policies = {
         "retry_then_checkpoint",
         "skip",
         "stop",
     }
 
-    if value not in allowed:
-        return "retry_then_checkpoint"
-
-    return value
-
-
-def validate_config(config):
-
-    errors = []
-
-    try:
-        normalize_format(config)
-    except ValueError as exc:
-        errors.append(str(exc))
-
-    if get_parts(config) < 1:
-        errors.append(
-            "PARTS must be >= 1"
-        )
-
-    if get_scenes(config) < 1:
-        errors.append(
-            "SCENES must be >= 1"
-        )
-
-    if get_fps(config) < 1:
-        errors.append(
-            "FPS must be >= 1"
-        )
-
-    title_source = resolve_title_source(
-        config
-    )
-
-    if title_source["source"] == "missing":
-        errors.append(
-            "TOPIC and STORY_TEXT cannot "
-            "both be empty."
-        )
-
-    if errors:
+    if failure_policy not in allowed_failure_policies:
         raise ValueError(
-            "Invalid Input/topic.txt:\n- "
-            + "\n- ".join(errors)
+            "FAILURE_POLICY must be one of: "
+            "retry_then_checkpoint, skip, stop."
         )
 
-    return True
+    config["FAILURE_POLICY"] = failure_policy
+
+    # CAPTIONS
+    captions = str(
+        config.get("CAPTIONS", "hindi")
+    ).strip().lower()
+
+    config["CAPTIONS"] = captions
+
+    # QUALITY
+    quality = str(
+        config.get("QUALITY", "high")
+    ).strip().lower()
+
+    config["QUALITY"] = quality
+
+    # VISUAL STYLE
+    visual_style = str(
+        config.get(
+            "VISUAL_STYLE",
+            "cinematic_realistic",
+        )
+    ).strip()
+
+    config["VISUAL_STYLE"] = visual_style
+
+    # STORY LENGTH
+    story_length = str(
+        config.get("STORY_LENGTH", "auto")
+    ).strip()
+
+    config["STORY_LENGTH"] = story_length
+
+    # SCENE DURATION
+    scene_duration = str(
+        config.get("SCENE_DURATION", "auto")
+    ).strip()
+
+    config["SCENE_DURATION"] = scene_duration
+
+    return config
 
 
-def print_config_summary(config):
+def load_and_validate(
+    path: str | Path = "Input/topic.txt",
+) -> Dict[str, Any]:
+    """
+    Convenience function:
+    load + validate configuration.
+    """
+
+    config = load_input_config(path)
+    return validate_config(config)
+
+
+def get_config_summary(
+    config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Return a compact summary useful for workflow logging.
+    """
+
+    return {
+        "FORMAT": get_format(config),
+        "TOPIC": get_topic(config),
+        "HAS_STORY_TEXT": bool(get_story_text(config)),
+        "TITLE_SOURCE_AVAILABLE": bool(
+            get_title_source(config)
+        ),
+        "PARTS": get_parts(config),
+        "SCENES": get_scenes(config),
+        "FPS": get_fps(config),
+        "VOICE": str(
+            config.get("VOICE", "")
+        ),
+        "AUDIENCE": str(
+            config.get("AUDIENCE", "")
+        ),
+        "CAPTIONS": str(
+            config.get("CAPTIONS", "")
+        ),
+        "STORY_LENGTH": str(
+            config.get("STORY_LENGTH", "")
+        ),
+        "SCENE_DURATION": str(
+            config.get("SCENE_DURATION", "")
+        ),
+        "FAILURE_POLICY": str(
+            config.get("FAILURE_POLICY", "")
+        ),
+        "RESUME_ENABLED": bool(
+            config.get("RESUME_ENABLED", False)
+        ),
+        "SAVE_CHECKPOINT_AFTER_EACH_SCENE": bool(
+            config.get(
+                "SAVE_CHECKPOINT_AFTER_EACH_SCENE",
+                False,
+            )
+        ),
+        "SKIP_COMPLETED_SCENES": bool(
+            config.get(
+                "SKIP_COMPLETED_SCENES",
+                False,
+            )
+        ),
+    }
+
+
+def print_config_summary(
+    config: Dict[str, Any],
+) -> None:
+    """
+    Human-readable configuration summary.
+    """
+
+    summary = get_config_summary(config)
 
     print("==============================================")
-    print("        INPUT CONFIGURATION")
+    print("INPUT CONFIG")
     print("==============================================")
 
-    print(
-        f"FORMAT              : "
-        f"{normalize_format(config)}"
-    )
-
-    print(
-        f"AUDIENCE            : "
-        f"{cfg_text(config, 'AUDIENCE', 'adult')}"
-    )
-
-    print(
-        f"TOPIC               : "
-        f"{resolve_topic(config) or '[empty]'}"
-    )
-
-    print(
-        f"STORY_TEXT          : "
-        f"{'provided' if has_story_text(config) else 'empty'}"
-    )
-
-    print(
-        f"PARTS               : "
-        f"{get_parts(config)}"
-    )
-
-    print(
-        f"SCENES              : "
-        f"{get_scenes(config)}"
-    )
-
-    print(
-        f"STORY_LENGTH        : "
-        f"{get_story_length(config)}"
-    )
-
-    print(
-        f"SCENE_DURATION      : "
-        f"{get_scene_duration(config)}"
-    )
-
-    print(
-        f"VOICE               : "
-        f"{cfg_text(config, 'VOICE', 'male')}"
-    )
-
-    print(
-        f"SPEED               : "
-        f"{cfg_text(config, 'SPEED', '+0%')}"
-    )
-
-    print(
-        f"CAPTIONS            : "
-        f"{get_caption_mode(config)}"
-    )
-
-    print(
-        f"VISUAL_STYLE        : "
-        f"{cfg_text(config, 'VISUAL_STYLE', 'cinematic_realistic')}"
-    )
-
-    print(
-        f"REALISM             : "
-        f"{cfg_text(config, 'REALISM', 'high')}"
-    )
-
-    print(
-        f"CHARACTER_BIBLE     : "
-        f"{cfg_bool(config, 'CHARACTER_BIBLE', True)}"
-    )
-
-    print(
-        f"CHARACTER_CONSIST.  : "
-        f"{cfg_bool(config, 'CHARACTER_CONSISTENCY', True)}"
-    )
-
-    print(
-        f"WORLD_CONSISTENCY   : "
-        f"{cfg_bool(config, 'WORLD_CONSISTENCY', True)}"
-    )
-
-    print(
-        f"SCENE_CONTINUITY    : "
-        f"{cfg_bool(config, 'SCENE_CONTINUITY', True)}"
-    )
-
-    print(
-        f"CINEMATIC_CAMERA    : "
-        f"{cfg_bool(config, 'CINEMATIC_CAMERA', True)}"
-    )
-
-    print(
-        f"CAMERA_STYLE        : "
-        f"{cfg_text(config, 'CAMERA_STYLE', 'cinematic')}"
-    )
-
-    print(
-        f"LIGHTING            : "
-        f"{cfg_text(config, 'LIGHTING', 'cinematic')}"
-    )
-
-    print(
-        f"MOOD                : "
-        f"{cfg_text(config, 'MOOD', 'dramatic')}"
-    )
-
-    print(
-        f"QUALITY             : "
-        f"{cfg_text(config, 'QUALITY', 'high')}"
-    )
-
-    print(
-        f"FPS                 : "
-        f"{get_fps(config)}"
-    )
-
-    print(
-        f"MUSIC               : "
-        f"{cfg_bool(config, 'MUSIC', True)}"
-    )
-
-    print(
-        f"MUSIC_STYLE         : "
-        f"{cfg_text(config, 'MUSIC_STYLE', 'cinematic')}"
-    )
-
-    print(
-        f"SFX                 : "
-        f"{cfg_bool(config, 'SFX', True)}"
-    )
-
-    print(
-        f"AMBIENT_SOUND       : "
-        f"{cfg_bool(config, 'AMBIENT_SOUND', True)}"
-    )
-
-    print(
-        f"TRANSITIONS         : "
-        f"{cfg_text(config, 'TRANSITIONS', 'cinematic')}"
-    )
-
-    print(
-        f"WATERMARK           : "
-        f"{cfg_bool(config, 'WATERMARK', False)}"
-    )
-
-    print(
-        f"LOGO                : "
-        f"{cfg_bool(config, 'LOGO', False)}"
-    )
-
-    print(
-        f"RESUME_ENABLED      : "
-        f"{cfg_bool(config, 'RESUME_ENABLED', True)}"
-    )
-
-    print(
-        f"MAX_RETRIES         : "
-        f"{get_max_retries(config)}"
-    )
-
-    print(
-        f"SAVE_CHECKPOINT     : "
-        f"{cfg_bool(config, 'SAVE_CHECKPOINT_AFTER_EACH_SCENE', True)}"
-    )
-
-    print(
-        f"SKIP_COMPLETED      : "
-        f"{cfg_bool(config, 'SKIP_COMPLETED_SCENES', True)}"
-    )
-
-    print(
-        f"FAILURE_POLICY      : "
-        f"{get_failure_policy(config)}"
-    )
+    for key, value in summary.items():
+        print(f"{key} = {value}")
 
     print("==============================================")
 
 
 if __name__ == "__main__":
+    import sys
 
-    config = load_input_config()
+    config_path = (
+        sys.argv[1]
+        if len(sys.argv) > 1
+        else "Input/topic.txt"
+    )
 
-    validate_config(config)
+    try:
+        config = load_and_validate(config_path)
 
-    print_config_summary(config)
+        print_config_summary(config)
+
+        print("INPUT CONFIG VALIDATION: OK")
+
+    except Exception as exc:
+        print(
+            f"INPUT CONFIG VALIDATION: FAILED: {exc}"
+        )
+        raise
