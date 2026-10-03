@@ -94,19 +94,64 @@ jobs:
             exit 1
           fi
 
+          if [ ! -f "scripts/input_config.py" ]; then
+            echo "ERROR: scripts/input_config.py not found."
+            exit 1
+          fi
+
           echo "=============================================="
           echo "PROJECT CONFIG"
           echo "=============================================="
 
           cat Input/topic.txt
 
-          FORMAT=$(grep -E '^[[:space:]]*FORMAT[[:space:]]*=' Input/topic.txt \
-            | head -n 1 \
-            | sed 's/.*=[[:space:]]*//' \
-            | sed 's/[[:space:]]*#.*//' \
-            | tr -d '"' \
-            | tr -d "'" \
-            | tr '[:upper:]' '[:lower:]')
+          echo
+          echo "=============================================="
+          echo "VALIDATING INPUT CONFIG"
+          echo "=============================================="
+
+          python3 - <<'PY'
+          import sys
+
+          sys.path.insert(0, "scripts")
+
+          from input_config import (
+              load_input_config,
+              validate_config,
+              normalize_format,
+              get_parts,
+              get_scenes,
+          )
+
+          config = load_input_config()
+
+          validate_config(config)
+
+          fmt = normalize_format(config)
+          parts = get_parts(config)
+          scenes = get_scenes(config)
+
+          print(f"FORMAT: {fmt}")
+          print(f"PARTS: {parts}")
+          print(f"SCENES: {scenes}")
+          print("Input configuration is valid.")
+          PY
+
+          FORMAT=$(python3 - <<'PY'
+          import sys
+
+          sys.path.insert(0, "scripts")
+
+          from input_config import (
+              load_input_config,
+              normalize_format,
+          )
+
+          config = load_input_config()
+
+          print(normalize_format(config))
+          PY
+          )
 
           if [ "$FORMAT" != "short" ] && [ "$FORMAT" != "full" ]; then
             echo "ERROR: FORMAT must be short or full."
@@ -115,7 +160,9 @@ jobs:
 
           echo "FORMAT=$FORMAT" >> "$GITHUB_ENV"
 
+          echo
           echo "Selected format: $FORMAT"
+          echo "Read project config: SUCCESS"
 
       # ============================================================
       # PREPARE OUTPUT DIRECTORIES
@@ -148,21 +195,27 @@ jobs:
         run: |
           set -e
 
-          PARTS=$(grep -E '^[[:space:]]*PARTS[[:space:]]*=' Input/topic.txt \
-            | head -n 1 \
-            | sed 's/.*=[[:space:]]*//' \
-            | sed 's/[[:space:]]*#.*//' \
-            | tr -d '"' \
-            | tr -d "'" \
-            | tr -d ' ')
+          readarray -t CONFIG_VALUES < <(
+            python3 - <<'PY'
+          import sys
 
-          SCENES=$(grep -E '^[[:space:]]*SCENES[[:space:]]*=' Input/topic.txt \
-            | head -n 1 \
-            | sed 's/.*=[[:space:]]*//' \
-            | sed 's/[[:space:]]*#.*//' \
-            | tr -d '"' \
-            | tr -d "'" \
-            | tr -d ' ')
+          sys.path.insert(0, "scripts")
+
+          from input_config import (
+              load_input_config,
+              get_parts,
+              get_scenes,
+          )
+
+          config = load_input_config()
+
+          print(get_parts(config))
+          print(get_scenes(config))
+          PY
+          )
+
+          PARTS="${CONFIG_VALUES[0]}"
+          SCENES="${CONFIG_VALUES[1]}"
 
           if ! [[ "$PARTS" =~ ^[0-9]+$ ]]; then
             echo "ERROR: Invalid PARTS value."
@@ -225,6 +278,7 @@ jobs:
             else
               echo "Checkpoint does not contain output directory."
             fi
+
           else
             echo "No downloadable checkpoint found."
           fi
@@ -488,7 +542,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           python3 scripts/generate_visuals.py
 
       # ============================================================
@@ -507,6 +560,7 @@ jobs:
 
           echo
           echo "Generated I2V clips:"
+
           find output/i2v \
             -type f \
             -name "*.mp4" \
@@ -541,7 +595,12 @@ jobs:
 
           SCENE_COUNT=$(python3 - <<'PY'
           import json
-          with open("output/scenes/scenes.json", "r", encoding="utf-8") as f:
+
+          with open(
+              "output/scenes/scenes.json",
+              "r",
+              encoding="utf-8"
+          ) as f:
               print(len(json.load(f).get("scenes", [])))
           PY
           )
@@ -708,24 +767,41 @@ jobs:
 
           concat_file = Path("/tmp/concat.txt")
 
-          with concat_file.open("w", encoding="utf-8") as f:
+          with concat_file.open(
+              "w",
+              encoding="utf-8"
+          ) as f:
               for part in parts:
-                  f.write(f"file '{part.resolve()}'\n")
+                  f.write(
+                      f"file '{part.resolve()}'\n"
+                  )
 
-          output = Path("output/videos/final_video.mp4")
+          output = Path(
+              "output/videos/final_video.mp4"
+          )
 
-          subprocess.run([
-              "ffmpeg",
-              "-y",
-              "-f", "concat",
-              "-safe", "0",
-              "-i", str(concat_file),
-              "-c", "copy",
-              "-movflags", "+faststart",
-              str(output)
-          ], check=True)
+          subprocess.run(
+              [
+                  "ffmpeg",
+                  "-y",
+                  "-f",
+                  "concat",
+                  "-safe",
+                  "0",
+                  "-i",
+                  str(concat_file),
+                  "-c",
+                  "copy",
+                  "-movflags",
+                  "+faststart",
+                  str(output),
+              ],
+              check=True,
+          )
 
-          print(f"Final video created: {output}")
+          print(
+              f"Final video created: {output}"
+          )
           PY
 
       # ============================================================
@@ -754,6 +830,7 @@ jobs:
 
           echo
           echo "Video information:"
+
           ffprobe \
             -v error \
             -show_entries format=duration,size \
@@ -794,8 +871,11 @@ jobs:
             i2v
           do
             if [ -d "output/$dir" ]; then
-              mkdir -p "/tmp/lok-ai-checkpoint/output/$dir"
-              cp -a "output/$dir/." \
+              mkdir -p \
+                "/tmp/lok-ai-checkpoint/output/$dir"
+
+              cp -a \
+                "output/$dir/." \
                 "/tmp/lok-ai-checkpoint/output/$dir/"
             fi
           done
