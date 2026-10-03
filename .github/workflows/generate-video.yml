@@ -183,8 +183,8 @@ jobs:
           mkdir -p output/visuals
           mkdir -p output/i2v
           mkdir -p output/parts
-          mkdir -p output/thumbnails
-          mkdir -p output/youtube
+          mkdir -p output/thumbnail
+          mkdir -p output/publish
           mkdir -p output/videos
 
       # ============================================================
@@ -309,7 +309,9 @@ jobs:
               output/visuals \
               output/i2v \
               output/parts \
-              output/videos
+              output/videos \
+              output/thumbnail \
+              output/publish
 
             mkdir -p \
               output/story \
@@ -319,7 +321,9 @@ jobs:
               output/visuals \
               output/i2v \
               output/parts \
-              output/videos
+              output/videos \
+              output/thumbnail \
+              output/publish
 
             cp Input/topic.txt output/config/topic.txt
           fi
@@ -483,28 +487,13 @@ jobs:
           echo "     INSTALLING PIPELINE DEPENDENCIES"
           echo "=============================================="
 
-          echo
-          echo "Updating apt..."
           sudo apt-get update
-
-          echo
-          echo "Installing FFmpeg..."
           sudo apt-get install -y ffmpeg
 
-          echo
-          echo "Checking FFmpeg..."
           ffmpeg -version | head -n 1
-
-          echo
-          echo "Checking FFprobe..."
           ffprobe -version | head -n 1
 
-          echo
-          echo "Updating pip..."
           python3 -m pip install --upgrade pip
-
-          echo
-          echo "Installing Python dependencies..."
 
           python3 -m pip install --upgrade \
             requests \
@@ -512,16 +501,10 @@ jobs:
             edge-tts \
             pillow
 
-          echo
-          echo "Testing requests..."
-
           python3 - <<'PY'
           import requests
           print("requests:", requests.__version__)
           PY
-
-          echo
-          echo "Testing boto3..."
 
           python3 - <<'PY'
           import boto3
@@ -531,34 +514,19 @@ jobs:
           print("botocore:", botocore.__version__)
           PY
 
-          echo
-          echo "Testing edge-tts..."
-
           edge-tts --help >/dev/null
-
           echo "edge-tts: READY"
-
-          echo
-          echo "Testing Pillow..."
 
           python3 - <<'PY'
           from PIL import Image
           print("Pillow: READY")
           PY
 
-          echo
-          echo "=============================================="
-          echo "       DEPENDENCY VERIFICATION"
-          echo "=============================================="
-
           command -v ffmpeg
           command -v ffprobe
           command -v edge-tts
 
-          echo
-          echo "=============================================="
-          echo "     ALL DEPENDENCIES READY"
-          echo "=============================================="
+          echo "ALL DEPENDENCIES READY"
 
       # ============================================================
       # GENERATE HINDI TTS
@@ -710,8 +678,7 @@ jobs:
         run: |
           set -e
 
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pillow
+          python3 -m pip install --upgrade pillow
 
       # ============================================================
       # GENERATE THUMBNAILS
@@ -721,12 +688,25 @@ jobs:
         run: |
           set -e
 
-          if [ -f "scripts/generate_thumbnails.py" ]; then
-            python3 scripts/generate_thumbnails.py
-          else
-            echo "Thumbnail script not found."
-            echo "Skipping thumbnail generation for now."
+          echo "=============================================="
+          echo "          GENERATING THUMBNAILS"
+          echo "=============================================="
+
+          if [ ! -f "scripts/generate_thumbnail.py" ]; then
+            echo "ERROR: scripts/generate_thumbnail.py not found."
+            exit 1
           fi
+
+          python3 scripts/generate_thumbnail.py
+
+          echo
+          echo "Validating thumbnail outputs..."
+
+          test -s "output/thumbnail/thumbnail_1280x720.jpg"
+          test -s "output/thumbnail/thumbnail_1080x1920.jpg"
+          test -s "output/thumbnail/thumbnail_manifest.json"
+
+          echo "Thumbnail generation validated successfully."
 
       # ============================================================
       # GENERATE YOUTUBE PACKAGE
@@ -736,12 +716,22 @@ jobs:
         run: |
           set -e
 
-          if [ -f "scripts/generate_youtube_metadata.py" ]; then
-            python3 scripts/generate_youtube_metadata.py
-          else
-            echo "YouTube metadata script not found."
-            echo "Skipping metadata generation for now."
+          if [ ! -f "scripts/generate_youtube_metadata.py" ]; then
+            echo "ERROR: scripts/generate_youtube_metadata.py not found."
+            exit 1
           fi
+
+          python3 scripts/generate_youtube_metadata.py
+
+          echo
+          echo "Validating YouTube package..."
+
+          test -s "output/publish/youtube_metadata.json"
+          test -s "output/publish/youtube_title.txt"
+          test -s "output/publish/youtube_description.txt"
+          test -s "output/publish/youtube_tags.txt"
+
+          echo "YouTube upload package validated successfully."
 
       # ============================================================
       # RENDER SCENE VIDEOS
@@ -981,13 +971,13 @@ jobs:
 
           echo
           echo "Thumbnails:"
-          find output/thumbnails \
+          find output/thumbnail \
             -type f \
             -print 2>/dev/null || true
 
           echo
           echo "YouTube:"
-          find output/youtube \
+          find output/publish \
             -type f \
             -print 2>/dev/null || true
 
