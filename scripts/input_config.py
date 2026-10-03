@@ -4,8 +4,12 @@
 Centralized Input configuration.
 
 Input/topic.txt is the single source of truth for the video pipeline.
-All generation scripts should use this module instead of independently
-parsing Input/topic.txt.
+
+Supports:
+- normal KEY = VALUE settings
+- inline comments
+- quoted values
+- multiline STORY_TEXT = """..."""
 """
 
 from pathlib import Path
@@ -13,7 +17,6 @@ import re
 
 
 INPUT_FILE = Path("Input/topic.txt")
-
 
 TRUE_VALUES = {
     "true",
@@ -31,15 +34,6 @@ FALSE_VALUES = {
 
 
 def clean_value(value):
-    """
-    Remove inline comments and surrounding quotes.
-
-    Example:
-        FORMAT = "short"  # comment
-    becomes:
-        short
-    """
-
     value = str(value).strip()
 
     if "#" in value:
@@ -59,15 +53,6 @@ def clean_value(value):
 
 
 def parse_value(value):
-    """
-    Convert Input values into useful Python types.
-
-    true/false -> bool
-    integers   -> int
-    decimals   -> float
-    everything else -> str
-    """
-
     value = clean_value(value)
 
     if value == "":
@@ -101,12 +86,18 @@ def parse_value(value):
 
 def load_input_config(path=INPUT_FILE):
     """
-    Read the complete Input/topic.txt file.
+    Read complete Input/topic.txt.
 
-    Every valid KEY = VALUE entry is preserved.
+    Supports multiline STORY_TEXT.
 
-    Unknown keys are intentionally preserved so that adding a new
-    Input option does not require changing this parser.
+    Example:
+
+    STORY_TEXT = """
+    यह पूरी कहानी यहाँ होगी।
+    यह कई lines में हो सकती है।
+    """
+
+    All other KEY = VALUE settings are parsed normally.
     """
 
     path = Path(path)
@@ -116,43 +107,124 @@ def load_input_config(path=INPUT_FILE):
             f"Input configuration not found: {path}"
         )
 
+    text = path.read_text(
+        encoding="utf-8"
+    )
+
     config = {}
 
-    for raw_line in path.read_text(
-        encoding="utf-8"
-    ).splitlines():
+    lines = text.splitlines()
 
+    index = 0
+
+    while index < len(lines):
+
+        raw_line = lines[index]
         line = raw_line.strip()
 
         # Empty line
         if not line:
+            index += 1
             continue
 
         # Full-line comment
         if line.startswith("#"):
+            index += 1
             continue
 
-        # Ignore lines without =
+        # --------------------------------------------------
+        # MULTILINE STORY_TEXT
+        # --------------------------------------------------
+
+        story_match = re.match(
+            r'^STORY_TEXT\s*=\s*("""|\'\'\')',
+            line,
+            flags=re.IGNORECASE,
+        )
+
+        if story_match:
+
+            delimiter = story_match.group(1)
+
+            remainder = line[
+                story_match.end():
+            ]
+
+            collected = []
+
+            # Closing delimiter is on same line
+            if delimiter in remainder:
+
+                end_index = remainder.find(
+                    delimiter
+                )
+
+                collected.append(
+                    remainder[:end_index]
+                )
+
+            else:
+
+                collected.append(
+                    remainder
+                )
+
+                index += 1
+
+                while index < len(lines):
+
+                    current = lines[index]
+
+                    if delimiter in current:
+
+                        end_index = current.find(
+                            delimiter
+                        )
+
+                        collected.append(
+                            current[:end_index]
+                        )
+
+                        break
+
+                    collected.append(current)
+
+                    index += 1
+
+            config["STORY_TEXT"] = "\n".join(
+                collected
+            ).strip()
+
+            index += 1
+            continue
+
+        # --------------------------------------------------
+        # NORMAL KEY = VALUE
+        # --------------------------------------------------
+
         if "=" not in line:
+            index += 1
             continue
 
-        key, value = line.split("=", 1)
+        key, value = line.split(
+            "=",
+            1
+        )
 
         key = key.strip().upper()
 
         if not key:
+            index += 1
             continue
 
         config[key] = parse_value(value)
+
+        index += 1
 
     return config
 
 
 def cfg(config, key, default=None):
-    """
-    Get any configuration value.
-    """
-
     return config.get(
         str(key).upper(),
         default
@@ -160,10 +232,6 @@ def cfg(config, key, default=None):
 
 
 def cfg_text(config, key, default=""):
-    """
-    Get a configuration value as text.
-    """
-
     value = cfg(
         config,
         key,
@@ -177,10 +245,6 @@ def cfg_text(config, key, default=""):
 
 
 def cfg_bool(config, key, default=False):
-    """
-    Get a configuration value as boolean.
-    """
-
     value = cfg(
         config,
         key,
@@ -202,10 +266,6 @@ def cfg_bool(config, key, default=False):
 
 
 def cfg_int(config, key, default=0):
-    """
-    Get a configuration value as integer.
-    """
-
     value = cfg(
         config,
         key,
@@ -222,10 +282,6 @@ def cfg_int(config, key, default=0):
 
 
 def cfg_float(config, key, default=0.0):
-    """
-    Get a configuration value as float.
-    """
-
     value = cfg(
         config,
         key,
@@ -242,21 +298,6 @@ def cfg_float(config, key, default=0.0):
 
 
 def normalize_format(config):
-    """
-    Normalize video format.
-
-    Accepted aliases:
-        short
-        vertical
-        reels
-        youtube_short
-
-        full
-        horizontal
-        long
-        longform
-        youtube_full
-    """
 
     value = cfg_text(
         config,
@@ -288,13 +329,6 @@ def normalize_format(config):
 
 
 def resolve_topic(config):
-    """
-    Explicit TOPIC has priority.
-
-    If TOPIC is empty, return an empty string so the
-    story-generation layer can create a title/topic from STORY_TEXT.
-    """
-
     return cfg_text(
         config,
         "TOPIC",
@@ -303,13 +337,6 @@ def resolve_topic(config):
 
 
 def resolve_story_text(config):
-    """
-    Return the user-provided story.
-
-    Empty STORY_TEXT means the story must be generated
-    from TOPIC.
-    """
-
     return cfg_text(
         config,
         "STORY_TEXT",
@@ -330,13 +357,6 @@ def has_topic(config):
 
 
 def resolve_title_source(config):
-    """
-    Determine where the final title should come from.
-
-    Priority:
-        1. Explicit TOPIC
-        2. STORY_TEXT -> AI-generated title
-    """
 
     topic = resolve_topic(config)
 
@@ -394,6 +414,7 @@ def get_max_retries(config):
 
 
 def get_fps(config):
+
     fps = cfg_int(
         config,
         "FPS",
@@ -407,6 +428,7 @@ def get_fps(config):
 
 
 def get_caption_mode(config):
+
     value = cfg_text(
         config,
         "CAPTIONS",
@@ -428,10 +450,67 @@ def get_caption_mode(config):
     return value
 
 
+def get_story_length(config):
+
+    value = cfg_text(
+        config,
+        "STORY_LENGTH",
+        "auto"
+    ).lower()
+
+    allowed = {
+        "auto",
+        "short",
+        "medium",
+        "long",
+    }
+
+    if value not in allowed:
+        return "auto"
+
+    return value
+
+
+def get_scene_duration(config):
+
+    value = cfg_text(
+        config,
+        "SCENE_DURATION",
+        "auto"
+    ).lower()
+
+    allowed = {
+        "auto",
+        "fixed",
+    }
+
+    if value not in allowed:
+        return "auto"
+
+    return value
+
+
+def get_failure_policy(config):
+
+    value = cfg_text(
+        config,
+        "FAILURE_POLICY",
+        "retry_then_checkpoint"
+    ).lower()
+
+    allowed = {
+        "retry_then_checkpoint",
+        "skip",
+        "stop",
+    }
+
+    if value not in allowed:
+        return "retry_then_checkpoint"
+
+    return value
+
+
 def validate_config(config):
-    """
-    Validate important Input settings before generation starts.
-    """
 
     errors = []
 
@@ -441,19 +520,28 @@ def validate_config(config):
         errors.append(str(exc))
 
     if get_parts(config) < 1:
-        errors.append("PARTS must be >= 1")
+        errors.append(
+            "PARTS must be >= 1"
+        )
 
     if get_scenes(config) < 1:
-        errors.append("SCENES must be >= 1")
+        errors.append(
+            "SCENES must be >= 1"
+        )
 
     if get_fps(config) < 1:
-        errors.append("FPS must be >= 1")
+        errors.append(
+            "FPS must be >= 1"
+        )
 
-    title_source = resolve_title_source(config)
+    title_source = resolve_title_source(
+        config
+    )
 
     if title_source["source"] == "missing":
         errors.append(
-            "TOPIC and STORY_TEXT cannot both be empty."
+            "TOPIC and STORY_TEXT cannot "
+            "both be empty."
         )
 
     if errors:
@@ -466,9 +554,6 @@ def validate_config(config):
 
 
 def print_config_summary(config):
-    """
-    Print a readable summary for GitHub Actions logs.
-    """
 
     print("==============================================")
     print("        INPUT CONFIGURATION")
@@ -506,12 +591,12 @@ def print_config_summary(config):
 
     print(
         f"STORY_LENGTH        : "
-        f"{cfg_text(config, 'STORY_LENGTH', 'auto')}"
+        f"{get_story_length(config)}"
     )
 
     print(
         f"SCENE_DURATION      : "
-        f"{cfg_text(config, 'SCENE_DURATION', 'auto')}"
+        f"{get_scene_duration(config)}"
     )
 
     print(
@@ -537,6 +622,31 @@ def print_config_summary(config):
     print(
         f"REALISM             : "
         f"{cfg_text(config, 'REALISM', 'high')}"
+    )
+
+    print(
+        f"CHARACTER_BIBLE     : "
+        f"{cfg_bool(config, 'CHARACTER_BIBLE', True)}"
+    )
+
+    print(
+        f"CHARACTER_CONSIST.  : "
+        f"{cfg_bool(config, 'CHARACTER_CONSISTENCY', True)}"
+    )
+
+    print(
+        f"WORLD_CONSISTENCY   : "
+        f"{cfg_bool(config, 'WORLD_CONSISTENCY', True)}"
+    )
+
+    print(
+        f"SCENE_CONTINUITY    : "
+        f"{cfg_bool(config, 'SCENE_CONTINUITY', True)}"
+    )
+
+    print(
+        f"CINEMATIC_CAMERA    : "
+        f"{cfg_bool(config, 'CINEMATIC_CAMERA', True)}"
     )
 
     print(
@@ -567,6 +677,11 @@ def print_config_summary(config):
     print(
         f"MUSIC               : "
         f"{cfg_bool(config, 'MUSIC', True)}"
+    )
+
+    print(
+        f"MUSIC_STYLE         : "
+        f"{cfg_text(config, 'MUSIC_STYLE', 'cinematic')}"
     )
 
     print(
@@ -604,10 +719,26 @@ def print_config_summary(config):
         f"{get_max_retries(config)}"
     )
 
+    print(
+        f"SAVE_CHECKPOINT     : "
+        f"{cfg_bool(config, 'SAVE_CHECKPOINT_AFTER_EACH_SCENE', True)}"
+    )
+
+    print(
+        f"SKIP_COMPLETED      : "
+        f"{cfg_bool(config, 'SKIP_COMPLETED_SCENES', True)}"
+    )
+
+    print(
+        f"FAILURE_POLICY      : "
+        f"{get_failure_policy(config)}"
+    )
+
     print("==============================================")
 
 
 if __name__ == "__main__":
+
     config = load_input_config()
 
     validate_config(config)
