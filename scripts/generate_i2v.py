@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import base64
+import hashlib
 import json
-import mimetypes
 import os
 import random
 import sys
@@ -11,9 +11,24 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
+import boto3
+from botocore.client import Config
+
 
 # ============================================================
-# CONFIG
+# CENTRALIZED INPUT CONFIG
+# ============================================================
+
+from input_config import (
+    load_input_config,
+    cfg_bool,
+    normalize_format,
+    get_max_retries,
+)
+
+
+# ============================================================
+# PATHS
 # ============================================================
 
 CONFIG_FILE = Path("Input/topic.txt")
@@ -25,8 +40,49 @@ I2V_DIR = Path("output/i2v")
 
 JOBS_FILE = I2V_DIR / "i2v_jobs.json"
 
-ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
-API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
+
+# ============================================================
+# LOAD INPUT
+# ============================================================
+
+CONFIG = load_input_config()
+
+FORMAT = normalize_format(CONFIG)
+
+MAX_RETRIES = get_max_retries(CONFIG)
+
+RESUME_ENABLED = cfg_bool(
+    CONFIG,
+    "RESUME_ENABLED",
+    True
+)
+
+SKIP_COMPLETED_SCENES = cfg_bool(
+    CONFIG,
+    "SKIP_COMPLETED_SCENES",
+    True
+)
+
+SAVE_CHECKPOINT = cfg_bool(
+    CONFIG,
+    "SAVE_CHECKPOINT_AFTER_EACH_SCENE",
+    True
+)
+
+
+# ============================================================
+# CLOUDFLARE AI
+# ============================================================
+
+ACCOUNT_ID = os.getenv(
+    "CLOUDFLARE_ACCOUNT_ID",
+    ""
+).strip()
+
+API_TOKEN = os.getenv(
+    "CLOUDFLARE_API_TOKEN",
+    ""
+).strip()
 
 MODEL = "alibaba/hh1.1-i2v"
 
@@ -35,86 +91,46 @@ API_URL = (
     "{account_id}/ai/run/{model}"
 )
 
-MAX_RETRIES = 6
+
+# ============================================================
+# CLOUDFLARE R2
+# ============================================================
+
+R2_BUCKET = os.getenv(
+    "CLOUDFLARE_R2_BUCKET",
+    ""
+).strip()
+
+R2_ACCESS_KEY_ID = os.getenv(
+    "CLOUDFLARE_R2_ACCESS_KEY_ID",
+    ""
+).strip()
+
+R2_SECRET_ACCESS_KEY = os.getenv(
+    "CLOUDFLARE_R2_SECRET_ACCESS_KEY",
+    ""
+).strip()
+
+R2_PUBLIC_URL = os.getenv(
+    "CLOUDFLARE_R2_PUBLIC_URL",
+    ""
+).strip().rstrip("/")
+
+
+# ============================================================
+# I2V SETTINGS
+# ============================================================
+
 INITIAL_BACKOFF = 20
 MAX_BACKOFF = 300
 REQUEST_TIMEOUT = 300
 
 
 # ============================================================
-# CONFIG HELPERS
-# ============================================================
-
-def clean_config_value(value):
-
-    value = value.strip()
-
-    if "#" in value:
-        value = value.split("#", 1)[0].strip()
-
-    return value.strip().strip('"').strip("'")
-
-
-def load_config():
-
-    if not CONFIG_FILE.exists():
-        raise RuntimeError(
-            "Input/topic.txt not found."
-        )
-
-    config = {}
-
-    for raw in CONFIG_FILE.read_text(
-        encoding="utf-8"
-    ).splitlines():
-
-        line = raw.strip()
-
-        if not line or line.startswith("#"):
-            continue
-
-        if "=" not in line:
-            continue
-
-        key, value = line.split("=", 1)
-
-        config[key.strip().upper()] = (
-            clean_config_value(value)
-        )
-
-    return config
-
-
-CONFIG = load_config()
-
-FORMAT = CONFIG.get(
-    "FORMAT",
-    "full"
-).lower()
-
-if FORMAT not in {"short", "full"}:
-    raise RuntimeError(
-        f"Invalid FORMAT: {FORMAT}"
-    )
-
-
-# ============================================================
-# FORMAT-BASED I2V RESOLUTION
+# FORMAT RESOLUTION
 # ============================================================
 
 def get_i2v_resolution(format_name):
-
-    """
-    Cloudflare HH 1.1 I2V supports:
-        720P
-        1080P
-
-    SHORT:
-        720P
-
-    FULL:
-        1080P
-    """
 
     if format_name == "short":
         return "720P"
@@ -128,7 +144,7 @@ I2V_RESOLUTION = get_i2v_resolution(
 
 
 # ============================================================
-# VALIDATE API
+# VALIDATE CLOUDFLARE
 # ============================================================
 
 if not ACCOUNT_ID:
@@ -140,6 +156,57 @@ if not API_TOKEN:
     raise RuntimeError(
         "CLOUDFLARE_API_TOKEN is not set."
     )
+
+
+# ============================================================
+# VALIDATE R2
+# ============================================================
+
+if not R2_BUCKET:
+    raise RuntimeError(
+        "CLOUDFLARE_R2_BUCKET is not set."
+    )
+
+if not R2_ACCESS_KEY_ID:
+    raise RuntimeError(
+        "CLOUDFLARE_R2_ACCESS_KEY_ID is not set."
+    )
+
+if not R2_SECRET_ACCESS_KEY:
+    raise RuntimeError(
+        "CLOUDFLARE_R2_SECRET_ACCESS_KEY is not set."
+    )
+
+if not R2_PUBLIC_URL:
+    raise RuntimeError(
+        "CLOUDFLARE_R2_PUBLIC_URL is not set."
+    )
+
+
+# ============================================================
+# R2 CLIENT
+# ============================================================
+
+R2_ENDPOINT = (
+    f"https://{ACCOUNT_ID}.r2.cloudflarestorage.com"
+)
+
+
+def create_r2_client():
+
+    return boto3.client(
+        "s3",
+        endpoint_url=R2_ENDPOINT,
+        aws_access_key_id=R2_ACCESS_KEY_ID,
+        aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+        region_name="auto",
+        config=Config(
+            signature_version="s3v4"
+        ),
+    )
+
+
+R2_CLIENT = create_r2_client()
 
 
 # ============================================================
@@ -204,7 +271,7 @@ jobs = load_json(
 
 
 # ============================================================
-# FILE HELPERS
+# VISUAL FINDER
 # ============================================================
 
 def find_visual(part, scene):
@@ -234,6 +301,10 @@ def find_visual(part, scene):
     return None
 
 
+# ============================================================
+# AUDIO FINDER
+# ============================================================
+
 def find_audio(part, scene):
 
     directory = (
@@ -259,6 +330,10 @@ def find_audio(part, scene):
     return None
 
 
+# ============================================================
+# AUDIO DURATION
+# ============================================================
+
 def get_audio_duration(path):
 
     import subprocess
@@ -280,6 +355,7 @@ def get_audio_duration(path):
     )
 
     if result.returncode != 0:
+
         raise RuntimeError(
             f"Unable to read audio duration: {path}"
         )
@@ -303,68 +379,159 @@ def get_audio_duration(path):
 
 def choose_duration(audio_duration):
 
-    """
-    Cloudflare HH 1.1 I2V supports approximately
-    3-15 seconds.
+    target = audio_duration + 0.5
 
-    We request enough time for the narration while
-    avoiding unnecessary looping during rendering.
-    """
-
-    if FORMAT == "short":
-
-        # Short scenes should remain fast.
-        # Give the scene enough motion time for narration.
-        target = audio_duration + 0.5
-
-    else:
-
-        target = audio_duration + 0.5
-
-    # Model limits.
     target = max(
         3.0,
-        min(15.0, target)
+        min(
+            15.0,
+            target
+        )
     )
 
-    # API expects an integer duration.
     duration = int(
         round(target)
     )
 
     duration = max(
         3,
-        min(15, duration)
+        min(
+            15,
+            duration
+        )
     )
 
     return duration
 
 
 # ============================================================
-# IMAGE -> DATA URI
+# R2 CONTENT TYPE
 # ============================================================
 
-def image_to_data_uri(path):
+def get_content_type(path):
 
-    mime_type, _ = mimetypes.guess_type(
-        str(path)
+    suffix = path.suffix.lower()
+
+    if suffix == ".png":
+        return "image/png"
+
+    if suffix in {
+        ".jpg",
+        ".jpeg",
+    }:
+        return "image/jpeg"
+
+    raise RuntimeError(
+        f"Unsupported visual format: {path}"
     )
 
-    if not mime_type:
 
-        if path.suffix.lower() == ".png":
-            mime_type = "image/png"
+# ============================================================
+# R2 OBJECT KEY
+# ============================================================
 
-        else:
-            mime_type = "image/jpeg"
+def make_r2_key(
+    visual_path,
+    part,
+    scene
+):
 
-    encoded = base64.b64encode(
-        path.read_bytes()
-    ).decode("ascii")
+    data = visual_path.read_bytes()
+
+    digest = hashlib.sha256(
+        data
+    ).hexdigest()[:16]
+
+    extension = (
+        visual_path.suffix.lower()
+    )
+
+    if extension == ".jpeg":
+        extension = ".jpg"
 
     return (
-        f"data:{mime_type};base64,{encoded}"
+        f"i2v-inputs/"
+        f"{FORMAT}/"
+        f"part_{part:02d}/"
+        f"scene_{scene:02d}_"
+        f"{digest}"
+        f"{extension}"
     )
+
+
+# ============================================================
+# UPLOAD VISUAL TO R2
+# ============================================================
+
+def upload_visual_to_r2(
+    visual_path,
+    part,
+    scene
+):
+
+    key = make_r2_key(
+        visual_path,
+        part,
+        scene
+    )
+
+    content_type = get_content_type(
+        visual_path
+    )
+
+    print()
+    print(
+        f"Uploading visual to R2:"
+    )
+
+    print(
+        f"  File : {visual_path}"
+    )
+
+    print(
+        f"  Key  : {key}"
+    )
+
+    try:
+
+        with visual_path.open(
+            "rb"
+        ) as file:
+
+            R2_CLIENT.upload_fileobj(
+                file,
+                R2_BUCKET,
+                key,
+                ExtraArgs={
+                    "ContentType": content_type,
+                    "CacheControl": "public, max-age=31536000, immutable",
+                },
+            )
+
+    except Exception as exc:
+
+        raise RuntimeError(
+            f"R2 upload failed for "
+            f"{visual_path}: {exc}"
+        )
+
+    public_url = (
+        f"{R2_PUBLIC_URL}/{key}"
+    )
+
+    print(
+        "  R2 upload successful."
+    )
+
+    print(
+        f"  Public URL: {public_url}"
+    )
+
+    return {
+        "key": key,
+        "url": public_url,
+        "content_type": content_type,
+    }
 
 
 # ============================================================
@@ -408,17 +575,26 @@ def build_prompt(
 This is an ORIGINAL short-form video scene.
 
 Motion must begin immediately in the first moment.
+
 Do not make the opening feel like a still photograph.
 
 Create immediate visual curiosity and tension.
-Use purposeful human movement, environmental movement,
-camera movement, or a combination.
 
-The scene must feel designed specifically for a short video,
-not like a clipped section from a longer movie.
+Use purposeful human movement,
+environmental movement,
+camera movement,
+or a combination.
+
+The scene must feel designed specifically
+for a short video.
+
+It must NOT feel like a clipped section
+from a longer movie.
 
 Maintain momentum throughout the shot.
+
 Avoid a static opening.
+
 Avoid a static ending.
 """
 
@@ -427,8 +603,11 @@ Avoid a static ending.
         format_instruction = """
 This is a cinematic long-form video scene.
 
-Create continuous natural motion throughout the shot.
-Use subtle human movement, environmental movement,
+Create continuous natural motion throughout
+the entire shot.
+
+Use subtle human movement,
+environmental movement,
 and purposeful cinematic camera movement.
 
 Do not make the scene feel like a photograph.
@@ -472,16 +651,22 @@ ANIMATION REQUIREMENTS:
 - Realistic shadows.
 - Natural depth of field.
 - Cinematic but believable camera movement.
-- Preserve the identity of every person.
-- Preserve age, face, hairstyle, clothing and body proportions.
-- Preserve the location and important objects.
+- Preserve identity of every person.
+- Preserve age.
+- Preserve face.
+- Preserve hairstyle.
+- Preserve clothing.
+- Preserve body proportions.
+- Preserve location.
+- Preserve important objects.
 - Preserve continuity with the source image.
-- Do not change the characters into different people.
-- Do not change the scene into a different location.
+- Do not change characters into different people.
+- Do not change the scene into another location.
 
 CAMERA:
 
 Use subtle real camera movement such as:
+
 slow handheld movement,
 controlled dolly movement,
 slow push-in,
@@ -492,10 +677,11 @@ The camera must not move randomly.
 
 IMPORTANT:
 
-The generated result must look like footage captured
-with a real camera in the real world.
+The generated result must look like footage
+captured with a real camera in the real world.
 
 It must NOT look like:
+
 a comic,
 a cartoon,
 an illustration,
@@ -536,7 +722,7 @@ watermark, text, logo
 
 
 # ============================================================
-# HTTP REQUEST
+# CLOUDFLARE HTTP REQUEST
 # ============================================================
 
 def call_cloudflare(payload):
@@ -580,10 +766,15 @@ def call_cloudflare(payload):
         response_body = ""
 
         try:
+
             response_body = (
                 error.read()
-                .decode("utf-8", errors="replace")
+                .decode(
+                    "utf-8",
+                    errors="replace"
+                )
             )
+
         except Exception:
             pass
 
@@ -605,12 +796,18 @@ def call_cloudflare(payload):
 
 def extract_video_bytes(result):
 
-    if not isinstance(result, dict):
+    if not isinstance(
+        result,
+        dict
+    ):
+
         raise RuntimeError(
             "Invalid Cloudflare response."
         )
 
-    if result.get("success") is False:
+    if result.get(
+        "success"
+    ) is False:
 
         errors = result.get(
             "errors",
@@ -640,19 +837,18 @@ def extract_video_bytes(result):
             str
         ):
 
-            # Some responses may return a URL.
-            if video.startswith(
-                "http://"
-            ) or video.startswith(
-                "https://"
+            if (
+                video.startswith(
+                    "http://"
+                )
+                or
+                video.startswith(
+                    "https://"
+                )
             ):
 
                 request = Request(
-                    video,
-                    headers={
-                        "Authorization":
-                            f"Bearer {API_TOKEN}"
-                    }
+                    video
                 )
 
                 with urlopen(
@@ -662,7 +858,6 @@ def extract_video_bytes(result):
 
                     return response.read()
 
-            # Otherwise treat as base64.
             try:
 
                 return base64.b64decode(
@@ -749,13 +944,25 @@ def generate_clip(
         f"{MODEL}"
     )
 
-    image_uri = image_to_data_uri(
-        visual_path
+    # --------------------------------------------------------
+    # Upload image to R2
+    # --------------------------------------------------------
+
+    r2_info = upload_visual_to_r2(
+        visual_path=visual_path,
+        part=part,
+        scene=scene_number
     )
+
+    image_url = r2_info["url"]
+
+    # --------------------------------------------------------
+    # Cloudflare I2V payload
+    # --------------------------------------------------------
 
     payload = {
         "input": {
-            "image": image_uri,
+            "image": image_url,
             "prompt": prompt,
             "negative_prompt": (
                 "cartoon, comic, anime, illustration, "
@@ -793,6 +1000,7 @@ def generate_clip(
             )
 
             if not video_bytes:
+
                 raise RuntimeError(
                     "Cloudflare returned empty video."
                 )
@@ -806,7 +1014,10 @@ def generate_clip(
                 video_bytes
             )
 
-            if output_path.stat().st_size < 1000:
+            if (
+                output_path.stat().st_size
+                < 1000
+            ):
 
                 output_path.unlink(
                     missing_ok=True
@@ -820,7 +1031,11 @@ def generate_clip(
                 f"SUCCESS: {output_path}"
             )
 
-            return duration
+            return {
+                "duration": duration,
+                "r2_key": r2_info["key"],
+                "r2_url": r2_info["url"],
+            }
 
         except Exception as exc:
 
@@ -871,18 +1086,39 @@ def main():
     print("=" * 70)
 
     print(
-        f"Format     : {FORMAT}"
+        f"Format              : {FORMAT}"
     )
 
     print(
-        f"Resolution : {I2V_RESOLUTION}"
+        f"Resolution          : {I2V_RESOLUTION}"
     )
 
     print(
-        f"Model      : {MODEL}"
+        f"Model               : {MODEL}"
+    )
+
+    print(
+        f"Max retries         : {MAX_RETRIES}"
+    )
+
+    print(
+        f"Resume enabled      : {RESUME_ENABLED}"
+    )
+
+    print(
+        f"Skip completed      : {SKIP_COMPLETED_SCENES}"
+    )
+
+    print(
+        f"R2 bucket           : {R2_BUCKET}"
+    )
+
+    print(
+        f"R2 public URL       : {R2_PUBLIC_URL}"
     )
 
     if not SCENES_FILE.exists():
+
         raise RuntimeError(
             "output/scenes/scenes.json not found."
         )
@@ -893,7 +1129,10 @@ def main():
         )
     )
 
-    if scenes_data.get("status") != "completed":
+    if scenes_data.get(
+        "status"
+    ) != "completed":
+
         raise RuntimeError(
             "Scenes are not marked completed."
         )
@@ -904,6 +1143,7 @@ def main():
     )
 
     if not scenes:
+
         raise RuntimeError(
             "No scenes found."
         )
@@ -923,12 +1163,17 @@ def main():
         []
     ):
 
-        key = (
-            int(job["part"]),
-            int(job["scene"])
-        )
+        try:
 
-        old_jobs[key] = job
+            key = (
+                int(job["part"]),
+                int(job["scene"])
+            )
+
+            old_jobs[key] = job
+
+        except Exception:
+            continue
 
     final_jobs = []
 
@@ -939,19 +1184,27 @@ def main():
     for scene in scenes:
 
         part = int(
-            scene.get("part", 0)
+            scene.get(
+                "part",
+                0
+            )
         )
 
         scene_number = int(
-            scene.get("scene", 0)
+            scene.get(
+                "scene",
+                0
+            )
         )
 
         if part <= 0:
+
             raise RuntimeError(
                 f"Invalid part: {part}"
             )
 
         if scene_number <= 0:
+
             raise RuntimeError(
                 f"Invalid scene: {scene_number}"
             )
@@ -962,9 +1215,11 @@ def main():
         )
 
         if visual_path is None:
+
             raise RuntimeError(
                 f"Missing visual for "
-                f"Part {part} Scene {scene_number}"
+                f"Part {part} "
+                f"Scene {scene_number}"
             )
 
         audio_path = find_audio(
@@ -973,15 +1228,17 @@ def main():
         )
 
         if audio_path is None:
+
             raise RuntimeError(
                 f"Missing narration for "
-                f"Part {part} Scene {scene_number}"
+                f"Part {part} "
+                f"Scene {scene_number}"
             )
 
         output_path = (
-            I2V_DIR /
-            f"part_{part:02d}" /
-            f"scene_{scene_number:02d}.mp4"
+            I2V_DIR
+            / f"part_{part:02d}"
+            / f"scene_{scene_number:02d}.mp4"
         )
 
         key = (
@@ -990,28 +1247,38 @@ def main():
         )
 
         # ----------------------------------------------------
-        # Resume valid completed clip
+        # Resume existing valid clip
         # ----------------------------------------------------
 
         if (
-            output_path.exists()
+            RESUME_ENABLED
+            and SKIP_COMPLETED_SCENES
+            and output_path.exists()
             and output_path.stat().st_size > 1000
         ):
 
             print()
             print(
                 f"SKIP existing I2V: "
-                f"Part {part} Scene {scene_number}"
+                f"Part {part} "
+                f"Scene {scene_number}"
             )
 
-            duration = 0
+            audio_duration = 0.0
 
             try:
-                duration = get_audio_duration(
+
+                audio_duration = get_audio_duration(
                     audio_path
                 )
+
             except Exception:
                 pass
+
+            old_job = old_jobs.get(
+                key,
+                {}
+            )
 
             final_jobs.append(
                 {
@@ -1031,7 +1298,15 @@ def main():
                         output_path
                     ),
                     "audio_duration":
-                        duration,
+                        audio_duration,
+                    "r2_key":
+                        old_job.get(
+                            "r2_key"
+                        ),
+                    "r2_url":
+                        old_job.get(
+                            "r2_url"
+                        ),
                 }
             )
 
@@ -1041,7 +1316,7 @@ def main():
         # Generate new clip
         # ----------------------------------------------------
 
-        generated_duration = generate_clip(
+        result = generate_clip(
             part=part,
             scene_number=scene_number,
             scene=scene,
@@ -1074,19 +1349,36 @@ def main():
                 "audio_duration":
                     audio_duration,
                 "requested_duration":
-                    generated_duration,
+                    result["duration"],
+                "r2_key":
+                    result["r2_key"],
+                "r2_url":
+                    result["r2_url"],
             }
         )
 
-        jobs["jobs"] = final_jobs
-        jobs["status"] = "running"
-        jobs["format"] = FORMAT
-        jobs["resolution"] = I2V_RESOLUTION
+        # ----------------------------------------------------
+        # Scene checkpoint
+        # ----------------------------------------------------
 
-        save_json(
-            JOBS_FILE,
-            jobs
-        )
+        if SAVE_CHECKPOINT:
+
+            jobs["jobs"] = final_jobs
+            jobs["status"] = "running"
+            jobs["format"] = FORMAT
+            jobs["model"] = MODEL
+            jobs["resolution"] = I2V_RESOLUTION
+            jobs["total"] = len(scenes)
+
+            save_json(
+                JOBS_FILE,
+                jobs
+            )
+
+            print(
+                f"Checkpoint saved after "
+                f"Part {part} Scene {scene_number}"
+            )
 
     # --------------------------------------------------------
     # Final validation
@@ -1127,6 +1419,7 @@ def main():
     )
 
     if completed != expected:
+
         raise RuntimeError(
             "I2V clip count mismatch."
         )
@@ -1152,6 +1445,10 @@ def main():
         f"Output directory: {I2V_DIR}"
     )
 
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
 
 if __name__ == "__main__":
 
