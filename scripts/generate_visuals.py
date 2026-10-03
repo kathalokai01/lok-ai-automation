@@ -22,9 +22,12 @@ SCENES_FILE = (
     BASE / "scenes" / "scenes.json"
 )
 
+# FIX:
+# generate_character_bible.py writes here:
+# output/story/character_bible.json
 CHARACTER_BIBLE_FILE = (
     BASE
-    / "character_bible"
+    / "story"
     / "character_bible.json"
 )
 
