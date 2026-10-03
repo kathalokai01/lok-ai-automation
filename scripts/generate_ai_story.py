@@ -9,14 +9,10 @@ from pathlib import Path
 
 from input_config import (
     load_input_config,
-    cfg_bool,
-    cfg_text,
-    get_max_retries,
-    get_scene_duration,
-    get_story_length,
     normalize_format,
-    resolve_story_text,
-    resolve_topic,
+    get_max_retries,
+    get_topic,
+    get_story_text,
 )
 
 
@@ -24,6 +20,64 @@ INPUT = Path("output/story/story.json")
 OUTPUT = Path("output/story/ai_story.json")
 MODEL_FILE = Path("output/config/selected_model.json")
 
+
+# ============================================================
+# LOCAL CONFIG HELPERS
+# ============================================================
+
+def cfg_text(config, key, default=""):
+    value = config.get(key, default)
+
+    if value is None:
+        return default
+
+    return str(value).strip()
+
+
+def cfg_bool(config, key, default=False):
+    value = config.get(key, default)
+
+    if isinstance(value, bool):
+        return value
+
+    text = str(value).strip().lower()
+
+    if text in ("true", "1", "yes", "on"):
+        return True
+
+    if text in ("false", "0", "no", "off"):
+        return False
+
+    return default
+
+
+def get_story_length_value(config):
+    return cfg_text(
+        config,
+        "STORY_LENGTH",
+        "auto"
+    )
+
+
+def get_scene_duration_value(config):
+    return cfg_text(
+        config,
+        "SCENE_DURATION",
+        "auto"
+    )
+
+
+def resolve_topic_value(config):
+    return get_topic(config)
+
+
+def resolve_story_text_value(config):
+    return get_story_text(config)
+
+
+# ============================================================
+# JSON HELPERS
+# ============================================================
 
 def load_json(path):
     if not path.exists():
@@ -49,6 +103,10 @@ def save_json(data):
     temp.replace(OUTPUT)
 
 
+# ============================================================
+# MODEL
+# ============================================================
+
 def load_selected_model():
     config = load_json(MODEL_FILE)
 
@@ -67,6 +125,10 @@ def load_selected_model():
     return model
 
 
+# ============================================================
+# INPUT CONFIG
+# ============================================================
+
 def build_config():
 
     config = load_input_config()
@@ -80,9 +142,9 @@ def build_config():
             "adult"
         ),
 
-        "story_length": get_story_length(config),
+        "story_length": get_story_length_value(config),
 
-        "scene_duration": get_scene_duration(config),
+        "scene_duration": get_scene_duration_value(config),
 
         "part_hook": cfg_bool(
             config,
@@ -238,6 +300,10 @@ def build_config():
     }
 
 
+# ============================================================
+# GEMINI PART GENERATION
+# ============================================================
+
 def generate_part(
     api_key,
     model,
@@ -329,6 +395,7 @@ def generate_part(
     format_type = pipeline_config["format"]
 
     if format_type == "short":
+
         format_instruction = """
 This is a SHORT-FORM video.
 
@@ -346,7 +413,9 @@ The opening must create curiosity immediately.
 The ending must feel intentional and suspenseful,
 not like the video was simply cut off.
 """
+
     else:
+
         format_instruction = """
 This is a FULL-LENGTH cinematic story.
 
@@ -411,7 +480,11 @@ SOURCE TOPIC:
 {topic}
 
 SOURCE STORY TEXT:
-{story_text if story_text else "[No additional STORY_TEXT was provided. Build from the topic.]"} 
+{
+    story_text
+    if story_text
+    else "[No additional STORY_TEXT was provided. Build from the topic.]"
+}
 
 FORMAT:
 {format_type}
@@ -517,6 +590,7 @@ NEGATIVE PROMPT:
 {"Avoid glitch effects." if pipeline_config["avoid_glitch"] else ""}
 
 AUDIO:
+
 MUSIC ENABLED:
 {pipeline_config["music"]}
 
@@ -567,6 +641,7 @@ IMPORTANT:
     for attempt in range(1, max_retries + 1):
 
         try:
+
             print(
                 f"Generating Part {part['part']} "
                 f"(attempt {attempt}/{max_retries}) "
@@ -605,6 +680,7 @@ IMPORTANT:
             )
 
             if len(generated_scenes) != len(scenes):
+
                 raise ValueError(
                     f"Expected {len(scenes)} scenes, "
                     f"received {len(generated_scenes)}"
@@ -621,6 +697,7 @@ IMPORTANT:
             ]
 
             if actual_numbers != expected_numbers:
+
                 raise ValueError(
                     "Gemini returned incorrect scene numbers"
                 )
@@ -630,11 +707,14 @@ IMPORTANT:
         except urllib.error.HTTPError as e:
 
             try:
+
                 body = e.read().decode(
                     "utf-8",
                     errors="replace"
                 )
+
             except Exception:
+
                 body = ""
 
             last_error = (
@@ -653,9 +733,11 @@ IMPORTANT:
                 503,
                 504
             ):
+
                 break
 
             if attempt < max_retries:
+
                 delay = min(
                     30,
                     3 * (2 ** (attempt - 1))
@@ -677,6 +759,7 @@ IMPORTANT:
             )
 
             if attempt < max_retries:
+
                 delay = min(
                     30,
                     3 * (2 ** (attempt - 1))
@@ -693,6 +776,10 @@ IMPORTANT:
         f"{max_retries} attempts: {last_error}"
     )
 
+
+# ============================================================
+# MAIN
+# ============================================================
 
 def main():
 
@@ -713,20 +800,23 @@ def main():
 
     input_config = load_input_config()
 
-    topic = resolve_topic(input_config)
-    story_text = resolve_story_text(input_config)
+    topic = resolve_topic_value(input_config)
+    story_text = resolve_story_text_value(input_config)
 
     if not topic:
+
         topic = str(
             story.get("topic", "")
         ).strip()
 
     if not topic and not story_text:
+
         raise SystemExit(
             "ERROR: Both TOPIC and STORY_TEXT are empty"
         )
 
     if not topic:
+
         topic = "Story generated from supplied STORY_TEXT"
 
     expected_parts = len(
@@ -739,11 +829,13 @@ def main():
     )
 
     if expected_parts < 1:
+
         raise SystemExit(
             "ERROR: No story parts found"
         )
 
     if expected_scenes < 1:
+
         raise SystemExit(
             "ERROR: No story scenes found"
         )
@@ -757,17 +849,22 @@ def main():
     print(f"Story length   : {pipeline_config['story_length']}")
     print(f"Scene duration : {pipeline_config['scene_duration']}")
     print(f"Topic          : {topic}")
+
     print(
         "Story text     : "
         f"{'provided' if story_text else 'not provided'}"
     )
+
     print(f"Parts          : {expected_parts}")
     print(f"Scenes         : {expected_scenes}")
+
     print(
-        f"Max retries    : "
+        "Max retries    : "
         f"{pipeline_config['max_retries']}"
     )
+
     print("==============================================")
+
 
     ai_story = {
         "status": "generating",
@@ -782,6 +879,11 @@ def main():
         "parts": []
     }
 
+
+    # ========================================================
+    # RESUME EXISTING AI STORY
+    # ========================================================
+
     if OUTPUT.exists():
 
         try:
@@ -795,7 +897,10 @@ def main():
                 == pipeline_config["format"]
             )
 
-            if same_source and existing.get("parts"):
+            if (
+                same_source
+                and existing.get("parts")
+            ):
 
                 ai_story = existing
 
@@ -813,6 +918,11 @@ def main():
                 "Existing AI story is invalid. "
                 "Starting fresh."
             )
+
+
+    # ========================================================
+    # GENERATE PARTS
+    # ========================================================
 
     for part in story.get("parts", []):
 
@@ -834,8 +944,9 @@ def main():
         if (
             existing_part
             and existing_part.get("status") == "completed"
-            and len(existing_part.get("scenes", []))
-            == expected_scene_count
+            and len(
+                existing_part.get("scenes", [])
+            ) == expected_scene_count
             and all(
                 scene.get("status") == "completed"
                 for scene in existing_part.get(
@@ -852,6 +963,7 @@ def main():
 
             continue
 
+
         generated_scenes = generate_part(
             api_key,
             model,
@@ -861,23 +973,29 @@ def main():
             pipeline_config
         )
 
+
         completed_part = {
             "part": part_number,
             "status": "completed",
+
             "hook_required": part.get(
                 "hook_required",
                 False
             ),
+
             "suspense_required": part.get(
                 "suspense_required",
                 False
             ),
+
             "final_resolution": part.get(
                 "final_resolution",
                 False
             ),
+
             "scenes": []
         }
+
 
         for scene in generated_scenes:
 
@@ -889,6 +1007,7 @@ def main():
                 ),
                 {}
             )
+
 
             completed_part["scenes"].append({
 
@@ -930,19 +1049,23 @@ def main():
                 ]
             })
 
+
         ai_story["parts"] = [
             p
             for p in ai_story.get("parts", [])
             if p.get("part") != part_number
         ]
 
+
         ai_story["parts"].append(
             completed_part
         )
 
+
         ai_story["parts"].sort(
             key=lambda p: p["part"]
         )
+
 
         ai_story["status"] = "in_progress"
 
@@ -951,6 +1074,11 @@ def main():
         print(
             f"Part {part_number} completed and saved."
         )
+
+
+    # ========================================================
+    # FINAL VALIDATION
+    # ========================================================
 
     total_parts = len(
         ai_story.get("parts", [])
@@ -961,34 +1089,47 @@ def main():
         for part in ai_story.get("parts", [])
     )
 
+
     if total_parts != expected_parts:
+
         raise SystemExit(
             f"ERROR: AI story parts mismatch: "
             f"{total_parts}/{expected_parts}"
         )
 
+
     if total_scenes != expected_scenes:
+
         raise SystemExit(
             f"ERROR: AI story scenes mismatch: "
             f"{total_scenes}/{expected_scenes}"
         )
 
+
     for part in ai_story["parts"]:
 
         if part.get("status") != "completed":
+
             raise SystemExit(
                 f"ERROR: Part {part.get('part')} "
                 "is not completed"
             )
 
+
         if not all(
             scene.get("status") == "completed"
             for scene in part.get("scenes", [])
         ):
+
             raise SystemExit(
                 f"ERROR: Part {part.get('part')} "
                 "contains incomplete scenes"
             )
+
+
+    # ========================================================
+    # FINAL SAVE
+    # ========================================================
 
     ai_story["status"] = "completed"
     ai_story["model"] = model
@@ -1001,6 +1142,7 @@ def main():
     ai_story["input_config"] = pipeline_config
 
     save_json(ai_story)
+
 
     print("==============================================")
     print("       AI STORY GENERATION COMPLETED")
