@@ -538,6 +538,133 @@ jobs:
           python3 scripts/generate_tts.py
 
       # ============================================================
+      # BUILD AND VALIDATE WAN2GP QUEUE
+      # ============================================================
+      - name: Build Wan2GP I2V queue
+        shell: bash
+        run: |
+          set -e
+
+          echo "=============================================="
+          echo "       BUILDING WAN2GP I2V QUEUE"
+          echo "=============================================="
+
+          if [ ! -f "scripts/build_wan2gp_queue.py" ]; then
+            echo "ERROR: scripts/build_wan2gp_queue.py not found."
+            exit 1
+          fi
+
+          if [ ! -f "Input/wan2gp_template.json" ]; then
+            echo "ERROR: Input/wan2gp_template.json not found."
+            exit 1
+          fi
+
+          python3 scripts/build_wan2gp_queue.py
+
+          QUEUE="output/i2v/wan2gp_queue.zip"
+
+          if [ ! -s "$QUEUE" ]; then
+            echo "ERROR: Wan2GP queue ZIP was not created."
+            exit 1
+          fi
+
+          echo
+          echo "Queue created successfully:"
+          ls -lh "$QUEUE"
+
+          echo
+          echo "Inspecting ZIP contents..."
+
+          python3 - <<'PY'
+          import json
+          import zipfile
+          from pathlib import Path
+
+          queue = Path("output/i2v/wan2gp_queue.zip")
+
+          with zipfile.ZipFile(queue, "r") as zf:
+              names = zf.namelist()
+
+              if "queue.json" not in names:
+                  raise SystemExit(
+                      "ERROR: queue.json missing from queue ZIP."
+                  )
+
+              with zf.open("queue.json") as f:
+                  data = json.load(f)
+
+              if not isinstance(data, list) or not data:
+                  raise SystemExit(
+                      "ERROR: queue.json is not a non-empty list."
+                  )
+
+              image_files = [
+                  name for name in names
+                  if name.lower().endswith(
+                      (".png", ".jpg", ".jpeg", ".webp")
+                  )
+              ]
+
+              print(f"Queue tasks     : {len(data)}")
+              print(f"Embedded images : {len(image_files)}")
+
+              if len(data) != len(image_files):
+                  raise SystemExit(
+                      "ERROR: Task/image count mismatch."
+                  )
+
+              for index, task in enumerate(data, start=1):
+                  if not isinstance(task, dict):
+                      raise SystemExit(
+                          f"ERROR: Task {index} is invalid."
+                      )
+
+                  params = task.get("params")
+
+                  if not isinstance(params, dict):
+                      raise SystemExit(
+                          f"ERROR: Task {index} has invalid params."
+                      )
+
+                  if not params.get("model_type"):
+                      raise SystemExit(
+                          f"ERROR: Task {index} has no model_type."
+                      )
+
+                  if not params.get("image_start"):
+                      raise SystemExit(
+                          f"ERROR: Task {index} has no image_start."
+                      )
+
+                  if params.get("image_prompt_type") != "S":
+                      raise SystemExit(
+                          f"ERROR: Task {index} is not configured "
+                          "for start-image I2V."
+                      )
+
+                  if "video_prompt_type" in params:
+                      print(
+                          f"Task {index}: "
+                          f"video_prompt_type="
+                          f"{params['video_prompt_type']!r}"
+                      )
+
+              print("Queue structure validation: SUCCESS")
+
+              bad = zf.testzip()
+
+              if bad is not None:
+                  raise SystemExit(
+                      f"ERROR: ZIP integrity failed at {bad}"
+                  )
+
+              print("ZIP integrity validation: SUCCESS")
+          PY
+
+          echo
+          echo "Wan2GP queue builder validation: SUCCESS"
+
+      # ============================================================
       # PREPARE VISUAL GENERATION
       # ============================================================
       - name: Prepare visual generation
