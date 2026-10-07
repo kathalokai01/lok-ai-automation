@@ -302,13 +302,6 @@ def make_task(scene, embedded_image_name, template):
     if "image_prompt_type" in params:
         params["image_prompt_type"] = "S"
 
-    # Ensure this remains an I2V task when the selected model uses
-    # video_prompt_type flags.
-    video_prompt_type = params.get("video_prompt_type")
-
-    if isinstance(video_prompt_type, str):
-        if not video_prompt_type:
-            params["video_prompt_type"] = "S"
 
     # Preserve model-specific resolution, sampling, guidance, acceleration,
     # profiles, etc. from the exported template.
