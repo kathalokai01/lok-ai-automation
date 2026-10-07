@@ -16,9 +16,6 @@ jobs:
 
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
       CLOUDFLARE_R2_BUCKET: ${{ secrets.CLOUDFLARE_R2_BUCKET }}
       CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
       CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
@@ -37,25 +34,15 @@ jobs:
       # ============================================================
       # VALIDATE REQUIRED SECRETS
       # ============================================================
-      - name: Validate API secrets
+      - name: Validate required secrets
         shell: bash
         run: |
           set -e
 
-          echo "Checking required API secrets..."
+          echo "Checking required secrets..."
 
           if [ -z "${GEMINI_API_KEY:-}" ]; then
             echo "ERROR: GEMINI_API_KEY is not set."
-            exit 1
-          fi
-
-          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
-            echo "ERROR: CLOUDFLARE_ACCOUNT_ID is not set."
-            exit 1
-          fi
-
-          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
-            echo "ERROR: CLOUDFLARE_API_TOKEN is not set."
             exit 1
           fi
 
@@ -79,7 +66,7 @@ jobs:
             exit 1
           fi
 
-          echo "All required secrets are available."
+          echo "Required secrets are available."
 
       # ============================================================
       # READ PROJECT CONFIG
@@ -105,11 +92,6 @@ jobs:
 
           cat Input/topic.txt
 
-          echo
-          echo "=============================================="
-          echo "VALIDATING INPUT CONFIG"
-          echo "=============================================="
-
           python3 - <<'PY'
           import sys
 
@@ -131,6 +113,11 @@ jobs:
           parts = get_parts(config)
           scenes = get_scenes(config)
 
+          if fmt not in ("short", "full"):
+              raise SystemExit(
+                  "ERROR: FORMAT must be short or full."
+              )
+
           print(f"FORMAT: {fmt}")
           print(f"PARTS: {parts}")
           print(f"SCENES: {scenes}")
@@ -147,25 +134,21 @@ jobs:
               normalize_format,
           )
 
-          config = load_input_config()
-
-          print(normalize_format(config))
+          print(
+              normalize_format(
+                  load_input_config()
+              )
+          )
           PY
           )
-
-          if [ "$FORMAT" != "short" ] && [ "$FORMAT" != "full" ]; then
-            echo "ERROR: FORMAT must be short or full."
-            exit 1
-          fi
 
           echo "FORMAT=$FORMAT" >> "$GITHUB_ENV"
 
           echo
           echo "Selected format: $FORMAT"
-          echo "Read project config: SUCCESS"
 
       # ============================================================
-      # PREPARE OUTPUT DIRECTORIES
+      # PREPARE DIRECTORIES
       # ============================================================
       - name: Prepare output directories
         shell: bash
@@ -181,6 +164,7 @@ jobs:
           mkdir -p output/narration/audio
           mkdir -p output/audio
           mkdir -p output/visuals
+          mkdir -p output/visual_worker
           mkdir -p output/i2v
           mkdir -p output/parts
           mkdir -p output/thumbnail
@@ -188,7 +172,7 @@ jobs:
           mkdir -p output/videos
 
       # ============================================================
-      # EXPECTED TOTAL
+      # EXPECTED SCENE COUNT
       # ============================================================
       - name: Calculate expected scene count
         shell: bash
@@ -218,12 +202,12 @@ jobs:
           SCENES="${CONFIG_VALUES[1]}"
 
           if ! [[ "$PARTS" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: Invalid PARTS value."
+            echo "ERROR: Invalid PARTS."
             exit 1
           fi
 
           if ! [[ "$SCENES" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: Invalid SCENES value."
+            echo "ERROR: Invalid SCENES."
             exit 1
           fi
 
@@ -238,7 +222,7 @@ jobs:
           echo "Expected total  : $EXPECTED_TOTAL"
 
       # ============================================================
-      # RESTORE PREVIOUS SUCCESSFUL CHECKPOINT
+      # RESTORE PREVIOUS CHECKPOINT
       # ============================================================
       - name: Restore previous successful checkpoint
         shell: bash
@@ -270,13 +254,12 @@ jobs:
               --name lok-ai-successful-checkpoint \
               --dir /tmp/lok-ai-checkpoint; then
 
-            echo "Checkpoint downloaded."
-
             if [ -d "/tmp/lok-ai-checkpoint/output" ]; then
-              cp -a /tmp/lok-ai-checkpoint/output/. output/ || true
+              cp -a \
+                /tmp/lok-ai-checkpoint/output/. \
+                output/ || true
+
               echo "Checkpoint restored."
-            else
-              echo "Checkpoint does not contain output directory."
             fi
 
           else
@@ -284,7 +267,7 @@ jobs:
           fi
 
       # ============================================================
-      # VALIDATE RESTORED TOPIC
+      # VALIDATE RESTORED CHECKPOINT
       # ============================================================
       - name: Validate restored checkpoint
         shell: bash
@@ -300,13 +283,15 @@ jobs:
           if cmp -s Input/topic.txt output/config/topic.txt; then
             echo "Restored checkpoint belongs to current input."
           else
-            echo "Input changed. Removing stale downstream checkpoint."
+            echo "Input changed."
+            echo "Removing stale downstream checkpoint."
 
             rm -rf \
               output/story \
               output/scenes \
               output/narration \
               output/visuals \
+              output/visual_worker \
               output/i2v \
               output/parts \
               output/videos \
@@ -319,6 +304,7 @@ jobs:
               output/narration \
               output/narration/audio \
               output/visuals \
+              output/visual_worker \
               output/i2v \
               output/parts \
               output/videos \
@@ -327,52 +313,6 @@ jobs:
 
             cp Input/topic.txt output/config/topic.txt
           fi
-
-      # ============================================================
-      # VALIDATE SCENE CHECKPOINT
-      # ============================================================
-      - name: Validate scene checkpoint
-        shell: bash
-        run: |
-          set -e
-
-          SCENE_FILE="output/scenes/scenes.json"
-
-          if [ ! -f "$SCENE_FILE" ]; then
-            echo "No scene checkpoint found."
-            exit 0
-          fi
-
-          python3 - <<'PY'
-          import json
-          import os
-          import sys
-
-          path = "output/scenes/scenes.json"
-          expected = int(os.environ["EXPECTED_TOTAL"])
-
-          try:
-              with open(path, "r", encoding="utf-8") as f:
-                  data = json.load(f)
-          except Exception as e:
-              print(f"Invalid scenes.json: {e}")
-              sys.exit(0)
-
-          scenes = data.get("scenes", [])
-
-          if data.get("status") != "completed":
-              print("Scene checkpoint is not completed.")
-              sys.exit(0)
-
-          if len(scenes) != expected:
-              print(
-                  f"Scene checkpoint mismatch: "
-                  f"{len(scenes)}/{expected}"
-              )
-              sys.exit(0)
-
-          print(f"Scene checkpoint valid: {len(scenes)}/{expected}")
-          PY
 
       # ============================================================
       # GENERATE STORY PLAN
@@ -450,19 +390,31 @@ jobs:
               print("ERROR: scenes.json not found.")
               sys.exit(1)
 
-          with open(path, "r", encoding="utf-8") as f:
+          with open(
+              path,
+              "r",
+              encoding="utf-8"
+          ) as f:
               data = json.load(f)
 
           scenes = data.get("scenes", [])
 
-          print(f"Scenes generated: {len(scenes)}/{expected}")
+          print(
+              f"Scenes generated: "
+              f"{len(scenes)}/{expected}"
+          )
 
           if data.get("status") != "completed":
-              print("ERROR: Scene generation is not completed.")
+              print(
+                  "ERROR: Scene generation "
+                  "is not completed."
+              )
               sys.exit(1)
 
           if len(scenes) != expected:
-              print("ERROR: Scene count mismatch.")
+              print(
+                  "ERROR: Scene count mismatch."
+              )
               sys.exit(1)
           PY
 
@@ -476,22 +428,15 @@ jobs:
           python3 scripts/generate_narration.py
 
       # ============================================================
-      # INSTALL ALL RUNTIME DEPENDENCIES
+      # INSTALL RUNTIME DEPENDENCIES
       # ============================================================
-      - name: Install FFmpeg, TTS, Python and R2 dependencies
+      - name: Install FFmpeg, TTS and Python dependencies
         shell: bash
         run: |
           set -e
 
-          echo "=============================================="
-          echo "     INSTALLING PIPELINE DEPENDENCIES"
-          echo "=============================================="
-
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-
-          ffmpeg -version | head -n 1
-          ffprobe -version | head -n 1
 
           python3 -m pip install --upgrade pip
 
@@ -501,32 +446,21 @@ jobs:
             edge-tts \
             pillow
 
-          python3 - <<'PY'
-          import requests
-          print("requests:", requests.__version__)
-          PY
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+          edge-tts --help >/dev/null
 
           python3 - <<'PY'
           import boto3
-          import botocore
-
-          print("boto3:", boto3.__version__)
-          print("botocore:", botocore.__version__)
-          PY
-
-          edge-tts --help >/dev/null
-          echo "edge-tts: READY"
-
-          python3 - <<'PY'
+          import requests
           from PIL import Image
+
+          print("requests: READY")
+          print("boto3: READY")
           print("Pillow: READY")
           PY
 
-          command -v ffmpeg
-          command -v ffprobe
-          command -v edge-tts
-
-          echo "ALL DEPENDENCIES READY"
+          echo "All dependencies ready."
 
       # ============================================================
       # GENERATE HINDI TTS
@@ -535,222 +469,8 @@ jobs:
         shell: bash
         run: |
           set -e
+
           python3 scripts/generate_tts.py
-
-      # ============================================================
-      # BUILD AND VALIDATE WAN2GP QUEUE
-      # ============================================================
-      - name: Build Wan2GP I2V queue
-        shell: bash
-        run: |
-          set -e
-
-          echo "=============================================="
-          echo "       BUILDING WAN2GP I2V QUEUE"
-          echo "=============================================="
-
-          if [ ! -f "scripts/build_wan2gp_queue.py" ]; then
-            echo "ERROR: scripts/build_wan2gp_queue.py not found."
-            exit 1
-          fi
-
-          if [ ! -f "Input/wan2gp_template.json" ]; then
-            echo "ERROR: Input/wan2gp_template.json not found."
-            exit 1
-          fi
-
-          python3 scripts/build_wan2gp_queue.py
-
-          QUEUE="output/i2v/wan2gp_queue.zip"
-
-          if [ ! -s "$QUEUE" ]; then
-            echo "ERROR: Wan2GP queue ZIP was not created."
-            exit 1
-          fi
-
-          echo
-          echo "Queue created successfully:"
-          ls -lh "$QUEUE"
-
-          echo
-          echo "Inspecting ZIP contents..."
-
-          python3 - <<'PY'
-          import json
-          import zipfile
-          from pathlib import Path
-
-          queue = Path("output/i2v/wan2gp_queue.zip")
-
-          with zipfile.ZipFile(queue, "r") as zf:
-              names = zf.namelist()
-
-              if "queue.json" not in names:
-                  raise SystemExit(
-                      "ERROR: queue.json missing from queue ZIP."
-                  )
-
-              with zf.open("queue.json") as f:
-                  data = json.load(f)
-
-              if not isinstance(data, list) or not data:
-                  raise SystemExit(
-                      "ERROR: queue.json is not a non-empty list."
-                  )
-
-              image_files = [
-                  name for name in names
-                  if name.lower().endswith(
-                      (".png", ".jpg", ".jpeg", ".webp")
-                  )
-              ]
-
-              print(f"Queue tasks     : {len(data)}")
-              print(f"Embedded images : {len(image_files)}")
-
-              if len(data) != len(image_files):
-                  raise SystemExit(
-                      "ERROR: Task/image count mismatch."
-                  )
-
-              for index, task in enumerate(data, start=1):
-                  if not isinstance(task, dict):
-                      raise SystemExit(
-                          f"ERROR: Task {index} is invalid."
-                      )
-
-                  params = task.get("params")
-
-                  if not isinstance(params, dict):
-                      raise SystemExit(
-                          f"ERROR: Task {index} has invalid params."
-                      )
-
-                  if not params.get("model_type"):
-                      raise SystemExit(
-                          f"ERROR: Task {index} has no model_type."
-                      )
-
-                  if not params.get("image_start"):
-                      raise SystemExit(
-                          f"ERROR: Task {index} has no image_start."
-                      )
-
-                  if params.get("image_prompt_type") != "S":
-                      raise SystemExit(
-                          f"ERROR: Task {index} is not configured "
-                          "for start-image I2V."
-                      )
-
-                  if "video_prompt_type" in params:
-                      print(
-                          f"Task {index}: "
-                          f"video_prompt_type="
-                          f"{params['video_prompt_type']!r}"
-                      )
-
-              print("Queue structure validation: SUCCESS")
-
-              bad = zf.testzip()
-
-              if bad is not None:
-                  raise SystemExit(
-                      f"ERROR: ZIP integrity failed at {bad}"
-                  )
-
-              print("ZIP integrity validation: SUCCESS")
-          PY
-
-          echo
-          echo "Wan2GP queue builder validation: SUCCESS"
-
-      # ============================================================
-      # PREPARE VISUAL GENERATION
-      # ============================================================
-      - name: Prepare visual generation
-        shell: bash
-        run: |
-          set -e
-          python3 scripts/prepare_visuals.py
-
-      # ============================================================
-      # SELECT CLOUDFLARE VISUAL MODEL
-      # ============================================================
-      - name: Select Cloudflare visual model
-        shell: bash
-        run: |
-          set -e
-          python3 scripts/select_visual_model.py
-
-      # ============================================================
-      # GENERATE VISUALS
-      # ============================================================
-      - name: Generate visuals
-        shell: bash
-        run: |
-          set -e
-          python3 scripts/generate_visuals.py
-
-      # ============================================================
-      # REAL AI IMAGE TO VIDEO
-      # ============================================================
-      - name: Generate real AI image-to-video clips
-        shell: bash
-        run: |
-          set -e
-
-          echo "=============================================="
-          echo "      GENERATING REAL AI VIDEO CLIPS"
-          echo "=============================================="
-
-          python3 scripts/generate_i2v.py
-
-          echo
-          echo "Generated I2V clips:"
-
-          find output/i2v \
-            -type f \
-            -name "*.mp4" \
-            -size +1000c \
-            -print
-
-          COUNT=$(find output/i2v \
-            -type f \
-            -name "*.mp4" \
-            -size +1000c \
-            | wc -l)
-
-          echo
-          echo "I2V clips: $COUNT/$EXPECTED_TOTAL"
-
-          if [ "$COUNT" -ne "$EXPECTED_TOTAL" ]; then
-            echo "ERROR: I2V clip count mismatch."
-            exit 1
-          fi
-
-      # ============================================================
-      # FINAL ASSET VALIDATION
-      # ============================================================
-      - name: Validate all assets before render
-        shell: bash
-        run: |
-          set -e
-
-          echo "=============================================="
-          echo "        FINAL ASSET VALIDATION"
-          echo "=============================================="
-
-          SCENE_COUNT=$(python3 - <<'PY'
-          import json
-
-          with open(
-              "output/scenes/scenes.json",
-              "r",
-              encoding="utf-8"
-          ) as f:
-              print(len(json.load(f).get("scenes", [])))
-          PY
-          )
 
           AUDIO_COUNT=$(find output/narration/audio \
             -type f \
@@ -758,268 +478,256 @@ jobs:
             -size +1000c \
             | wc -l)
 
-          VISUAL_COUNT=$(find output/visuals \
-            -type f \
-            \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \) \
-            -size +1000c \
-            | wc -l)
-
-          I2V_COUNT=$(find output/i2v \
-            -type f \
-            -name "*.mp4" \
-            -size +1000c \
-            | wc -l)
-
-          echo "Scenes : $SCENE_COUNT/$EXPECTED_TOTAL"
-          echo "Audio  : $AUDIO_COUNT/$EXPECTED_TOTAL"
-          echo "Visual : $VISUAL_COUNT/$EXPECTED_TOTAL"
-          echo "I2V    : $I2V_COUNT/$EXPECTED_TOTAL"
-
-          if [ "$SCENE_COUNT" -ne "$EXPECTED_TOTAL" ]; then
-            echo "ERROR: Scene count mismatch."
-            exit 1
-          fi
+          echo "Audio files: $AUDIO_COUNT/$EXPECTED_TOTAL"
 
           if [ "$AUDIO_COUNT" -ne "$EXPECTED_TOTAL" ]; then
             echo "ERROR: Audio count mismatch."
             exit 1
           fi
 
-          if [ "$VISUAL_COUNT" -ne "$EXPECTED_TOTAL" ]; then
-            echo "ERROR: Visual count mismatch."
-            exit 1
-          fi
-
-          if [ "$I2V_COUNT" -ne "$EXPECTED_TOTAL" ]; then
-            echo "ERROR: I2V count mismatch."
-            exit 1
-          fi
-
-          echo "All assets validated successfully."
-
       # ============================================================
-      # INSTALL THUMBNAIL DEPENDENCIES
+      # PREPARE VISUAL JOBS
       # ============================================================
-      - name: Install thumbnail dependencies
+      - name: Prepare visual generation
         shell: bash
         run: |
           set -e
 
-          python3 -m pip install --upgrade pillow
+          python3 scripts/prepare_visuals.py
 
-      # ============================================================
-      # GENERATE THUMBNAILS
-      # ============================================================
-      - name: Generate thumbnails
-        shell: bash
-        run: |
-          set -e
-
-          echo "=============================================="
-          echo "          GENERATING THUMBNAILS"
-          echo "=============================================="
-
-          if [ ! -f "scripts/generate_thumbnail.py" ]; then
-            echo "ERROR: scripts/generate_thumbnail.py not found."
+          if [ ! -s "output/visuals/visual_jobs.json" ]; then
+            echo "ERROR: visual_jobs.json was not created."
             exit 1
           fi
-
-          python3 scripts/generate_thumbnail.py
 
           echo
-          echo "Validating thumbnail outputs..."
-
-          test -s "output/thumbnail/thumbnail_1280x720.jpg"
-          test -s "output/thumbnail/thumbnail_1080x1920.jpg"
-          test -s "output/thumbnail/thumbnail_manifest.json"
-
-          echo "Thumbnail generation validated successfully."
+          echo "Visual preparation completed."
 
       # ============================================================
-      # GENERATE YOUTUBE PACKAGE
+      # BUILD FREE GPU VISUAL QUEUE
       # ============================================================
-      - name: Generate YouTube upload package
+      - name: Build free GPU visual queue
         shell: bash
         run: |
           set -e
 
-          if [ ! -f "scripts/generate_youtube_metadata.py" ]; then
-            echo "ERROR: scripts/generate_youtube_metadata.py not found."
+          echo "=============================================="
+          echo "      BUILDING FREE GPU VISUAL QUEUE"
+          echo "=============================================="
+
+          python3 scripts/generate_visuals.py
+
+          QUEUE_JSON="output/visual_worker/visual_generation_queue.json"
+          QUEUE_ZIP="output/i2v/visual_generation_queue.zip"
+
+          if [ ! -s "$QUEUE_JSON" ]; then
+            echo "ERROR: Visual worker queue JSON missing."
             exit 1
           fi
 
-          python3 scripts/generate_youtube_metadata.py
+          if [ ! -s "$QUEUE_ZIP" ]; then
+            echo "ERROR: Visual worker queue ZIP missing."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          import zipfile
+          from pathlib import Path
+
+          json_path = Path(
+              "output/visual_worker/visual_generation_queue.json"
+          )
+
+          zip_path = Path(
+              "output/i2v/visual_generation_queue.zip"
+          )
+
+          with json_path.open(
+              "r",
+              encoding="utf-8"
+          ) as f:
+              data = json.load(f)
+
+          if not isinstance(data, dict):
+              raise SystemExit(
+                  "ERROR: Visual queue is not an object."
+              )
+
+          jobs = data.get("jobs", [])
+
+          if not isinstance(jobs, list):
+              raise SystemExit(
+                  "ERROR: Visual queue jobs are invalid."
+              )
+
+          expected = int(
+              data.get("expected_total", 0)
+          )
+
+          if len(jobs) != expected:
+              raise SystemExit(
+                  f"ERROR: Queue count mismatch: "
+                  f"{len(jobs)}/{expected}"
+              )
+
+          pending = sum(
+              1
+              for job in jobs
+              if job.get("status") == "pending"
+          )
+
+          print(f"Expected jobs : {expected}")
+          print(f"Pending jobs  : {pending}")
+
+          with zipfile.ZipFile(
+              zip_path,
+              "r"
+          ) as zf:
+
+              names = zf.namelist()
+
+              required = {
+                  "visual_generation_queue.json",
+                  "scenes.json",
+                  "worker_config.json",
+              }
+
+              missing = required - set(names)
+
+              if missing:
+                  raise SystemExit(
+                      "ERROR: ZIP missing: "
+                      + ", ".join(sorted(missing))
+                  )
+
+              bad = zf.testzip()
+
+              if bad:
+                  raise SystemExit(
+                      f"ERROR: ZIP integrity failed: {bad}"
+                  )
+
+          print("Visual worker ZIP validation: SUCCESS")
+          PY
 
           echo
-          echo "Validating YouTube package..."
-
-          test -s "output/publish/youtube_metadata.json"
-          test -s "output/publish/youtube_title.txt"
-          test -s "output/publish/youtube_description.txt"
-          test -s "output/publish/youtube_tags.txt"
-
-          echo "YouTube upload package validated successfully."
+          echo "FREE GPU VISUAL QUEUE READY"
+          echo "Queue JSON: $QUEUE_JSON"
+          echo "Queue ZIP : $QUEUE_ZIP"
 
       # ============================================================
-      # RENDER SCENE VIDEOS
+      # UPLOAD VISUAL WORKER PACKAGE AS ARTIFACT
       # ============================================================
-      - name: Render scene videos
-        shell: bash
-        run: |
-          set -e
-
-          echo "=============================================="
-          echo "          STARTING VIDEO RENDER"
-          echo "=============================================="
-
-          python3 scripts/render_video.py
-
-      # ============================================================
-      # VALIDATE RENDERED PARTS
-      # ============================================================
-      - name: Validate rendered videos
-        shell: bash
-        run: |
-          set -e
-
-          COUNT=$(find output/parts \
-            -maxdepth 1 \
-            -type f \
-            -name "*.mp4" \
-            -size +1000c \
-            | wc -l)
-
-          echo "Rendered part videos: $COUNT/$PARTS"
-
-          if [ "$COUNT" -ne "$PARTS" ]; then
-            echo "ERROR: Rendered part count mismatch."
-            exit 1
-          fi
-
-      # ============================================================
-      # UPLOAD RENDERED PART VIDEOS
-      # ============================================================
-      - name: Upload rendered videos
+      - name: Upload visual worker package
         uses: actions/upload-artifact@v4
         with:
-          name: lok-ai-rendered-videos
+          name: lok-ai-visual-worker-queue
           path: |
-            output/parts/*.mp4
-            output/scenes/**/*.mp4
+            output/i2v/visual_generation_queue.zip
+            output/visual_worker/visual_generation_queue.json
+            output/visual_worker/scenes.json
+            output/visual_worker/character_bible.json
+            output/visual_worker/worker_config.json
           if-no-files-found: error
           retention-days: 7
 
       # ============================================================
-      # ASSEMBLE FINAL VIDEO
+      # UPLOAD VISUAL WORKER PACKAGE TO R2
       # ============================================================
-      - name: Assemble final video
+      - name: Upload visual worker queue to R2
         shell: bash
         run: |
           set -e
 
-          mkdir -p output/videos
-
           python3 - <<'PY'
+          import os
+          import boto3
           from pathlib import Path
-          import subprocess
-          import re
+          from botocore.config import Config
 
-          parts = sorted(
-              Path("output/parts").glob("*.mp4"),
-              key=lambda p: int(
-                  re.search(r'(\d+)', p.stem).group(1)
+          bucket = os.environ["CLOUDFLARE_R2_BUCKET"]
+          access_key = os.environ[
+              "CLOUDFLARE_R2_ACCESS_KEY_ID"
+          ]
+          secret_key = os.environ[
+              "CLOUDFLARE_R2_SECRET_ACCESS_KEY"
+          ]
+          public_url = os.environ[
+              "CLOUDFLARE_R2_PUBLIC_URL"
+          ].rstrip("/")
+
+          account_id = os.environ.get(
+              "CLOUDFLARE_ACCOUNT_ID",
+              ""
+          ).strip()
+
+          if not account_id:
+              raise SystemExit(
+                  "ERROR: CLOUDFLARE_ACCOUNT_ID "
+                  "is required for R2 endpoint."
               )
+
+          endpoint = (
+              f"https://{account_id}.r2.cloudflarestorage.com"
           )
 
-          if not parts:
-              raise SystemExit("ERROR: No part videos found.")
-
-          concat_file = Path("/tmp/concat.txt")
-
-          with concat_file.open(
-              "w",
-              encoding="utf-8"
-          ) as f:
-              for part in parts:
-                  f.write(
-                      f"file '{part.resolve()}'\n"
-                  )
-
-          output = Path(
-              "output/videos/final_video.mp4"
+          client = boto3.client(
+              "s3",
+              endpoint_url=endpoint,
+              aws_access_key_id=access_key,
+              aws_secret_access_key=secret_key,
+              region_name="auto",
+              config=Config(
+                  signature_version="s3v4"
+              ),
           )
 
-          subprocess.run(
-              [
-                  "ffmpeg",
-                  "-y",
-                  "-f",
-                  "concat",
-                  "-safe",
-                  "0",
-                  "-i",
-                  str(concat_file),
-                  "-c",
-                  "copy",
-                  "-movflags",
-                  "+faststart",
-                  str(output),
-              ],
-              check=True,
+          queue = Path(
+              "output/i2v/visual_generation_queue.zip"
           )
 
-          print(
-              f"Final video created: {output}"
+          key = (
+              f"visual-queues/"
+              f"{os.environ['GITHUB_RUN_ID']}/"
+              f"visual_generation_queue.zip"
           )
+
+          client.upload_file(
+              str(queue),
+              bucket,
+              key,
+              ExtraArgs={
+                  "ContentType": "application/zip",
+              },
+          )
+
+          url = f"{public_url}/{key}"
+
+          Path(
+              "output/visual_worker/queue_url.txt"
+          ).write_text(
+              url + "\n",
+              encoding="utf-8",
+          )
+
+          print("R2 upload successful.")
+          print(f"Queue URL: {url}")
           PY
 
       # ============================================================
-      # VALIDATE FINAL VIDEO
+      # UPLOAD QUEUE URL
       # ============================================================
-      - name: Validate final video
-        shell: bash
-        run: |
-          set -e
-
-          FINAL="output/videos/final_video.mp4"
-
-          if [ ! -s "$FINAL" ]; then
-            echo "ERROR: Final video missing."
-            exit 1
-          fi
-
-          SIZE=$(stat -c%s "$FINAL")
-
-          echo "Final video size: $SIZE bytes"
-
-          if [ "$SIZE" -lt 10000 ]; then
-            echo "ERROR: Final video is too small."
-            exit 1
-          fi
-
-          echo
-          echo "Video information:"
-
-          ffprobe \
-            -v error \
-            -show_entries format=duration,size \
-            -show_entries stream=codec_name,width,height,r_frame_rate \
-            -of default=noprint_wrappers=1 \
-            "$FINAL"
-
-      # ============================================================
-      # UPLOAD FINAL VIDEO
-      # ============================================================
-      - name: Upload final video
+      - name: Upload queue URL artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lok-ai-final-video
-          path: output/videos/final_video.mp4
+          name: lok-ai-visual-worker-queue-url
+          path: output/visual_worker/queue_url.txt
           if-no-files-found: error
           retention-days: 7
 
       # ============================================================
-      # PREPARE SUCCESSFUL CHECKPOINT
+      # PREPARE CHECKPOINT
       # ============================================================
       - name: Prepare successful checkpoint
         if: success()
@@ -1037,6 +745,7 @@ jobs:
             scenes \
             narration \
             visuals \
+            visual_worker \
             i2v
           do
             if [ -d "output/$dir" ]; then
@@ -1052,7 +761,7 @@ jobs:
           echo "Successful checkpoint prepared."
 
       # ============================================================
-      # UPLOAD SUCCESSFUL CHECKPOINT
+      # UPLOAD CHECKPOINT
       # ============================================================
       - name: Upload successful checkpoint
         if: success()
@@ -1064,51 +773,36 @@ jobs:
           retention-days: 30
 
       # ============================================================
-      # SHOW FINAL OUTPUT
+      # FINAL STATUS
       # ============================================================
-      - name: Show final output
+      - name: Show queue status
         if: always()
         shell: bash
         run: |
           echo
           echo "=============================================="
-          echo "              FINAL OUTPUT"
+          echo "           VISUAL WORKER QUEUE"
           echo "=============================================="
 
+          if [ -f "output/visual_worker/queue_url.txt" ]; then
+            cat output/visual_worker/queue_url.txt
+          else
+            echo "Queue URL was not created."
+          fi
+
           echo
-          echo "Videos:"
-          find output/videos \
-            -type f \
+          echo "Artifacts:"
+          find output/visual_worker \
             -maxdepth 2 \
-            -print 2>/dev/null || true
-
-          echo
-          echo "Parts:"
-          find output/parts \
-            -type f \
-            -name "*.mp4" \
-            -print 2>/dev/null || true
-
-          echo
-          echo "I2V:"
-          find output/i2v \
-            -type f \
-            -name "*.mp4" \
-            -print 2>/dev/null || true
-
-          echo
-          echo "Thumbnails:"
-          find output/thumbnail \
-            -type f \
-            -print 2>/dev/null || true
-
-          echo
-          echo "YouTube:"
-          find output/publish \
             -type f \
             -print 2>/dev/null || true
 
           echo
           echo "=============================================="
-          echo "              WORKFLOW COMPLETE"
+          echo "       GITHUB PREPARATION COMPLETE"
           echo "=============================================="
+
+          echo
+          echo "Cloudflare AI visual generation: DISABLED"
+          echo "Cloudflare AI I2V: DISABLED"
+          echo "Free GPU visual worker: REQUIRED"
