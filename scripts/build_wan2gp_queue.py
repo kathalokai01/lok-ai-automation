@@ -9,22 +9,188 @@ from pathlib import Path
 from PIL import Image
 
 
+# ============================================================
+# WAN2GP TEST 7 — FINAL PIPELINE QUEUE BUILDER
+# ============================================================
+
 BASE = Path(__file__).resolve().parents[1]
 
 SCENES_FILE = BASE / "output" / "scenes" / "scenes.json"
 VISUALS_DIR = BASE / "output" / "visuals"
+
 OUTPUT_DIR = BASE / "output" / "i2v"
 OUTPUT_ZIP = OUTPUT_DIR / "wan2gp_queue.zip"
-
-# Exported from Wan2GP "Export Settings".
-# This prevents us from guessing model-specific settings.
-TEMPLATE_FILE = BASE / "Input" / "wan2gp_template.json"
 
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
 
 
+# ============================================================
+# TEST 7 — LOCKED STABLE SETTINGS
+# ============================================================
+
+WAN_MODEL_TYPE = "ti2v_2_2"
+
+WAN_RESOLUTION = "480x832"
+WAN_FRAMES = 33
+WAN_FPS = "16"
+
+WAN_STEPS = 16
+WAN_SEED = 20261011
+
+WAN_GUIDANCE = 2.0
+WAN_FLOW_SHIFT = 5
+WAN_MOTION_AMPLITUDE = 0.55
+
+WAN_IMAGE_PROMPT_TYPE = "S"
+WAN_VIDEO_PROMPT_TYPE = "S"
+
+WAN_PROMPT_MODE = "FG"
+
+
+# ============================================================
+# TEST 7 REAL-LIVE-ACTION PROMPT
+# ============================================================
+
+FACE_MOTION_PROMPT = """
+Photorealistic live-action documentary video.
+
+Preserve the exact identity of the person from the reference image.
+Preserve facial proportions, skin texture, hairstyle, clothing and environment.
+
+The camera is locked and stable.
+
+Natural subtle breathing.
+Very small natural body and weight movement.
+Very small natural posture adjustment.
+Minimal natural head movement.
+Head and neck remain stable.
+
+FACE MICRO-MOTION:
+Natural eye focus changes.
+One subtle irregular natural blink.
+Very tiny eyelid movement.
+Eyes remain anatomically stable.
+
+Extremely subtle natural lip and jaw micro-movement
+as if the person is about to speak,
+but the person does NOT visibly speak.
+
+No exaggerated mouth opening.
+No visible teeth.
+No tongue.
+Only tiny natural lip compression and release.
+Very small natural jaw relaxation.
+
+Keep facial identity identical from first frame to last frame.
+
+Clothing has subtle natural movement.
+Background has subtle realistic environmental movement.
+Distant people may move naturally.
+Environment and buildings remain stable.
+
+Real-world live-action footage.
+Natural human movement.
+Photorealistic skin.
+Realistic lighting.
+Stable temporal consistency.
+Real documentary camera.
+"""
+
+
+# ============================================================
+# STRONG NEGATIVE PROMPT
+# ============================================================
+
+FACE_NEGATIVE_PROMPT = """
+cartoon,
+anime,
+illustration,
+painting,
+CGI,
+3D render,
+artificial face,
+plastic skin,
+
+face morphing,
+identity change,
+different person,
+facial warping,
+facial distortion,
+face deformation,
+face ghosting,
+double face,
+duplicate face,
+
+unstable eyes,
+crossed eyes,
+asymmetric eyes,
+eye duplication,
+extra eyelids,
+missing eyelids,
+exaggerated eye movement,
+exaggerated blinking,
+
+large mouth movement,
+talking,
+speaking,
+lip sync,
+open mouth,
+teeth,
+tongue,
+mouth deformation,
+lip deformation,
+jaw deformation,
+jaw stretching,
+
+neck bending,
+neck deformation,
+head shaking,
+head morphing,
+
+blurred face,
+smeared face,
+flickering face,
+temporal flicker,
+
+background morphing,
+moving buildings,
+distorted buildings,
+duplicated people,
+distorted people,
+
+excessive body motion,
+
+camera movement,
+camera shake,
+camera rotation,
+zoom,
+pan,
+
+slideshow,
+photo animation,
+photo montage,
+static photograph,
+frozen frame,
+
+AI-generated look,
+unnatural motion,
+temporal inconsistency,
+ghosting,
+flicker,
+glitch,
+watermark,
+logo,
+text
+"""
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
 def fail(message):
-    print(f"ERROR: {message}")
+    print()
+    print("ERROR:", message)
     raise SystemExit(1)
 
 
@@ -39,65 +205,63 @@ def load_json(path, description):
 
 
 def load_scenes():
-    data = load_json(SCENES_FILE, "scenes.json")
+
+    data = load_json(
+        SCENES_FILE,
+        "scenes.json"
+    )
 
     if isinstance(data, dict):
         scenes = data.get("scenes")
+
     elif isinstance(data, list):
         scenes = data
+
     else:
         scenes = None
 
-    if not isinstance(scenes, list) or not scenes:
-        fail("scenes.json does not contain a valid non-empty 'scenes' array.")
-
-    return scenes
-
-
-def load_template():
-    """
-    Load a real Wan2GP exported settings file.
-
-    We intentionally do NOT manufacture model-specific fields here.
-    Wan2GP documentation recommends exported settings as the safest
-    template for a particular model.
-    """
-
-    template = load_json(TEMPLATE_FILE, "Wan2GP template")
-
-    if not isinstance(template, dict):
-        fail("Wan2GP template must contain a JSON object.")
-
-    model_type = str(template.get("model_type") or "").strip()
-
-    if not model_type:
+    if not isinstance(scenes, list):
         fail(
-            "Wan2GP template does not contain 'model_type'. "
-            "Export the settings from a real Wan2GP I2V configuration."
+            "scenes.json does not contain a valid scenes array."
         )
 
-    print(f"Template model : {model_type}")
+    if not scenes:
+        fail(
+            "scenes.json contains zero scenes."
+        )
 
-    if "settings_version" in template:
-        print(f"Settings ver.  : {template['settings_version']}")
-
-    return template
+    return sorted(
+        scenes,
+        key=lambda x: (
+            int(x.get("part", 0)),
+            int(x.get("scene", 0))
+        )
+    )
 
 
 def find_visual(part, scene):
+
     part_dir = VISUALS_DIR / f"part_{part:02d}"
 
     for ext in IMAGE_EXTENSIONS:
-        candidate = part_dir / f"scene_{scene:02d}{ext}"
+
+        candidate = (
+            part_dir /
+            f"scene_{scene:02d}{ext}"
+        )
 
         if candidate.exists():
             return candidate
 
     if part_dir.exists():
+
         matches = sorted(
             p
-            for p in part_dir.glob(f"scene_{scene:02d}.*")
-            if p.suffix.lower() in IMAGE_EXTENSIONS
+            for p in part_dir.glob(
+                f"scene_{scene:02d}.*"
+            )
+            if p.suffix.lower()
+            in IMAGE_EXTENSIONS
         )
 
         if matches:
@@ -107,12 +271,16 @@ def find_visual(part, scene):
 
 
 def validate_image(path):
+
     try:
+
         with Image.open(path) as img:
             img.verify()
 
         with Image.open(path) as img:
+
             image = img.convert("RGB")
+
             width, height = image.size
 
         if width < 64 or height < 64:
@@ -123,408 +291,421 @@ def validate_image(path):
         return width, height
 
     except Exception as exc:
-        fail(f"Invalid visual image '{path}': {exc}")
 
+        fail(
+            f"Invalid visual image '{path}': {exc}"
+        )
+
+
+# ============================================================
+# SCENE PROMPT
+# ============================================================
 
 def build_prompt(scene):
-    visual = str(scene.get("visual_prompt") or "").strip()
-    camera = str(scene.get("camera_prompt") or "").strip()
-    lighting = str(scene.get("lighting_prompt") or "").strip()
+
+    visual = str(
+        scene.get("visual_prompt") or ""
+    ).strip()
+
+    camera = str(
+        scene.get("camera_prompt") or ""
+    ).strip()
+
+    lighting = str(
+        scene.get("lighting_prompt") or ""
+    ).strip()
 
     if not visual:
+
         fail(
-            f"Part {scene.get('part')} Scene {scene.get('scene')} "
+            f"Part {scene.get('part')} "
+            f"Scene {scene.get('scene')} "
             "has no visual_prompt."
         )
 
     sections = [
+
         visual,
-        "Generate real natural temporal movement.",
-        "The subject must move naturally and continuously, not remain a static photograph.",
-        "Preserve character identity, clothing, environment and composition.",
-        "Create realistic cinematic motion rather than a slideshow, photo montage, "
-        "zoom-only effect or pan-only effect.",
+
+        FACE_MOTION_PROMPT.strip(),
+
     ]
 
     if camera:
-        sections.append(f"Camera movement: {camera}")
+
+        sections.append(
+            "Scene camera direction: "
+            + camera
+        )
 
     if lighting:
-        sections.append(f"Lighting: {lighting}")
 
-    return "\n".join(sections)
+        sections.append(
+            "Scene lighting direction: "
+            + lighting
+        )
+
+    return "\n\n".join(sections)
 
 
-def build_negative_prompt(scene, template):
+# ============================================================
+# NEGATIVE PROMPT
+# ============================================================
+
+def build_negative_prompt(scene):
+
     original = str(
-        scene.get("negative_prompt")
-        or template.get("negative_prompt")
-        or ""
+        scene.get("negative_prompt") or ""
     ).strip()
-
-    extra = [
-        "static image",
-        "frozen frame",
-        "slideshow",
-        "photo montage",
-        "zoom-only",
-        "pan-only",
-        "cartoon",
-        "anime",
-        "illustration",
-        "painting",
-        "text",
-        "watermark",
-        "logo",
-        "glitch",
-        "distorted anatomy",
-        "extra limbs",
-    ]
 
     parts = []
 
     if original:
         parts.append(original)
 
-    parts.extend(extra)
+    parts.append(
+        FACE_NEGATIVE_PROMPT.strip()
+    )
 
     result = []
+
     seen = set()
 
-    for item in parts:
-        value = item.strip()
-        key = value.lower()
+    for block in parts:
 
-        if value and key not in seen:
-            seen.add(key)
-            result.append(value)
+        for item in block.split(","):
+
+            value = item.strip()
+
+            key = value.lower()
+
+            if value and key not in seen:
+
+                seen.add(key)
+
+                result.append(value)
 
     return ", ".join(result)
 
 
-def scene_duration(scene):
-    value = scene.get("duration")
+# ============================================================
+# BUILD NATIVE WAN2GP TASK
+# ============================================================
+
+def make_task(
+    scene,
+    embedded_image_name
+):
 
     try:
-        duration = float(value)
-    except Exception:
-        duration = 5.0
 
-    if duration <= 0:
-        duration = 5.0
-
-    return duration
-
-
-def calculate_frames(duration, template):
-    """
-    Only modify video length when the exported template already tells us
-    enough information to do it safely.
-
-    Otherwise preserve the template's model-specific value.
-    """
-
-    existing = template.get("video_length")
-
-    if existing is None:
-        return None
-
-    # Wan2GP accepts numeric frame counts.
-    if isinstance(existing, int):
-        fps_value = template.get("force_fps", 16)
-
-        try:
-            fps = float(fps_value)
-        except Exception:
-            fps = 16.0
-
-        frames = max(1, round(duration * fps))
-
-        # Common Wan-family temporal alignment.
-        if frames > 1:
-            frames = ((frames - 1) // 4) * 4 + 1
-
-        return frames
-
-    # If the template uses a duration string, leave it untouched.
-    if isinstance(existing, str):
-        return existing
-
-    return None
-
-
-def make_task(scene, embedded_image_name, template):
-    try:
         part = int(scene["part"])
         scene_no = int(scene["scene"])
+
     except Exception:
-        fail("Scene has invalid part/scene values.")
 
-    params = copy.deepcopy(template)
-
-    # Remove fields that belong to exported UI/session state rather than
-    # an individual queue task.
-    transient_keys = [
-        "state",
-        "start_image_labels",
-        "end_image_labels",
-        "start_image_data_base64",
-        "end_image_data_base64",
-        "start_image_data",
-        "end_image_data",
-        "profile_priority",
-        "lset_name",
-    ]
-
-    for key in transient_keys:
-        params.pop(key, None)
-
-    # Scene-specific prompt.
-    params["prompt"] = build_prompt(scene)
-
-    # Negative prompt only if the template/model supports the field.
-    if "negative_prompt" in params:
-        params["negative_prompt"] = build_negative_prompt(
-            scene,
-            template,
-        )
-    elif scene.get("negative_prompt"):
-        params["negative_prompt"] = build_negative_prompt(
-            scene,
-            template,
+        fail(
+            "Scene has invalid part/scene values."
         )
 
-    # Start image.
-    params["image_start"] = embedded_image_name
+    params = {
 
-    # Explicitly tell Wan2GP to treat the image as a start image when the
-    # template already uses this mode.
-    if "image_prompt_type" in params:
-        params["image_prompt_type"] = "S"
+        # ----------------------------
+        # MODEL
+        # ----------------------------
 
+        "model_type":
+            WAN_MODEL_TYPE,
 
-    # Preserve model-specific resolution, sampling, guidance, acceleration,
-    # profiles, etc. from the exported template.
-    #
-    # We intentionally DO NOT hard-code:
-    # model_type
-    # resolution
-    # steps
-    # guidance_scale
-    # flow_shift
-    # fps
-    #
-    # Those belong to the actual Wan2GP model/template.
+        # ----------------------------
+        # IMAGE
+        # ----------------------------
 
-    frames = calculate_frames(
-        scene_duration(scene),
-        template,
-    )
+        "image_start":
+            embedded_image_name,
 
-    if frames is not None:
-        params["video_length"] = frames
+        "image_prompt_type":
+            WAN_IMAGE_PROMPT_TYPE,
 
-    output_name = f"part_{part:02d}_scene_{scene_no:02d}.mp4"
+        "video_prompt_type":
+            WAN_VIDEO_PROMPT_TYPE,
 
-    params["output_filename"] = output_name
+        # ----------------------------
+        # VIDEO
+        # ----------------------------
 
-    # Keep these sane if the exported template contains them.
-    if "batch_size" in params:
-        params["batch_size"] = 1
+        "resolution":
+            WAN_RESOLUTION,
 
-    if "repeat_generation" in params:
-        params["repeat_generation"] = 1
+        "video_length":
+            WAN_FRAMES,
+
+        # IMPORTANT:
+        # Wan2GP expects string here.
+        "force_fps":
+            WAN_FPS,
+
+        # ----------------------------
+        # QUALITY
+        # ----------------------------
+
+        "num_inference_steps":
+            WAN_STEPS,
+
+        "seed":
+            WAN_SEED + (part * 100) + scene_no,
+
+        "guidance_scale":
+            WAN_GUIDANCE,
+
+        "flow_shift":
+            WAN_FLOW_SHIFT,
+
+        "motion_amplitude":
+            WAN_MOTION_AMPLITUDE,
+
+        # ----------------------------
+        # GENERATION
+        # ----------------------------
+
+        "repeat_generation":
+            1,
+
+        "batch_size":
+            1,
+
+        "multi_images_gen_type":
+            0,
+
+        "multi_prompts_gen_type":
+            WAN_PROMPT_MODE,
+
+        # ----------------------------
+        # PROMPTS
+        # ----------------------------
+
+        "prompt":
+            build_prompt(scene),
+
+        "negative_prompt":
+            build_negative_prompt(scene),
+
+        # ----------------------------
+        # OUTPUT
+        # ----------------------------
+
+        "output_filename":
+            f"part_{part:02d}_scene_{scene_no:02d}.mp4"
+    }
 
     return {
-        "id": f"part_{part:02d}_scene_{scene_no:02d}",
-        "params": params,
+
+        "id":
+            f"part_{part:02d}_scene_{scene_no:02d}",
+
+        "params":
+            params,
+
+        "plugin_data":
+            {}
     }
 
 
-def validate_queue(tasks, root):
-    if not isinstance(tasks, list) or not tasks:
-        fail("Generated queue is empty or is not a list.")
-
-    for task in tasks:
-        if not isinstance(task, dict):
-            fail("Queue contains a non-object task.")
-
-        task_id = task.get("id")
-
-        if not task_id:
-            fail("Queue task has no id.")
-
-        params = task.get("params")
-
-        if not isinstance(params, dict):
-            fail(f"Task {task_id} has invalid params.")
-
-        if not params.get("model_type"):
-            fail(
-                f"Task {task_id} has no model_type. "
-                "The template must come from Wan2GP Export Settings."
-            )
-
-        image_name = params.get("image_start")
-
-        if not image_name:
-            fail(f"Task {task_id} has no image_start.")
-
-        image_path = root / image_name
-
-        if not image_path.exists():
-            fail(
-                f"Task {task_id} references missing embedded image: "
-                f"{image_name}"
-            )
-
+# ============================================================
+# MAIN
+# ============================================================
 
 def main():
+
     print("=" * 64)
-    print("          BUILDING WAN2GP I2V QUEUE")
+    print("WAN2GP TEST 7 — FINAL QUEUE BUILDER")
     print("=" * 64)
-    print(f"Scenes file : {SCENES_FILE}")
-    print(f"Visuals dir : {VISUALS_DIR}")
-    print(f"Template    : {TEMPLATE_FILE}")
-    print(f"Output ZIP  : {OUTPUT_ZIP}")
+
     print()
+    print("Scenes :", SCENES_FILE)
+    print("Visuals:", VISUALS_DIR)
+    print("Output :", OUTPUT_ZIP)
+
+    print()
+    print("MODEL")
+    print("model_type        :", WAN_MODEL_TYPE)
+    print("resolution        :", WAN_RESOLUTION)
+    print("frames            :", WAN_FRAMES)
+    print("fps               :", WAN_FPS)
+    print("steps             :", WAN_STEPS)
+    print("guidance          :", WAN_GUIDANCE)
+    print("flow_shift        :", WAN_FLOW_SHIFT)
+    print("motion_amplitude  :", WAN_MOTION_AMPLITUDE)
+    print("prompt_mode       :", WAN_PROMPT_MODE)
 
     scenes = load_scenes()
-    template = load_template()
 
-    scenes = sorted(
-        scenes,
-        key=lambda x: (
-            int(x.get("part", 0)),
-            int(x.get("scene", 0)),
-        ),
+    OUTPUT_DIR.mkdir(
+        parents=True,
+        exist_ok=True
     )
-
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     if OUTPUT_ZIP.exists():
         OUTPUT_ZIP.unlink()
 
     tasks = []
+
     missing = []
 
     with tempfile.TemporaryDirectory(
-        prefix="wan2gp_queue_"
+        prefix="wan2gp_test7_"
     ) as temp_dir:
 
         temp_root = Path(temp_dir)
 
-        for index, scene in enumerate(scenes, start=1):
+        # ----------------------------------------
+        # BUILD EVERY SCENE
+        # ----------------------------------------
+
+        for index, scene in enumerate(
+            scenes,
+            start=1
+        ):
 
             try:
-                part = int(scene["part"])
-                scene_no = int(scene["scene"])
+
+                part = int(
+                    scene["part"]
+                )
+
+                scene_no = int(
+                    scene["scene"]
+                )
+
             except Exception:
+
                 fail(
-                    f"Scene #{index} has invalid part/scene values."
+                    f"Scene #{index} has invalid "
+                    "part/scene values."
                 )
 
-            visual = find_visual(part, scene_no)
-
-            if visual is None:
-                missing.append(
-                    f"part_{part:02d}/scene_{scene_no:02d}"
-                )
-                continue
-
-            width, height = validate_image(visual)
-
-            embedded_name = (
-                f"task{index}_image_start_0.png"
+            visual = find_visual(
+                part,
+                scene_no
             )
 
-            embedded_path = temp_root / embedded_name
+            if visual is None:
+
+                missing.append(
+                    f"part_{part:02d}/"
+                    f"scene_{scene_no:02d}"
+                )
+
+                continue
+
+            width, height = validate_image(
+                visual
+            )
+
+            embedded_name = (
+                f"task{index:03d}_"
+                "image_start_0.png"
+            )
+
+            embedded_path = (
+                temp_root /
+                embedded_name
+            )
 
             try:
-                with Image.open(visual) as img:
-                    img.convert("RGB").save(
+
+                with Image.open(
+                    visual
+                ) as img:
+
+                    img.convert(
+                        "RGB"
+                    ).save(
                         embedded_path,
                         format="PNG",
-                        optimize=True,
+                        optimize=True
                     )
+
             except Exception as exc:
+
                 fail(
-                    f"Could not embed image '{visual}': {exc}"
+                    f"Could not embed "
+                    f"{visual}: {exc}"
                 )
 
             task = make_task(
                 scene,
-                embedded_name,
-                template,
+                embedded_name
             )
 
             tasks.append(task)
 
             print(
                 f"[{len(tasks):03d}] "
-                f"Part {part:02d} Scene {scene_no:02d} | "
-                f"{width}x{height} | "
-                f"{embedded_name}"
+                f"Part {part:02d} "
+                f"Scene {scene_no:02d} "
+                f"| {width}x{height}"
             )
 
+        # ----------------------------------------
+        # MISSING IMAGES
+        # ----------------------------------------
+
         if missing:
+
             print()
-            print("Missing visual assets:")
+            print(
+                "MISSING VISUALS:"
+            )
 
             for item in missing:
-                print(f"  - {item}")
+                print(
+                    " -",
+                    item
+                )
 
             fail(
-                f"{len(missing)} scene visual(s) are missing. "
-                "Queue was NOT created."
+                f"{len(missing)} scene visual(s) "
+                "missing. Queue NOT created."
             )
 
         if not tasks:
+
             fail(
-                "No valid scenes were converted into queue tasks."
+                "No valid scene tasks created."
             )
 
-        validate_queue(tasks, temp_root)
+        # ----------------------------------------
+        # QUEUE JSON
+        # ----------------------------------------
 
-        queue_json = temp_root / "queue.json"
+        queue_json = (
+            temp_root /
+            "queue.json"
+        )
 
         queue_json.write_text(
             json.dumps(
                 tasks,
                 ensure_ascii=False,
-                indent=4,
+                indent=2
             ),
-            encoding="utf-8",
+            encoding="utf-8"
         )
 
-        # Reload and validate the actual JSON that will be zipped.
-        try:
-            loaded = json.loads(
-                queue_json.read_text(
-                    encoding="utf-8"
-                )
-            )
-        except Exception as exc:
-            fail(
-                f"Generated queue.json cannot be reloaded: {exc}"
-            )
-
-        validate_queue(loaded, temp_root)
-
-        if len(loaded) != len(tasks):
-            fail(
-                "Queue task count validation failed."
-            )
+        # ----------------------------------------
+        # BUILD ZIP
+        # ----------------------------------------
 
         with zipfile.ZipFile(
             OUTPUT_ZIP,
             "w",
-            compression=zipfile.ZIP_DEFLATED,
+            compression=zipfile.ZIP_DEFLATED
         ) as zf:
 
             zf.write(
                 queue_json,
-                arcname="queue.json",
+                "queue.json"
             )
 
             for image_file in sorted(
@@ -532,28 +713,29 @@ def main():
                     "task*_image_start_0.png"
                 )
             ):
+
                 zf.write(
                     image_file,
-                    arcname=image_file.name,
+                    image_file.name
                 )
 
-    if not OUTPUT_ZIP.exists():
-        fail(
-            "Queue ZIP was not created."
-        )
+    # ========================================================
+    # FINAL ZIP VALIDATION
+    # ========================================================
 
-    # Final ZIP integrity validation.
     try:
+
         with zipfile.ZipFile(
             OUTPUT_ZIP,
-            "r",
+            "r"
         ) as zf:
 
             names = zf.namelist()
 
             if "queue.json" not in names:
+
                 fail(
-                    "ZIP does not contain queue.json."
+                    "queue.json missing from ZIP."
                 )
 
             image_count = len(
@@ -561,55 +743,88 @@ def main():
                     name
                     for name in names
                     if name.lower().endswith(
-                        (".png", ".jpg", ".jpeg", ".webp")
+                        (
+                            ".png",
+                            ".jpg",
+                            ".jpeg",
+                            ".webp"
+                        )
                     )
                 ]
             )
 
             if image_count != len(tasks):
+
                 fail(
-                    "ZIP image count mismatch: "
-                    f"{image_count} images for "
+                    "Image/task count mismatch: "
+                    f"{image_count} images / "
                     f"{len(tasks)} tasks."
                 )
 
             bad = zf.testzip()
 
-            if bad is not None:
+            if bad:
+
                 fail(
-                    f"ZIP integrity check failed at: {bad}"
+                    f"ZIP integrity failure: {bad}"
                 )
 
     except zipfile.BadZipFile as exc:
+
         fail(
-            f"Generated queue ZIP is corrupt: {exc}"
+            f"Invalid ZIP: {exc}"
         )
 
-    zip_size_mb = (
+    # ========================================================
+    # DONE
+    # ========================================================
+
+    size_mb = (
         OUTPUT_ZIP.stat().st_size
-        / (1024 * 1024)
+        /
+        (1024 * 1024)
     )
 
     print()
     print("=" * 64)
-    print("                 QUEUE READY")
+    print("WAN2GP TEST 7 QUEUE READY")
     print("=" * 64)
-    print(f"Tasks       : {len(tasks)}")
-    print(f"Images      : {image_count}")
-    print(f"ZIP size    : {zip_size_mb:.2f} MB")
-    print(f"Queue file  : {OUTPUT_ZIP}")
-    print()
-    print("Wan2GP validation command:")
+
     print(
-        "python wgp.py "
-        "--process output/i2v/wan2gp_queue.zip "
-        "--dry-run"
+        "Tasks  :",
+        len(tasks)
     )
+
+    print(
+        "Images :",
+        image_count
+    )
+
+    print(
+        "ZIP    :",
+        f"{size_mb:.2f} MB"
+    )
+
+    print(
+        "File   :",
+        OUTPUT_ZIP
+    )
+
     print()
     print(
-        "IMPORTANT: This queue uses the model/settings "
-        "from Input/wan2gp_template.json."
+        "TEST 7 BASELINE LOCKED:"
     )
+
+    print(
+        "480x832 | 33 frames | 16 FPS | "
+        "16 steps | motion 0.55"
+    )
+
+    print()
+    print(
+        "READY FOR WAN2GP T4 WORKER"
+    )
+
     print("=" * 64)
 
 
