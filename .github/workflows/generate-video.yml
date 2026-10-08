@@ -20,6 +20,7 @@ jobs:
       CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
       CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
       CLOUDFLARE_R2_PUBLIC_URL: ${{ secrets.CLOUDFLARE_R2_PUBLIC_URL }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
     steps:
 
@@ -67,6 +68,16 @@ jobs:
           fi
 
           echo "Required secrets are available."
+
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo
+            echo "NOTICE: CLOUDFLARE_ACCOUNT_ID is not set."
+            echo "R2 upload will be skipped."
+            echo "GitHub Artifact will still be created."
+          else
+            echo "CLOUDFLARE_ACCOUNT_ID is available."
+            echo "R2 upload is enabled."
+          fi
 
       # ============================================================
       # READ PROJECT CONFIG
@@ -222,7 +233,7 @@ jobs:
           echo "Expected total  : $EXPECTED_TOTAL"
 
       # ============================================================
-      # RESTORE PREVIOUS CHECKPOINT
+      # RESTORE PREVIOUS SUCCESSFUL CHECKPOINT
       # ============================================================
       - name: Restore previous successful checkpoint
         shell: bash
@@ -500,7 +511,6 @@ jobs:
             exit 1
           fi
 
-          echo
           echo "Visual preparation completed."
 
       # ============================================================
@@ -617,7 +627,7 @@ jobs:
           echo "Queue ZIP : $QUEUE_ZIP"
 
       # ============================================================
-      # UPLOAD VISUAL WORKER PACKAGE AS ARTIFACT
+      # UPLOAD VISUAL WORKER PACKAGE AS GITHUB ARTIFACT
       # ============================================================
       - name: Upload visual worker package
         uses: actions/upload-artifact@v4
@@ -633,12 +643,15 @@ jobs:
           retention-days: 7
 
       # ============================================================
-      # UPLOAD VISUAL WORKER PACKAGE TO R2
+      # OPTIONAL R2 UPLOAD
       # ============================================================
       - name: Upload visual worker queue to R2
+        if: ${{ env.CLOUDFLARE_ACCOUNT_ID != '' }}
         shell: bash
         run: |
           set -e
+
+          echo "R2 upload enabled."
 
           python3 - <<'PY'
           import os
@@ -657,16 +670,9 @@ jobs:
               "CLOUDFLARE_R2_PUBLIC_URL"
           ].rstrip("/")
 
-          account_id = os.environ.get(
-              "CLOUDFLARE_ACCOUNT_ID",
-              ""
-          ).strip()
-
-          if not account_id:
-              raise SystemExit(
-                  "ERROR: CLOUDFLARE_ACCOUNT_ID "
-                  "is required for R2 endpoint."
-              )
+          account_id = os.environ[
+              "CLOUDFLARE_ACCOUNT_ID"
+          ].strip()
 
           endpoint = (
               f"https://{account_id}.r2.cloudflarestorage.com"
@@ -688,9 +694,9 @@ jobs:
           )
 
           key = (
-              f"visual-queues/"
+              "visual-queues/"
               f"{os.environ['GITHUB_RUN_ID']}/"
-              f"visual_generation_queue.zip"
+              "visual_generation_queue.zip"
           )
 
           client.upload_file(
@@ -698,8 +704,8 @@ jobs:
               bucket,
               key,
               ExtraArgs={
-                  "ContentType": "application/zip",
-              },
+                  "ContentType": "application/zip"
+              }
           )
 
           url = f"{public_url}/{key}"
@@ -708,7 +714,7 @@ jobs:
               "output/visual_worker/queue_url.txt"
           ).write_text(
               url + "\n",
-              encoding="utf-8",
+              encoding="utf-8"
           )
 
           print("R2 upload successful.")
@@ -716,9 +722,31 @@ jobs:
           PY
 
       # ============================================================
-      # UPLOAD QUEUE URL
+      # R2 SKIPPED STATUS
+      # ============================================================
+      - name: R2 upload status
+        if: ${{ env.CLOUDFLARE_ACCOUNT_ID == '' }}
+        shell: bash
+        run: |
+          set -e
+
+          echo "=============================================="
+          echo "R2 UPLOAD SKIPPED"
+          echo "=============================================="
+          echo
+          echo "CLOUDFLARE_ACCOUNT_ID is not configured."
+          echo
+          echo "The queue is already available as:"
+          echo "GitHub Artifact: lok-ai-visual-worker-queue"
+          echo
+          echo "No Cloudflare AI service was used."
+          echo "=============================================="
+
+      # ============================================================
+      # UPLOAD QUEUE URL IF AVAILABLE
       # ============================================================
       - name: Upload queue URL artifact
+        if: ${{ env.CLOUDFLARE_ACCOUNT_ID != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: lok-ai-visual-worker-queue-url
@@ -787,7 +815,8 @@ jobs:
           if [ -f "output/visual_worker/queue_url.txt" ]; then
             cat output/visual_worker/queue_url.txt
           else
-            echo "Queue URL was not created."
+            echo "R2 Queue URL not available."
+            echo "Use GitHub Artifact: lok-ai-visual-worker-queue"
           fi
 
           echo
